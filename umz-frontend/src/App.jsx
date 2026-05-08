@@ -1,46 +1,47 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-// import Login from './components/Login';
-// import Dashboard from './components/Dashboard';
-// import Attendance from './components/Attendance';
-// import Marks from './components/Marks';
-// import CGPA from './components/CGPA';
-// import TimeTable from './components/TimeTable';
-// import Courses from './components/Courses';
-// import Grades from './components/Grades';
-// import Ranking from './components/Ranking';
-// import MutualShift from './components/MutualShift';
-// import HostelInfo from './components/HostelInfo';
-// import AiBuddy from './components/AiBuddy';
-// import Profile from './components/Profile';
-// import MobileBacklogs from './components/MobileBacklogs';
-// import MobileBottomNav from './components/MobileBottomNav';
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import Attendance from './components/Attendance';
+import Marks from './components/Marks';
+import CGPA from './components/CGPA';
+import TimeTable from './components/TimeTable';
+import Courses from './components/Courses';
+import Grades from './components/Grades';
+import Ranking from './components/Ranking';
+import MutualShift from './components/MutualShift';
+import HostelInfo from './components/HostelInfo';
+import AiBuddy from './components/AiBuddy';
+import Profile from './components/Profile';
+import MobileBacklogs from './components/MobileBacklogs';
+import MobileBottomNav from './components/MobileBottomNav';
 import ByeBye from './components/ByeBye';
+import Cookie from './components/Cookie';
 import './App.css';
 
 function AppContent() {
-  // const location = useLocation();
-  // const isLoginPage = location.pathname === '/' || location.pathname === '/login';
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/cookie' || location.pathname === '/cookie';
 
-  // // Get student info for the nav
-  // const studentInfoStr = localStorage.getItem('umz_student_info');
-  // let studentPhoto = '';
-  // let studentName = '';
+  // Get student info for the nav
+  const studentInfoStr = localStorage.getItem('umz_student_info');
+  let studentPhoto = '';
+  let studentName = '';
 
-  // if (studentInfoStr) {
-  //   try {
-  //     const studentInfo = JSON.parse(studentInfoStr);
-  //     studentPhoto = studentInfo?.StudentPicture ? `data:image/png;base64,${studentInfo.StudentPicture}` : '';
-  //     studentName = studentInfo?.StudentName || '';
-  //   } catch (e) {
-  //     console.error('Error parsing student info:', e);
-  //   }
-  // }
+  if (studentInfoStr) {
+    try {
+      const studentInfo = JSON.parse(studentInfoStr);
+      studentPhoto = studentInfo?.StudentPicture ? `data:image/png;base64,${studentInfo.StudentPicture}` : '';
+      studentName = studentInfo?.StudentName || '';
+    } catch (e) {
+      console.error('Error parsing student info:', e);
+    }
+  }
 
   return (
     <>
       <Routes>
-        {/* <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/cookie" element={<Cookie />} />
+        <Route path="/login" element={<ByeBye />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/marks" element={<Grades />} />
@@ -53,16 +54,16 @@ function AppContent() {
         <Route path="/hostel-info" element={<HostelInfo />} />
         <Route path="/ai-buddy" element={<AiBuddy />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/backlogs" element={<MobileBacklogs />} /> */}
-        <Route path="*" element={<ByeBye />} />
+        <Route path="/backlogs" element={<MobileBacklogs />} />
+        <Route path="/" element={<ByeBye />} />
       </Routes>
-      {/* {!isLoginPage && (
+      {!isLoginPage && (
         <MobileBottomNav
           messageCount={0}
           studentPhoto={studentPhoto}
           studentName={studentName}
         />
-      )} */}
+      )}
     </>
   );
 }
