@@ -114,14 +114,14 @@ const Sidebar = () => {
     }, [location.pathname]);
 
     const handleLogout = () => {
-        // Keep only credentials — clear every other key
-        const keep = new Set(['umz_regno', 'umz_password']);
+        // Keep only credentials and theme — clear every other key
+        const keep = new Set(['umz_regno', 'umz_password', 'theme']);
         Object.keys(localStorage).forEach(key => {
             if (!keep.has(key)) localStorage.removeItem(key);
         });
 
         // Redirect to login
-        navigate('/');
+        navigate('/newlogin');
     };
 
     const handleResync = async () => {

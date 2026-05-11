@@ -16,11 +16,13 @@ import MobileBacklogs from './components/MobileBacklogs';
 import MobileBottomNav from './components/MobileBottomNav';
 import ByeBye from './components/ByeBye';
 import Cookie from './components/Cookie';
+import NewLogin from './components/NewLogin';
 import './App.css';
 
 function AppContent() {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/cookie' || location.pathname === '/cookie';
+  const loginRoutes = ['/newlogin', '/cookie', '/login', '/'];
+  const isLoginPage = loginRoutes.includes(location.pathname);
 
   // Get student info for the nav
   const studentInfoStr = localStorage.getItem('umz_student_info');
@@ -41,6 +43,7 @@ function AppContent() {
     <>
       <Routes>
         <Route path="/cookie" element={<Cookie />} />
+        <Route path="/newlogin" element={<NewLogin />} />
         <Route path="/login" element={<ByeBye />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/attendance" element={<Attendance />} />

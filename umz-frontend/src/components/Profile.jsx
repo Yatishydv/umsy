@@ -29,8 +29,12 @@ const Profile = () => {
     }, []);
 
     const handleLogout = () => {
-        localStorage.clear();
-        navigate('/');
+        // Keep credentials for auto-fill in NewLogin, clear everything else
+        const keep = new Set(['umz_regno', 'umz_password', 'theme']);
+        Object.keys(localStorage).forEach(key => {
+            if (!keep.has(key)) localStorage.removeItem(key);
+        });
+        navigate('/newlogin');
     };
 
     return (

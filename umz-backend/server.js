@@ -3,6 +3,11 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import { chromium } from 'playwright';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import SessionPool from './src/utils/SessionPool.js';
@@ -68,6 +73,10 @@ function cleanupExpiredSessions() {
 
 // Run cleanup every minute
 setInterval(cleanupExpiredSessions, 60 * 1000);
+
+// In-memory status for long-running newlogin processes
+// Structure: Map<username, { status, percent, timestamp }>
+const loginStatus = new Map();
 
 // In-memory storage for temporary downloads
 const tempDownloads = new Map();
@@ -169,7 +178,7 @@ app.post('/api/start-login', async (req, res) => {
             // console.log(`🌐 Starting login process for: ${regno}`);
 
             // Launch browser
-            browser = await chromium.launch({ headless: false });
+            browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             });
@@ -361,6 +370,225 @@ app.post('/api/complete-login', async (req, res) => {
             error: error.message
         });
     }
+});
+
+/**
+ * POST /api/newlogin
+ * Turnstile-bypass login: accepts a pre-solved Cloudflare turnstile token,
+ * injects it into the UMS page and logs in without ever needing a captcha image.
+ *
+ * Body: { username, password, turnstileToken }
+ * Response: { success, cookies }
+ */
+// Per-user lock — prevents duplicate concurrent newlogin calls
+const newLoginActiveSessions = new Map();
+
+/**
+ * POST /api/newlogin
+ * Ports the exact umsy login bridge:
+ *  - puppeteer-extra + StealthPlugin (bypasses bot detection)
+ *  - networkidle2 navigation (allows 2 idle connections, unlike playwright networkidle)
+ *  - Username injected via page.evaluate + __doPostBack in one call
+ *  - Turnstile token injected from frontend; keyboard-tab fallback if not provided
+ *  - Returns cookie string which the frontend stores in localStorage
+ */
+app.post('/api/newlogin', async (req, res) => {
+    let { username, password, turnstileToken } = req.body;
+    username = username?.trim();
+    password = password?.trim();
+
+    if (!username || !password) {
+        return res.status(400).json({
+            success: false,
+            error: 'username and password are required'
+        });
+    }
+
+    if (newLoginActiveSessions.has(username)) {
+        return res.status(429).json({ success: false, error: 'Login already in progress for this user. Please wait.' });
+    }
+    newLoginActiveSessions.set(username, Date.now());
+    loginStatus.set(username, { status: 'Initializing...', percent: 5, timestamp: Date.now() });
+
+    console.log(`[newlogin] >>> Starting login for: ${username}`);
+
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--window-size=1920,1080',
+                '--disable-blink-features=AutomationControlled'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1920, height: 1080 });
+
+        // Auto-dismiss any unexpected alerts so they don't hang the scraper
+        page.on('dialog', async dialog => {
+            console.log(`[newlogin] Auto-dismissed alert: ${dialog.message()}`);
+            await dialog.dismiss().catch(() => {});
+        });
+
+        const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // ── Stage 2: Navigate to UMS ─────────────────────────────────────────
+        // networkidle2 = max 2 active connections (puppeteer term)
+        // This is equivalent to playwright's 'load' but more lenient on background polls
+        console.log('[newlogin] Navigating to UMS...');
+        loginStatus.set(username, { status: 'Navigating to UMS...', percent: 15, timestamp: Date.now() });
+        await page.goto('https://ums.lpu.in/lpuums/', { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // ── Stage 2: Fill username via DOM + trigger ASP.NET postback ─────────
+        console.log('[newlogin] Entering username and triggering postback...');
+        loginStatus.set(username, { status: 'Identifying account...', percent: 30, timestamp: Date.now() });
+        await page.waitForSelector('#txtU', { timeout: 15000, visible: true });
+        await page.click('#txtU');
+
+        await page.evaluate((val) => {
+            const input = document.querySelector('#txtU');
+            input.value = val;
+            // Direct ASP.NET postback — reveals the password field
+            if (typeof __doPostBack === 'function') {
+                __doPostBack('txtU', '');
+            }
+        }, username);
+
+        // ── Stage 3: Wait 3.5s for DOM to update (password field appears) ─────
+        console.log('[newlogin] Waiting 3.5s for ASP.NET DOM update...');
+        loginStatus.set(username, { status: 'Waiting for password gateway...', percent: 45, timestamp: Date.now() });
+        await delay(3500);
+
+        // ── Stage 3: Type password ────────────────────────────────────────────
+        const passSelector = 'input[type="password"], input[placeholder*="Pass"]';
+        console.log('[newlogin] Entering password...');
+        loginStatus.set(username, { status: 'Submitting credentials...', percent: 60, timestamp: Date.now() });
+        await page.waitForSelector(passSelector, { timeout: 15000, visible: true });
+        await page.click(passSelector);
+        await page.type(passSelector, password, { delay: 50 });
+
+        // ── Stage 3: Inject Turnstile token ───────────────────────────────────
+        let turnstileSolved = false;
+
+        if (turnstileToken) {
+            console.log('[newlogin] Injecting Turnstile token from frontend...');
+            await page.evaluate((token) => {
+                const input = document.querySelector('[name="cf-turnstile-response"]');
+                if (input) input.value = token;
+            }, turnstileToken);
+            turnstileSolved = true;
+        }
+
+        // Keyboard-based fallback solve loop (if no token provided)
+        if (!turnstileSolved) {
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                console.log(`[newlogin] Turnstile solve attempt ${attempt}/3...`);
+                const turnstilePresent = await page.evaluate(() =>
+                    !!document.querySelector('iframe[src*="cloudflare"]') ||
+                    !!document.querySelector('.cf-turnstile')
+                );
+
+                if (turnstilePresent) {
+                    await page.focus(passSelector);
+                    await page.keyboard.press('Tab');
+                    await delay(500);
+                    await page.keyboard.press('Space');
+                    try {
+                        await page.waitForFunction(() => {
+                            const inp = document.querySelector('[name="cf-turnstile-response"]');
+                            return inp && inp.value && inp.value.length > 0;
+                        }, { timeout: 15000 });
+                        turnstileSolved = true;
+                        console.log('[newlogin] Turnstile solved via keyboard.');
+                        break;
+                    } catch { console.log('[newlogin] Turnstile solve timeout.'); }
+                } else {
+                    turnstileSolved = true; // not present
+                    break;
+                }
+            }
+        }
+
+        // ── Submission ────────────────────────────────────────────────────────
+        const loginBtnSelector = 'input[type="submit"][value="Login"]';
+        console.log('[newlogin] Submitting login form...');
+        loginStatus.set(username, { status: 'Securing session...', percent: 80, timestamp: Date.now() });
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }).catch(() => {}),
+            page.click(loginBtnSelector).catch(() => {})
+        ]);
+
+        // Handle SweetAlert popup (wrong captcha/credentials warning)
+        const swalConfirm = await page.$('.swal2-confirm');
+        if (swalConfirm) {
+            console.log('[newlogin] Dismissing post-click popup...');
+            await swalConfirm.click();
+            await delay(2000);
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }).catch(() => {}),
+                page.click(loginBtnSelector).catch(() => {})
+            ]);
+        }
+
+        const finalUrl = page.url();
+        console.log(`[newlogin] Final URL: ${finalUrl}`);
+
+        const isOnLoginPage = finalUrl.includes('Login') || finalUrl.endsWith('/lpuums/') || finalUrl.endsWith('/lpuums');
+        const isChromeError = finalUrl.includes('chrome-error');
+
+        if (isChromeError) {
+            await browser.close();
+            newLoginActiveSessions.delete(username);
+            return res.status(503).json({ success: false, error: 'UMS portal is unreachable. Please try again.' });
+        }
+
+        if (isOnLoginPage) {
+            const errorText = await page.evaluate(() => {
+                return document.querySelector('#lockerror')?.innerText?.trim()
+                    || document.querySelector('.swal2-html-container')?.innerText?.trim()
+                    || document.querySelector('.alert-danger')?.innerText?.trim()
+                    || 'Login failed. Please verify your credentials and try again.';
+            });
+            await browser.close();
+            newLoginActiveSessions.delete(username);
+            return res.status(401).json({ success: false, error: errorText });
+        }
+
+        // ── Stage 5: Extract cookies and return ───────────────────────────────
+        console.log('[newlogin] Login successful! Extracting cookies...');
+        loginStatus.set(username, { status: 'Synchronizing cookies...', percent: 95, timestamp: Date.now() });
+        const cookies = await page.cookies();
+        const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log(`[newlogin] ✅ Cookie string length: ${cookieString.length}`);
+
+        await browser.close();
+        newLoginActiveSessions.delete(username);
+        loginStatus.delete(username);
+
+        return res.json({ success: true, cookies: cookieString });
+
+    } catch (error) {
+        console.error('[newlogin] Error:', error.message);
+        if (browser) await browser.close().catch(console.error);
+        newLoginActiveSessions.delete(username);
+        loginStatus.delete(username);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/newlogin-status/:username
+ */
+app.get('/api/newlogin-status/:username', (req, res) => {
+    const username = req.params.username?.trim();
+    const status = loginStatus.get(username);
+    if (!status) {
+        return res.status(404).json({ success: false, error: 'No active login session found' });
+    }
+    res.json(status);
 });
 
 /**

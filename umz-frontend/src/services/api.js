@@ -53,6 +53,30 @@ export async function completeLogin(sessionId, captcha) {
 }
 
 /**
+ * New login using Cloudflare Turnstile token (no captcha image needed)
+ */
+export async function newLogin(username, password, turnstileToken) {
+    const response = await fetch(`${API_BASE_URL}/newlogin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, turnstileToken }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Login failed');
+    return data;
+}
+
+/**
+ * Get the current progress/status of a newLogin attempt
+ */
+export async function getNewLoginStatus(username) {
+    const response = await fetch(`${API_BASE_URL}/newlogin-status/${username}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Status unavailable');
+    return data;
+}
+
+/**
  * Get student basic information
  */
 export async function getStudentInfo(auth) {

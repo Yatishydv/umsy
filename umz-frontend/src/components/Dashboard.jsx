@@ -161,7 +161,7 @@ const Dashboard = () => {
                     const isFresh = (Date.now() - timestamp) < 12 * 60 * 60 * 1000;
                     
                     if (isFresh) {
-                        // setNotifToast('Refreshing leave slip...');
+                        setNotifToast('Generating leave slip...');
                         const directRes = await getLeaveSlipHtmlFromUrl(url, auth);
                         if (directRes.success && directRes.data) {
                             setLeaveSlipUrl(url);
@@ -169,8 +169,8 @@ const Dashboard = () => {
                             setShowLeaveSlip(true);
                             
                             localStorage.setItem('umz_leave_slip', JSON.stringify({ url, data: directRes.data, timestamp: Date.now() }));
-                            // setNotifToast('Slip updated');
-                            setTimeout(() => setNotifToast(''), 3000);
+                            setNotifToast('Slip generated');
+                            setTimeout(() => setNotifToast(''), 2000);
                             return;
                         }
                     }
