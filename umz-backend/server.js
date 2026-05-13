@@ -178,7 +178,7 @@ app.post('/api/start-login', async (req, res) => {
             // console.log(`🌐 Starting login process for: ${regno}`);
 
             // Launch browser
-            browser = await chromium.launch({ headless: true });
+            browser = await chromium.launch({ headless: false });
             const context = await browser.newContext({
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             });

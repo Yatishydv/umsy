@@ -17,6 +17,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import ByeBye from './components/ByeBye';
 import Cookie from './components/Cookie';
 import NewLogin from './components/NewLogin';
+import GlobalSearch from './components/GlobalSearch';
 import './App.css';
 
 function AppContent() {
@@ -60,6 +61,7 @@ function AppContent() {
         <Route path="/backlogs" element={<MobileBacklogs />} />
         <Route path="/" element={<ByeBye />} />
       </Routes>
+      <GlobalSearch />
       {!isLoginPage && (
         <MobileBottomNav
           messageCount={0}
