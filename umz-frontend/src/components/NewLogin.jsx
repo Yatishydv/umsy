@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import logoUmz from '../assets/logoUMz.png';
 import loginImg1 from '../assets/login1.jpg';
 import loginImg2 from '../assets/login2.jpg';
@@ -12,6 +12,8 @@ const UMS_TURNSTILE_SITEKEY = '0x4AAAAAABqizXa69CuLKKuQ';
 
 const NewLogin = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isNewLogin2 = location.pathname === '/newlogin2';
 
     // ── UI state ───────────────────────────────────────────────────────────
     const [theme, setTheme] = useState('dark');
@@ -199,7 +201,15 @@ const NewLogin = () => {
 
         try {
             setProgress({ percent: 5, status: 'Initializing browser...' });
-            const result = await newLogin(cleanUsername, cleanPassword, turnstileToken);
+            
+            // Format password if it's a DOB from date picker
+            let finalPassword = cleanPassword;
+            if (isNewLogin2 && cleanPassword.includes('-')) {
+                const [y, m, d] = cleanPassword.split('-');
+                finalPassword = `${d}${m}${y}`;
+            }
+
+            const result = await newLogin(cleanUsername, finalPassword, turnstileToken);
 
             if (result.success && result.cookies) {
                 setDisplayedPercent(100);
@@ -209,6 +219,7 @@ const NewLogin = () => {
                 localStorage.setItem('umz_cookies', result.cookies);
                 localStorage.setItem('umz_regno', cleanUsername);
                 localStorage.setItem('umz_password', cleanPassword);
+                localStorage.removeItem('umz_is_v04');
 
                 // Persist to backend DB for cross-device access
                 try {
@@ -291,7 +302,7 @@ const NewLogin = () => {
                         <div className="flex flex-col space-y-2 p-8 text-center">
                             <img src={logoUmz} className="h-35 w-auto mx-auto object-contain mb-2" alt="UMZ Logo" />
                             <p className="text-sm text-muted-foreground">
-                                Login to your UMZ Dashboard
+                                {isNewLogin2 ? 'Quick Login with Date of Birth' : 'Login to your UMZ Dashboard'}
                             </p>
                             {/* Badge */}
                             <div className="mt-1 flex items-center justify-center gap-1.5">
@@ -299,7 +310,7 @@ const NewLogin = () => {
                                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
-                                    Turnstile Login
+                                    {isNewLogin2 ? 'DOB Entry' : 'Turnstile Login'}
                                 </span>
                             </div>
                         </div>
@@ -374,37 +385,56 @@ const NewLogin = () => {
                                         />
                                     </div>
 
-                                    {/* Password */}
+                                    {/* Password / DOB Selection */}
                                     <div className="space-y-2">
-                                        <div className="relative">
-                                            <input
-                                                id="nl-password"
-                                                type={showPassword ? 'text' : 'password'}
-                                                placeholder="Password"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                required
-                                                disabled={loading}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                            >
-                                                {showPassword ? (
+                                        {isNewLogin2 ? (
+                                            <div className="relative">
+                                                <input
+                                                    id="nl-dob"
+                                                    type="date"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    required
+                                                    disabled={loading}
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                />
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
                                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                     </svg>
-                                                ) : (
-                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                    </svg>
-                                                )}
-                                            </button>
-                                        </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <input
+                                                    id="nl-password"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    placeholder="Password"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    required
+                                                    disabled={loading}
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                                >
+                                                    {showPassword ? (
+                                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="flex items-center justify-end">
                                             <a
                                                 href="https://ums.lpu.in/lpuums/forgetpassword.aspx"
@@ -417,21 +447,14 @@ const NewLogin = () => {
                                         </div>
                                     </div>
 
-                                    {/* Cloudflare Turnstile Widget */}
-                                    <div className="space-y-2">
-                                        {/* <label className="text-sm font-medium text-foreground/80">Security Verification</label> */}
-                                        <div className="flex justify-center">
-                                            <div ref={turnstileRef} />
+                                    {/* Cloudflare Turnstile Widget (Hidden on newlogin2) */}
+                                    {!isNewLogin2 && (
+                                        <div className="space-y-2">
+                                            <div className="flex justify-center">
+                                                <div ref={turnstileRef} />
+                                            </div>
                                         </div>
-                                        {/* {turnstileToken && (
-                                            <p className="text-xs text-center text-green-500 flex items-center justify-center gap-1">
-                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                Verification complete
-                                            </p>
-                                        )} */}
-                                    </div>
+                                    )}
 
                                     {/* Submit */}
                                     <button
@@ -440,7 +463,7 @@ const NewLogin = () => {
                                         disabled={loading}
                                         className="cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full"
                                     >
-                                        Login
+                                        {isNewLogin2 ? 'Enter Dashboard' : 'Login'}
                                     </button>
                                 </form>
                             )}

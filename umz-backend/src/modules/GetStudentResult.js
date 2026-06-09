@@ -24,17 +24,15 @@ export async function fetchStudentResult(client) {
         );
 
         if (!response.data || typeof response.data !== 'string') {
-            throw new Error('Empty or non-HTML response from UMS result page');
+            console.warn('⚠️ Invalid or non-HTML response from UMS result page, returning empty data');
+            return { cgpa: null, semesters: [], rplGrades: [] };
         }
 
         return parseResultHTML(response.data);
 
     } catch (error) {
-        // console.error('❌ Error fetching student result:', error.message);
-        if (error.response) {
-            // console.error('   HTTP status:', error.response.status);
-        }
-        throw error;
+        console.warn('⚠️ Error fetching student result, returning empty data:', error.message);
+        return { cgpa: null, semesters: [], rplGrades: [] };
     }
 }
 

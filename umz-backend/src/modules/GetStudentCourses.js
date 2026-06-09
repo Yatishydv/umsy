@@ -11,7 +11,7 @@ export async function fetchStudentCourses(client) {
     try {
         const response = await client.post(
             'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetStudentCourses',
-            JSON.stringify({}),
+            {},
             {
                 headers: {
                     'Content-Type': 'application/json; charset=UTF-8',

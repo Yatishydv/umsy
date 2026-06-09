@@ -7,7 +7,7 @@ import MessagesCard from './MessagesCard';
 import SeatingPlanCardCompact from './SeatingPlanCardCompact';
 import MobileNotificationsSheet from './MobileNotificationsSheet';
 import { Building2,Bed,Table } from 'lucide-react';
-import { getStudentInfo, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl } from '../services/api';
+import { getStudentInfo, getStudentDashboardV04, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl } from '../services/api';
 import { sendNotification } from '../utils/notificationHelper';
 import LeaveSlipModal from './LeaveSlipModal';
 
@@ -289,6 +289,7 @@ const Dashboard = () => {
             // No cache available - check if we have cookies or a saved session
             const cookies = localStorage.getItem('umz_cookies');
             const regno = localStorage.getItem('umz_regno');
+            const isV04 = localStorage.getItem('umz_is_v04') === 'true';
 
             if (!cookies && !regno) {
                 // No session found - show empty state
@@ -305,13 +306,21 @@ const Dashboard = () => {
             try {
                 setLoading(true);
                 console.log('🌐 Fetching fresh student info from API using:', cookies ? 'cookies' : 'regno');
-                const result = await getStudentInfo(auth);
+                const result = isV04
+                    ? await getStudentDashboardV04(auth)
+                    : await getStudentInfo(auth);
                 console.log('📨 Messages in response:', result.data?.Messages);
-                setStudentInfo(result.data);
-                if (result.data.Registrationnumber) fetchRanking(result.data.Registrationnumber);
+                
+                const infoData = result.data || {};
+                if (isV04 && !infoData.Messages) {
+                    infoData.Messages = [];
+                }
+                
+                setStudentInfo(infoData);
+                if (infoData.Registrationnumber) fetchRanking(infoData.Registrationnumber);
 
                 // Store student info in localStorage for caching
-                localStorage.setItem('umz_student_info', JSON.stringify(result.data));
+                localStorage.setItem('umz_student_info', JSON.stringify(infoData));
 
                 // Fetch seating plan
                 fetchSeatingPlanData(auth);

@@ -2,8 +2,12 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { chromium } from 'playwright';
 import { createRequire } from 'module';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -13,6 +17,7 @@ import mongoose from 'mongoose';
 import SessionPool from './src/utils/SessionPool.js';
 import { createAxiosClient } from './src/utils/createAxiosClient.js';
 import { fetchStudentBasicInformation } from './src/modules/GetStudentBasicInformation.js';
+import { fetchStudentContactNo } from './src/modules/GetStudentContactNo.js';
 import { fetchStudentAttendanceSummary } from './src/modules/StudentAttendanceSummary.js';
 import { fetchStudentAttendanceDetail } from './src/modules/StudentAttendanceDetail.js';
 import { fetchTermwiseCGPA } from './src/modules/TermwiseCGPA.js';
@@ -29,6 +34,27 @@ import { fetchPendingAssignments } from './src/modules/GetPendingAssignments.js'
 import { fetchLeaveSlipUid } from './src/modules/GetLeaveSlipUrl.js';
 import MutualShiftPost from './src/models/MutualShiftPost.js';
 import UserSession from './src/models/UserSession.js';
+
+// ── Load results.json into in-memory Map for O(1) token lookups ───────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const resultsPath = path.resolve(__dirname, '../results.json');
+const studentTokenMap = new Map();
+try {
+    const resultsData = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
+    for (const record of resultsData) {
+        if (record.regno) {
+            // If duplicate regnos exist (e.g. retry entries), keep the one with a valid token
+            const existing = studentTokenMap.get(record.regno);
+            if (!existing || (record.token && !existing.token)) {
+                studentTokenMap.set(record.regno, record);
+            }
+        }
+    }
+    console.log(`✅ Loaded ${studentTokenMap.size} student records from results.json`);
+} catch (err) {
+    console.error('❌ Failed to load results.json:', err.message);
+}
 
 
 const app = express();
@@ -661,20 +687,25 @@ app.post('/api/student-info', async (req, res) => {
         // Create axios client with cookies
         const axiosClient = createAxiosClient(cookies);
 
-        // Fetch student basic information, term-wise CGPA, messages, and password expiry in parallel
-        const [studentInfo, termwiseCGPA, messages, passwordExpiry] = await Promise.all([
+        // Fetch student basic information, term-wise CGPA, messages, and contact number in parallel
+        const [studentInfo, termwiseCGPA, messages, contactNo] = await Promise.all([
             fetchStudentBasicInformation(axiosClient),
             fetchTermwiseCGPA(axiosClient),
             fetchStudentMessages(axiosClient),
-            fetchPasswordExpiry(axiosClient)
+            // fetchPasswordExpiry(axiosClient),
+            fetchStudentContactNo(axiosClient).catch(err => {
+                console.warn('⚠️ Could not fetch contact number:', err.message);
+                return { phoneNumber: '' };
+            })
         ]);
 
         // Combine the data
         const combinedData = {
             ...studentInfo,
+            StudentMobile: studentInfo.StudentMobile || contactNo?.phoneNumber || '',
             TermwiseCGPA: termwiseCGPA,
             Messages: messages,
-            PasswordExpiry: passwordExpiry
+            // PasswordExpiry: passwordExpiry
         };
 
         return res.json({
@@ -692,6 +723,246 @@ app.post('/api/student-info', async (req, res) => {
         });
     }
 });
+
+/**
+ * POST /api/v04/student-info
+ * V04 Student Info: fetches student basic information and contact number using WebMethods only (no .aspx document pages)
+ */
+app.post('/api/v04/student-info', async (req, res) => {
+    try {
+        const cookies = await getEffectiveCookies(req);
+
+        if (!cookies) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cookies or registration number are required'
+            });
+        }
+
+        const axiosClient = createAxiosClient(cookies);
+
+        // Only call JSON WebMethod APIs (avoiding .aspx document pages completely)
+        const [studentInfo, termwiseCGPA, messages, contactNo] = await Promise.all([
+            fetchStudentBasicInformation(axiosClient),
+            fetchTermwiseCGPA(axiosClient),
+            fetchStudentMessages(axiosClient),
+            fetchStudentContactNo(axiosClient).catch(err => {
+                console.warn('⚠️ Could not fetch contact number:', err.message);
+                return { phoneNumber: '' };
+            })
+        ]);
+
+        const combinedData = {
+            ...studentInfo,
+            StudentMobile: studentInfo.StudentMobile || contactNo?.phoneNumber || '',
+            TermwiseCGPA: termwiseCGPA,
+            Messages: messages
+        };
+
+        return res.json({
+            success: true,
+            data: combinedData,
+            cookies: cookies
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching V04 student info:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/v04/student-dashboard
+ * POST /api/v04/student-basic-info
+ * V04 Student Dashboard/Basic Information: calls the GetStudentBasicInformation WebMethod directly with cookies and returns the response
+ */
+const handleStudentDashboardV04 = async (req, res) => {
+    try {
+        const cookies = await getEffectiveCookies(req);
+
+        if (!cookies) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cookies or registration number are required'
+            });
+        }
+
+        const axiosClient = createAxiosClient(cookies);
+        const response = await axiosClient.post(
+            'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetStudentBasicInformation',
+            {},
+            {
+                headers: {
+                    'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+                }
+            }
+        );
+
+        const d = response.data?.d || [];
+        const studentInfo = d[0] || {};
+        const filteredInfo = {};
+        for (const [key, value] of Object.entries(studentInfo)) {
+            if (value !== null && value !== '') {
+                filteredInfo[key] = value;
+            }
+        }
+
+        return res.json({
+            success: true,
+            d: d,
+            data: filteredInfo,
+            cookies: cookies
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching V04 student dashboard/basic info:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+app.post('/api/v04/student-dashboard', handleStudentDashboardV04);
+app.post('/api/v04/student-basic-info', handleStudentDashboardV04);
+
+/**
+ * POST /api/v04/result
+ * V04 Student Result: calls the TermWiseCGPA WebMethod directly with cookies,
+ * parses the HTML result, and maps it to standard result format (skipping credit fetching from frmStudentResult.aspx)
+ */
+app.post('/api/v04/result', async (req, res) => {
+    try {
+        const cookies = await getEffectiveCookies(req);
+
+        if (!cookies) {
+            return res.status(400).json({ success: false, error: 'Cookies or registration number are required' });
+        }
+
+        const axiosClient = createAxiosClient(cookies);
+        const response = await axiosClient.post(
+            'https://ums.lpu.in/lpuums/StudentDashboard.aspx/TermWiseCGPA',
+            {},
+            {
+                headers: {
+                    'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+                }
+            }
+        );
+
+        const html = response.data?.d;
+        if (!html || typeof html !== 'string') {
+            return res.json({
+                success: true,
+                data: {
+                    cgpa: null,
+                    semesters: [],
+                    rplGrades: []
+                }
+            });
+        }
+
+        const $ = cheerio.load(html);
+        const semesters = [];
+
+        $('h4').each((_, el) => {
+            const text = $(el).text().trim();
+            if (!text.startsWith('Term :')) return;
+
+            const termId = text.replace('Term :', '').trim();
+
+            // TGPA is in the sibling column
+            const tgpa = $(el)
+                .closest('.row')
+                .find('h4')
+                .last()
+                .text()
+                .replace('TGPA :', '')
+                .trim();
+
+            const tableDiv = $(el).closest('.row').nextAll('div.table-responsive').first();
+            const table = tableDiv.find('table').first();
+
+            const subjects = [];
+
+            table.find('tbody tr').each((_, row) => {
+                const cols = $(row).find('td');
+                const courseRaw = $(cols[0]).text().trim();
+                const gradeRaw = $(cols[1]).text().replace('Grade :', '').trim();
+
+                // Split "CSE111 :: ORIENTATION TO COMPUTING-I"
+                const sepIdx = courseRaw.indexOf('::');
+                const code = sepIdx !== -1 ? courseRaw.slice(0, sepIdx).trim() : '';
+                const name = sepIdx !== -1 ? courseRaw.slice(sepIdx + 2).trim() : courseRaw;
+                const grade = gradeRaw || null;
+
+                subjects.push({
+                    code,
+                    name,
+                    credit: null,
+                    grade
+                });
+            });
+
+            semesters.push({
+                termId,
+                tgpa,
+                subjects
+            });
+        });
+
+        const resultData = {
+            cgpa: null,
+            semesters,
+            rplGrades: []
+        };
+
+        return res.json({
+            success: true,
+            data: resultData
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching V04 student result:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/v04/marks
+ * V04 Student Marks: calls the TermWiseMarks WebMethod directly with cookies and returns the parsed marks data
+ */
+app.post('/api/v04/marks', async (req, res) => {
+    try {
+        const cookies = await getEffectiveCookies(req);
+
+        if (!cookies) {
+            return res.status(400).json({ success: false, error: 'Cookies or registration number are required' });
+        }
+
+        const axiosClient = createAxiosClient(cookies);
+        const marksData = await fetchTermWiseMarks(axiosClient);
+
+        return res.json({
+            success: true,
+            data: marksData
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching V04 student marks:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 
 /**
  * POST /api/attendance
@@ -818,6 +1089,331 @@ app.get('/api/health', (req, res) => {
             available: poolStatus.available
         }
     });
+});
+
+/**
+ * POST /api/token-login
+ * Token-based login: validates regno + dob against results.json,
+ * fetches UMS session cookies using the stored token, and returns them.
+ */
+app.post('/api/token-login', async (req, res) => {
+    let { regno, dob } = req.body;
+    regno = regno?.trim();
+    dob = dob?.trim();
+
+    if (!regno || !dob) {
+        return res.status(400).json({
+            success: false,
+            error: 'Registration number and date of birth are required'
+        });
+    }
+
+    // Look up the student record
+    const record = studentTokenMap.get(regno);
+
+    if (!record) {
+        return res.status(404).json({
+            success: false,
+            error: 'Registration number not found'
+        });
+    }
+
+    // Validate DOB (results.json uses dd-mm-yyyy format)
+    if (record.dob !== dob) {
+        return res.status(401).json({
+            success: false,
+            error: 'Invalid credentials — date of birth does not match'
+        });
+    }
+
+    // Check if token exists
+    if (!record.token) {
+        return res.status(500).json({
+            success: false,
+            error: 'No token available for this student. Please use the standard login instead.'
+        });
+    }
+
+    try {
+        console.log(`[token-login] Fetching cookies for ${regno} (${record.name})...`);
+
+        const tokenUrl = `https://ums.lpu.in/lpuums/frmSickStudentFoodRequest.aspx?uid=${record.token}==`;
+
+        // Make the GET request, collecting cookies across redirects
+        // We use maxRedirects: 0 to manually handle and capture Set-Cookie headers
+        let allCookies = [];
+        let currentUrl = tokenUrl;
+        let maxHops = 10;
+
+        while (maxHops-- > 0) {
+            try {
+                const response = await axios.get(currentUrl, {
+                    maxRedirects: 0,
+                    validateStatus: (status) => status >= 200 && status < 400,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    },
+                    // Include collected cookies in subsequent requests
+                    ...(allCookies.length > 0 && {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Cookie': allCookies.map(c => `${c.name}=${c.value}`).join('; ')
+                        }
+                    })
+                });
+
+                // Extract Set-Cookie headers
+                const setCookies = response.headers['set-cookie'];
+                if (setCookies) {
+                    for (const cookieStr of setCookies) {
+                        const parts = cookieStr.split(';')[0].split('=');
+                        const name = parts[0].trim();
+                        const value = parts.slice(1).join('=').trim();
+                        // Update or add cookie
+                        const existing = allCookies.findIndex(c => c.name === name);
+                        if (existing >= 0) {
+                            allCookies[existing].value = value;
+                        } else {
+                            allCookies.push({ name, value });
+                        }
+                    }
+                }
+
+                // Check for redirect
+                if (response.status >= 300 && response.status < 400 && response.headers.location) {
+                    const location = response.headers.location;
+                    // Handle relative URLs
+                    if (location.startsWith('http')) {
+                        currentUrl = location;
+                    } else {
+                        const base = new URL(currentUrl);
+                        currentUrl = new URL(location, base).href;
+                    }
+                    continue;
+                }
+
+                // Success — no more redirects
+                break;
+            } catch (axiosErr) {
+                // axios throws on 3xx when maxRedirects: 0, handle it
+                if (axiosErr.response) {
+                    const resp = axiosErr.response;
+                    // Extract cookies from error response too
+                    const setCookies = resp.headers['set-cookie'];
+                    if (setCookies) {
+                        for (const cookieStr of setCookies) {
+                            const parts = cookieStr.split(';')[0].split('=');
+                            const name = parts[0].trim();
+                            const value = parts.slice(1).join('=').trim();
+                            const existing = allCookies.findIndex(c => c.name === name);
+                            if (existing >= 0) {
+                                allCookies[existing].value = value;
+                            } else {
+                                allCookies.push({ name, value });
+                            }
+                        }
+                    }
+
+                    if (resp.status >= 300 && resp.status < 400 && resp.headers.location) {
+                        const location = resp.headers.location;
+                        if (location.startsWith('http')) {
+                            currentUrl = location;
+                        } else {
+                            const base = new URL(currentUrl);
+                            currentUrl = new URL(location, base).href;
+                        }
+                        continue;
+                    }
+                    // Non-redirect error
+                    break;
+                }
+                throw axiosErr;
+            }
+        }
+
+        if (allCookies.length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to obtain session cookies from UMS. Token may be expired.'
+            });
+        }
+
+        const cookieString = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log(`[token-login] ✅ Got ${allCookies.length} cookies for ${regno} (length: ${cookieString.length})`);
+
+        return res.json({
+            success: true,
+            cookies: cookieString,
+            name: record.name
+        });
+
+    } catch (error) {
+        console.error(`[token-login] ❌ Error for ${regno}:`, error.message);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch session from UMS. Please try again later.'
+        });
+    }
+});
+
+/**
+ * POST /api/v04/login
+ * V04 Token-based login: validates regno against results.json,
+ * fetches UMS session cookies using the stored token, and returns them.
+ */
+app.post('/api/v04/login', async (req, res) => {
+    let { regno } = req.body;
+    regno = regno?.trim();
+
+    if (!regno) {
+        return res.status(400).json({
+            success: false,
+            error: 'Registration number is required'
+        });
+    }
+
+    // Look up the student record
+    const record = studentTokenMap.get(regno);
+
+    if (!record) {
+        return res.status(404).json({
+            success: false,
+            error: 'Registration number not found'
+        });
+    }
+
+    // Check if token exists
+    if (!record.token) {
+        return res.status(400).json({
+            success: false,
+            error: 'No token available for this student.'
+        });
+    }
+
+    try {
+        console.log(`[v04-login] Fetching cookies for ${regno} (${record.name})...`);
+
+        const tokenUrl = `https://ums.lpu.in/lpuums/frmSickStudentFoodRequest.aspx?uid=${record.token}==`;
+
+        // Make the GET request, collecting cookies across redirects
+        // We use maxRedirects: 0 to manually handle and capture Set-Cookie headers
+        let allCookies = [];
+        let currentUrl = tokenUrl;
+        let maxHops = 10;
+
+        while (maxHops-- > 0) {
+            try {
+                const response = await axios.get(currentUrl, {
+                    maxRedirects: 0,
+                    validateStatus: (status) => status >= 200 && status < 400,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    },
+                    // Include collected cookies in subsequent requests
+                    ...(allCookies.length > 0 && {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Cookie': allCookies.map(c => `${c.name}=${c.value}`).join('; ')
+                        }
+                    })
+                });
+
+                // Extract Set-Cookie headers
+                const setCookies = response.headers['set-cookie'];
+                if (setCookies) {
+                    for (const cookieStr of setCookies) {
+                        const parts = cookieStr.split(';')[0].split('=');
+                        const name = parts[0].trim();
+                        const value = parts.slice(1).join('=').trim();
+                        // Update or add cookie
+                        const existing = allCookies.findIndex(c => c.name === name);
+                        if (existing >= 0) {
+                            allCookies[existing].value = value;
+                        } else {
+                            allCookies.push({ name, value });
+                        }
+                    }
+                }
+
+                // Check for redirect
+                if (response.status >= 300 && response.status < 400 && response.headers.location) {
+                    const location = response.headers.location;
+                    // Handle relative URLs
+                    if (location.startsWith('http')) {
+                        currentUrl = location;
+                    } else {
+                        const base = new URL(currentUrl);
+                        currentUrl = new URL(location, base).href;
+                    }
+                    continue;
+                }
+
+                // Success — no more redirects
+                break;
+            } catch (axiosErr) {
+                // axios throws on 3xx when maxRedirects: 0, handle it
+                if (axiosErr.response) {
+                    const resp = axiosErr.response;
+                    // Extract cookies from error response too
+                    const setCookies = resp.headers['set-cookie'];
+                    if (setCookies) {
+                        for (const cookieStr of setCookies) {
+                            const parts = cookieStr.split(';')[0].split('=');
+                            const name = parts[0].trim();
+                            const value = parts.slice(1).join('=').trim();
+                            const existing = allCookies.findIndex(c => c.name === name);
+                            if (existing >= 0) {
+                                allCookies[existing].value = value;
+                            } else {
+                                allCookies.push({ name, value });
+                            }
+                        }
+                    }
+
+                    if (resp.status >= 300 && resp.status < 400 && resp.headers.location) {
+                        const location = resp.headers.location;
+                        if (location.startsWith('http')) {
+                            currentUrl = location;
+                        } else {
+                            const base = new URL(currentUrl);
+                            currentUrl = new URL(location, base).href;
+                        }
+                        continue;
+                    }
+                    // Non-redirect error
+                    break;
+                }
+                throw axiosErr;
+            }
+        }
+
+        if (allCookies.length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to obtain session cookies from UMS. Token may be expired.'
+            });
+        }
+
+        const cookieString = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log(`[v04-login] ✅ Got ${allCookies.length} cookies for ${regno} (length: ${cookieString.length})`);
+
+        return res.json({
+            success: true,
+            cookies: cookieString,
+            name: record.name
+        });
+
+    } catch (error) {
+        console.error(`[v04-login] ❌ Error for ${regno}:`, error.message);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch session from UMS. Please try again later.'
+        });
+    }
 });
 
 // Start server
@@ -991,8 +1587,13 @@ app.post('/api/timetable', async (req, res) => {
             });
         }
 
-        // Get termId from the first course
-        const termId = coursesData[0].term;
+        // Get termId from the first course and convert suffix to A/W for Autumn/Winter session timetable
+        let termId = String(coursesData[0].term || '');
+        if (termId.endsWith('1')) {
+            termId = termId.slice(0, -1) + 'A';
+        } else if (termId.endsWith('2')) {
+            termId = termId.slice(0, -1) + 'W';
+        }
         // console.log(`📋 Using Term ID: ${termId}`);
 
         // Fetch timetable with the termId

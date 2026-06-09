@@ -18,12 +18,12 @@ export async function fetchStudentSeatingPlan(client) {
 
     // console.log('📦 Raw response:', JSON.stringify(response.data).substring(0, 200));
 
-    if (!response.data?.d) {
-        // console.error('❌ No "d" property in response');
-        throw new Error('Invalid seating plan response');
+    const html = response.data?.d;
+    if (!html || typeof html !== 'string') {
+        return [];
     }
 
-    const $ = cheerio.load(response.data.d);
+    const $ = cheerio.load(html);
     const seatingPlan = [];
 
     // console.log('🔍 Found .mycoursesdiv elements:', $('.mycoursesdiv').length);

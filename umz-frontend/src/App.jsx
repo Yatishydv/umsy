@@ -17,12 +17,13 @@ import MobileBottomNav from './components/MobileBottomNav';
 import ByeBye from './components/ByeBye';
 import Cookie from './components/Cookie';
 import NewLogin from './components/NewLogin';
+import UmzV04Login from './components/UmzV04Login';
 import GlobalSearch from './components/GlobalSearch';
 import './App.css';
 
 function AppContent() {
   const location = useLocation();
-  const loginRoutes = ['/newlogin', '/cookie', '/login', '/'];
+  const loginRoutes = ['/newlogin', '/newlogin2', '/cookie', '/login', '/umzV04', '/v04/login', '/'];
   const isLoginPage = loginRoutes.includes(location.pathname);
 
   // Get student info for the nav
@@ -45,6 +46,9 @@ function AppContent() {
       <Routes>
         <Route path="/cookie" element={<Cookie />} />
         <Route path="/newlogin" element={<NewLogin />} />
+        <Route path="/newlogin2" element={<NewLogin />} />
+        <Route path="/v04/login" element={<UmzV04Login />} />
+        <Route path="/umzV04" element={<UmzV04Login />} />
         <Route path="/login" element={<ByeBye />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/attendance" element={<Attendance />} />

@@ -15,7 +15,10 @@ export async function fetchPendingAssignments(client) {
             return [];
         }
 
-        const html = response.data.d;
+        const html = response.data?.d;
+        if (!html || typeof html !== 'string') {
+            return [];
+        }
         const $ = cheerio.load(html);
         const assignments = [];
 

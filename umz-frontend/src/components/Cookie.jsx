@@ -11,6 +11,7 @@ const Cookie = () => {
     const handleContinue = () => {
         if (!cookie.trim()) return;
         localStorage.setItem('umz_cookies', cookie);
+        localStorage.removeItem('umz_is_v04');
         navigate('/dashboard');
     };
 

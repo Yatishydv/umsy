@@ -14,7 +14,10 @@ export async function fetchStudentAttendanceSummary(client) {
     }
   );
 
-  const html = response.data.d;
+  const html = response.data?.d;
+  if (!html || typeof html !== 'string') {
+    throw new Error('Invalid response from UMS: Expected HTML string. Your session might have expired.');
+  }
 
   // Wrap rows so cheerio can parse them
   const $ = cheerio.load(`<table>${html}</table>`);

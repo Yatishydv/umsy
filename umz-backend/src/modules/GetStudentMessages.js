@@ -18,7 +18,10 @@ export async function fetchStudentMessages(client) {
         }
     );
 
-    const html = response.data.d;
+    const html = response.data?.d;
+    if (!html || typeof html !== 'string') {
+        return [];
+    }
     const $ = cheerio.load(html);
 
     const messages = [];

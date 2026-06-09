@@ -46,7 +46,8 @@ const MobileProfile = ({ studentInfo, onLogout, onNavigate }) => {
             { label: 'Roll Number', value: studentInfo?.actualRollNo, icon: Award },
             { label: 'Programme', value: studentInfo?.programme, icon: GraduationCap },
             { label: 'Section', value: studentInfo?.section || 'N/A', icon: Menu },
-            { label: 'Email Address', value: studentInfo?.email, icon: Mail }
+            { label: 'Email Address', value: studentInfo?.email, icon: Mail },
+            { label: 'Mobile Number', value: studentInfo?.mobile || 'Not provided', icon: Phone }
         ];
 
         return (

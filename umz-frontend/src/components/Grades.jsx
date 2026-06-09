@@ -2,7 +2,43 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BookOpen, Search, SlidersHorizontal, X, GraduationCap, Tag, Star, Filter, ChevronDown, Check, FileText, LayoutGrid, ChevronLeft } from 'lucide-react';
 import Sidebar from './Sidebar';
-import { getCourses, getResult, getMarks } from '../services/api';
+import { getCourses, getResult, getResultV04, getMarks, getMarksV04 } from '../services/api';
+
+// Helpers for matching Roman numeral term IDs
+const isRoman = (str) => typeof str === 'string' && /^[IVXivx]+$/.test(str);
+
+const romanToInt = (roman) => {
+    const map = { I: 1, V: 5, X: 10, L: 50 };
+    let total = 0;
+    const r = String(roman).toUpperCase();
+    for (let i = 0; i < r.length; i++) {
+        const current = map[r[i]];
+        const next = map[r[i + 1]];
+        if (next && current < next) {
+            total += next - current;
+            i++;
+        } else {
+            total += current;
+        }
+    }
+    return total;
+};
+
+const intToRoman = (num) => {
+    const map = {
+        M: 1000, CM: 900, D: 500, CD: 400,
+        C: 100, XC: 90, L: 50, XL: 40,
+        X: 10, IX: 9, V: 5, IV: 4, I: 1
+    };
+    let roman = '';
+    for (let key in map) {
+        while (num >= map[key]) {
+            roman += key;
+            num -= map[key];
+        }
+    }
+    return roman;
+};
 
 /* Grade colour mapping */
 const gradeConfig = (g) => {
@@ -62,6 +98,7 @@ const Grades = () => {
             if (si) { try { setStudentInfo(JSON.parse(si)); } catch {} }
 
             const cookies = localStorage.getItem('umz_cookies');
+            const isV04 = localStorage.getItem('umz_is_v04') === 'true';
 
             // Load Results/Grades
             const cachedResult = localStorage.getItem('umz_result_data');
@@ -69,7 +106,9 @@ const Grades = () => {
                 try { setResultData(JSON.parse(cachedResult)); } catch {}
             } else if (cookies) {
                 try {
-                    const res = await getResult(cookies);
+                    const res = isV04
+                        ? await getResultV04(cookies)
+                        : await getResult(cookies);
                     setResultData(res.data);
                     localStorage.setItem('umz_result_data', JSON.stringify(res.data));
                 } catch (e) { console.warn('Result fetch failed:', e.message); }
@@ -81,7 +120,9 @@ const Grades = () => {
                 try { setMarksData(JSON.parse(cachedMarks)); } catch {}
             } else if (cookies) {
                 try {
-                    const res = await getMarks(cookies);
+                    const res = isV04
+                        ? await getMarksV04(cookies)
+                        : await getMarks(cookies);
                     setMarksData(res.data || []);
                     localStorage.setItem('umz_marks_data', JSON.stringify(res.data || []));
                 } catch (e) { console.warn('Marks fetch failed:', e.message); }
@@ -107,99 +148,254 @@ const Grades = () => {
     }, []);
 
     const termMapping = React.useMemo(() => {
-        if (!resultData?.semesters) return {};
-        const sortedTermIds = [...new Set(resultData.semesters.map(s => s.termId))].sort((a, b) => a - b);
+        const termIds = new Set();
+        if (resultData?.semesters) {
+            resultData.semesters.forEach(s => { if (s.termId) termIds.add(String(s.termId)); });
+        }
+        if (marksData) {
+            marksData.forEach(tm => { if (tm.termId) termIds.add(String(tm.termId)); });
+        }
+        if (courses) {
+            courses.forEach(c => { if (c.term) termIds.add(String(c.term)); });
+        }
+
+        const uniqueTerms = Array.from(termIds);
+
+        // Separate Roman and purely numeric regular terms
+        const romanTerms = uniqueTerms.filter(id => isRoman(id));
+        const numericRegularTerms = uniqueTerms.filter(id => /^\d{6}$/.test(id));
+        const nonRegularTerms = uniqueTerms.filter(id => !isRoman(id) && !/^\d{6}$/.test(id));
+
+        // Sort Roman terms
+        romanTerms.sort((a, b) => romanToInt(a) - romanToInt(b));
+
+        // Sort numeric regular terms
+        numericRegularTerms.sort((a, b) => parseInt(a) - parseInt(b));
+
         const mapping = {};
-        sortedTermIds.forEach((id, idx) => {
+
+        // Map Roman terms
+        romanTerms.forEach((id, idx) => {
             mapping[id] = `Sem ${idx + 1}`;
         });
+
+        // Map numeric regular terms
+        numericRegularTerms.forEach((id, idx) => {
+            mapping[id] = `Sem ${idx + 1}`;
+        });
+
+        // Map non-regular terms to their raw IDs (e.g. '12324B'), considering 'R' suffix as RPL
+        nonRegularTerms.forEach(id => {
+            if (/r$/i.test(id)) {
+                mapping[id] = `RPL — ${id}`;
+            } else {
+                mapping[id] = id;
+            }
+        });
+
         return mapping;
-    }, [resultData]);
+    }, [resultData, marksData, courses]);
 
     const allSubjects = React.useMemo(() => {
-        if (!resultData) return [];
         const rows = [];
+        const processedTermIds = new Set();
         
-        (resultData.semesters || []).forEach(sem => {
-            (sem.subjects || []).forEach(sub => {
-                const matchedCourse = courses.find(c =>
-                    c.courseCode && sub.code &&
-                    c.courseCode.toLowerCase().includes(sub.code.toLowerCase().split('-')[0])
-                );
-                
-                // Find marks for this subject
-                const termMarks = (marksData || []).find(tm => String(tm.termId) === String(sem.termId));
-                const subMarks = termMarks?.subjects?.find(ms => 
-                    ms.courseCode && sub.code &&
-                    ms.courseCode.toLowerCase().includes(sub.code.toLowerCase().split('-')[0])
-                );
+        if (resultData && resultData.semesters && resultData.semesters.length > 0) {
+            (resultData.semesters || []).forEach((sem, semIdx) => {
+                (sem.subjects || []).forEach(sub => {
+                    const matchedCourse = courses.find(c =>
+                        c.courseCode && sub.code &&
+                        c.courseCode.toLowerCase().includes(sub.code.toLowerCase().split('-')[0])
+                    );
+                    
+                    // Find marks for this subject
+                    const regularMarks = (marksData || []).filter(tm => /^\d{6}$/.test(tm.termId));
+                    let termMarks = (marksData || []).find(tm => String(tm.termId) === String(sem.termId));
+                    if (!termMarks && isRoman(sem.termId)) {
+                        const idx = romanToInt(sem.termId) - 1;
+                        if (idx >= 0 && idx < regularMarks.length) {
+                            termMarks = regularMarks[idx];
+                        }
+                    }
+                    if (!termMarks && regularMarks.length > 0 && semIdx < regularMarks.length) {
+                        termMarks = regularMarks[semIdx];
+                    }
 
-                const termInfo = (studentInfo?.TermwiseCGPA || []).find(t => String(t.term) === String(sem.termId));
-                const mappedTitle = termMapping[sem.termId] || `Sem ${sem.termId}`;
+                    if (termMarks?.termId) {
+                        processedTermIds.add(String(termMarks.termId));
+                    }
 
-                rows.push({
-                    name: sub.name || subMarks?.courseName || '',
-                    code: sub.code || subMarks?.courseCode || '',
-                    credit: sub.credit,
-                    grade: sub.grade || '—',
-                    termId: sem.termId,
-                    termTitle: mappedTitle,
-                    attendance: matchedCourse?.attendance || null,
-                    type: 'semester',
-                    tgpa: sem.tgpa || termInfo?.tgpa || '—',
-                    cgpa: termInfo?.cgpa || '—',
-                    marks: subMarks?.marksBreakdown || []
+                    const subMarks = termMarks?.subjects?.find(ms => 
+                        ms.courseCode && sub.code &&
+                        ms.courseCode.toLowerCase().includes(sub.code.toLowerCase().split('-')[0])
+                    );
+
+                    let termInfo = (studentInfo?.TermwiseCGPA || []).find(t => String(t.term) === String(sem.termId));
+                    if (!termInfo) {
+                        const idx = isRoman(sem.termId) ? (romanToInt(sem.termId) - 1) : semIdx;
+                        if (idx >= 0 && idx < (studentInfo?.TermwiseCGPA || []).length) {
+                            termInfo = studentInfo.TermwiseCGPA[idx];
+                        }
+                    }
+
+                    const mappedTitle = termMapping[sem.termId] || `Sem ${sem.termId}`;
+
+                    rows.push({
+                        name: sub.name || subMarks?.courseName || '',
+                        code: sub.code || subMarks?.courseCode || '',
+                        credit: sub.credit,
+                        grade: sub.grade || '—',
+                        termId: termMarks?.termId || sem.termId,
+                        termTitle: mappedTitle,
+                        attendance: matchedCourse?.attendance || null,
+                        type: 'semester',
+                        tgpa: sem.tgpa || termInfo?.tgpa || '—',
+                        cgpa: termInfo?.cgpa || '—',
+                        marks: subMarks?.marksBreakdown || []
+                    });
                 });
             });
-        });
 
-        (resultData.rplGrades || []).forEach(grp => {
-            (grp.subjects || []).forEach(sub => {
-                const mappedTitle = termMapping[grp.termId] ? `RPL — ${termMapping[grp.termId]}` : `RPL — Sem ${grp.termId}`;
-                
-                // Find marks for this RPL subject
-                const termMarks = (marksData || []).find(tm => String(tm.termId) === String(grp.termId));
-                const subMarks = termMarks?.subjects?.find(ms => 
-                    ms.courseCode && sub.code &&
-                    ms.courseCode.toLowerCase().includes(sub.code.toLowerCase().split('-')[0])
-                );
+            (resultData.rplGrades || []).forEach((grp, grpIdx) => {
+                (grp.subjects || []).forEach(sub => {
+                    const mappedTitle = termMapping[grp.termId] ? `RPL — ${termMapping[grp.termId]}` : `RPL — Sem ${grp.termId}`;
+                    
+                    // Find marks for this RPL subject
+                    const regularMarks = (marksData || []).filter(tm => /^\d{6}$/.test(tm.termId));
+                    let termMarks = (marksData || []).find(tm => String(tm.termId) === String(grp.termId));
+                    if (!termMarks && isRoman(grp.termId)) {
+                        const idx = romanToInt(grp.termId) - 1;
+                        if (idx >= 0 && idx < regularMarks.length) {
+                            termMarks = regularMarks[idx];
+                        }
+                    }
+                    if (!termMarks && regularMarks.length > 0 && grpIdx < regularMarks.length) {
+                        termMarks = regularMarks[grpIdx];
+                    }
 
-                rows.push({
-                    name: sub.name || subMarks?.courseName || '',
-                    code: sub.code || subMarks?.courseCode || '',
-                    credit: sub.credit,
-                    grade: sub.grade || '—',
-                    termId: grp.termId,
-                    termTitle: mappedTitle,
-                    attendance: null,
-                    type: 'rpl',
-                    tgpa: null,
-                    cgpa: null,
-                    marks: subMarks?.marksBreakdown || []
+                    if (termMarks?.termId) {
+                        processedTermIds.add(String(termMarks.termId));
+                    }
+
+                    const subMarks = termMarks?.subjects?.find(ms => 
+                        ms.courseCode && sub.code &&
+                        ms.courseCode.toLowerCase().includes(sub.code.toLowerCase().split('-')[0])
+                    );
+
+                    rows.push({
+                        name: sub.name || subMarks?.courseName || '',
+                        code: sub.code || subMarks?.courseCode || '',
+                        credit: sub.credit,
+                        grade: sub.grade || '—',
+                        termId: termMarks?.termId || grp.termId,
+                        termTitle: mappedTitle,
+                        attendance: null,
+                        type: 'rpl',
+                        tgpa: null,
+                        cgpa: null,
+                        marks: subMarks?.marksBreakdown || []
+                    });
                 });
             });
-        });
+
+            // Process leftover marksData (backlog, RPL, etc.)
+            (marksData || []).forEach(term => {
+                if (processedTermIds.has(String(term.termId))) return;
+
+                (term.subjects || []).forEach(sub => {
+                    const matchedCourse = courses.find(c =>
+                        c.courseCode && sub.courseCode &&
+                        c.courseCode.toLowerCase().includes(sub.courseCode.toLowerCase().split('-')[0])
+                    );
+
+                    const termInfo = (studentInfo?.TermwiseCGPA || []).find(t => String(t.term) === String(term.termId));
+                    const mappedTitle = termMapping[term.termId] || term.termId;
+                    const isRpl = /r$/i.test(String(term.termId));
+
+                    rows.push({
+                        name: sub.courseName || '',
+                        code: sub.courseCode || '',
+                        credit: null,
+                        grade: '—',
+                        termId: term.termId,
+                        termTitle: mappedTitle,
+                        attendance: matchedCourse?.attendance || null,
+                        type: isRpl ? 'rpl' : 'backlog',
+                        tgpa: termInfo?.tgpa || '—',
+                        cgpa: termInfo?.cgpa || '—',
+                        marks: sub.marksBreakdown || []
+                    });
+                });
+            });
+        } else if (marksData && marksData.length > 0) {
+            // Fallback: Build from marksData and courses
+            marksData.forEach(term => {
+                (term.subjects || []).forEach(sub => {
+                    const matchedCourse = courses.find(c =>
+                        c.courseCode && sub.courseCode &&
+                        c.courseCode.toLowerCase().includes(sub.courseCode.toLowerCase().split('-')[0])
+                    );
+
+                    const termInfo = (studentInfo?.TermwiseCGPA || []).find(t => String(t.term) === String(term.termId));
+                    const mappedTitle = termMapping[term.termId] || `Sem ${term.termId}`;
+
+                    rows.push({
+                        name: sub.courseName || '',
+                        code: sub.courseCode || '',
+                        credit: null,
+                        grade: '—',
+                        termId: term.termId,
+                        termTitle: mappedTitle,
+                        attendance: matchedCourse?.attendance || null,
+                        type: 'semester',
+                        tgpa: termInfo?.tgpa || '—',
+                        cgpa: termInfo?.cgpa || '—',
+                        marks: sub.marksBreakdown || []
+                    });
+                });
+            });
+        }
 
         return rows;
     }, [resultData, courses, studentInfo, termMapping, marksData]);
 
     const semList = React.useMemo(() => {
         if (allSubjects.length === 0) return [];
-        const titles = [...new Set(allSubjects.map(s => s.termTitle))];
+        let titles = [...new Set(allSubjects.map(s => s.termTitle))];
+        if (viewMode === 'grades') {
+            titles = titles.filter(t => t.startsWith('Sem '));
+        }
         titles.sort((a, b) => {
             const isRplA = a.includes('RPL');
             const isRplB = b.includes('RPL');
-            if (isRplA && !isRplB) return 1;
+            if (isRplA && !isRplB) return 1; // RPL comes last
             if (!isRplA && isRplB) return -1;
+
+            const isSemA = a.startsWith('Sem ');
+            const isSemB = b.startsWith('Sem ');
+            
+            if (isSemA && !isSemB) return -1; // Sem X comes first
+            if (!isSemA && isSemB) return 1;
+            
+            if (isSemA && isSemB) {
+                const numA = parseInt(a.replace('Sem ', ''));
+                const numB = parseInt(b.replace('Sem ', ''));
+                return numB - numA; // Sem 5, Sem 4... (newest first)
+            }
+            
+            // Otherwise, both are raw term IDs, sort them descending numerically/alphabetically
             const numA = parseInt(a.match(/\d+/)?.[0] || '0');
             const numB = parseInt(b.match(/\d+/)?.[0] || '0');
-            return numB - numA;
+            if (numA !== numB) {
+                return numB - numA;
+            }
+            return String(b).localeCompare(String(a));
         });
         return titles;
-    }, [allSubjects]);
+    }, [allSubjects, viewMode]);
 
     useEffect(() => {
-        if (!activeSem && semList.length > 0) {
+        if (semList.length > 0 && (!activeSem || !semList.includes(activeSem))) {
             setActiveSem(semList[0]);
         }
     }, [semList, activeSem]);
@@ -416,7 +612,7 @@ const Grades = () => {
                                                             <h3 className="text-3xl font-black">{group.tgpa} <span className="text-sm font-medium text-gray-400">TGPA</span></h3>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sem ID</p>
                                                             <p className="text-lg font-bold">{group.termId}</p>
                                                         </div>
                                                     </div>
@@ -435,10 +631,11 @@ const Grades = () => {
                                                     
                                                     // Render Marks View
                                                     if (viewMode === 'marks') {
-                                                        const totalObtained = sub.marks.reduce((sum, m) => {
-                                                            const weightageMatch = m.weightage.match(/(\d+\.?\d*)/);
-                                                            return sum + (weightageMatch ? parseFloat(weightageMatch[1]) : 0);
-                                                        }, 0);
+                                                        const totalObtained = Math.round(sub.marks.reduce((sum, m) => {
+                                                            const parts = (m.weightage || '').split('/');
+                                                            const val = parseFloat(parts[0]);
+                                                            return sum + (isNaN(val) ? 0 : val);
+                                                        }, 0) * 100) / 100;
 
                                                         return (
                                                             <div key={`${gIdx}-${idx}`} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-4 shadow-sm animate-in fade-in duration-300">

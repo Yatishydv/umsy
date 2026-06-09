@@ -91,6 +91,76 @@ export async function getStudentInfo(auth) {
 }
 
 /**
+ * Get student basic information for V04 token session (WebMethods only)
+ */
+export async function getStudentInfoV04(auth) {
+    const response = await fetch(`${API_BASE_URL}/v04/student-info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch student information');
+    return data;
+}
+
+/**
+ * Get student dashboard info for V04 token session directly (WebMethods only)
+ */
+export async function getStudentDashboardV04(auth) {
+    const response = await fetch(`${API_BASE_URL}/v04/student-dashboard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch student dashboard info');
+    return data;
+}
+
+/**
+ * Get student basic info for V04 token session directly (WebMethods only)
+ */
+export async function getStudentBasicInfoV04(auth) {
+    const response = await fetch(`${API_BASE_URL}/v04/student-basic-info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch student basic info');
+    return data;
+}
+
+/**
+ * Get student result for V04 token session directly (WebMethods only)
+ */
+export async function getResultV04(auth) {
+    const response = await fetch(`${API_BASE_URL}/v04/result`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch result');
+    return data;
+}
+
+/**
+ * Get student marks for V04 token session directly (WebMethods only)
+ */
+export async function getMarksV04(auth) {
+    const response = await fetch(`${API_BASE_URL}/v04/marks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch marks');
+    return data;
+}
+
+/**
  * Get student attendance data
  */
 export async function getAttendance(auth) {
@@ -292,6 +362,35 @@ export async function saveSession(regno, cookies) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to save session');
+    return data;
+}
+
+/**
+ * Token-based login using registration number and date of birth
+ * Validates against results.json and fetches UMS session cookies via stored token
+ */
+export async function tokenLogin(regno, dob) {
+    const response = await fetch(`${API_BASE_URL}/token-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regno, dob }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Login failed');
+    return data;
+}
+
+/**
+ * Token-based login for V04 using registration number only
+ */
+export async function tokenLoginV04(regno) {
+    const response = await fetch(`${API_BASE_URL}/v04/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regno }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Login failed');
     return data;
 }
 

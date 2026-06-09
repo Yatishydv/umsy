@@ -18,7 +18,10 @@ export async function fetchTermWiseMarks(client) {
         }
     );
 
-    const html = response.data.d;
+    const html = response.data?.d;
+    if (!html || typeof html !== 'string') {
+        throw new Error('Invalid response from UMS: Expected HTML string. Your session might have expired.');
+    }
     const $ = cheerio.load(html);
 
     const terms = [];

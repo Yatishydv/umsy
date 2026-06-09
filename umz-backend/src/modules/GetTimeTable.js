@@ -10,9 +10,18 @@ export async function fetchTimeTable(client, termId) {
     // console.log(`📅 Fetching Student Timetable for Term: ${termId}...`);
 
     try {
+        // Establish/initialize the session state for the timetable page
+        await client.get('https://ums.lpu.in/lpuums/frmMyCurrentTimeTable.aspx', {
+            headers: {
+                'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+            }
+        }).catch(err => {
+            console.warn('⚠️ Timetable GET page setup failed:', err.message);
+        });
+
         const response = await client.post(
             'https://ums.lpu.in/lpuums/frmMyCurrentTimeTable.aspx/GetTimeTable',
-            JSON.stringify({ TermId: termId }),
+            { TermId: termId },
             {
                 headers: {
                     'Content-Type': 'application/json; charset=UTF-8',
@@ -27,7 +36,10 @@ export async function fetchTimeTable(client, termId) {
             throw new Error('Invalid response from server');
         }
 
-        const html = response.data.d;
+        const html = response.data?.d;
+        if (!html || typeof html !== 'string') {
+            throw new Error('Invalid response from UMS: Expected HTML string. Your session might have expired.');
+        }
         const $ = cheerio.load(html);
 
         const timetable = {};

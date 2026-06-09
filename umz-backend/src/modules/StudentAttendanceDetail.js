@@ -15,9 +15,9 @@ export async function fetchStudentAttendanceDetail(client) {
             }
         );
 
-        const html = response.data.d;
+        const html = response.data?.d;
 
-        if (!html) {
+        if (!html || typeof html !== 'string') {
             // console.error('❌ No HTML data received from attendance API');
             return [];
         }
