@@ -4,7 +4,8 @@
     "type": "module",
     "main": "src/index.js",
     "scripts": {
-        "start": "node src/index.js",
+        "start": "node server.js",
+        "cli": "node src/index.js",
         "server": "node server.js",
         "postinstall": "npx playwright install chromium"
     },
