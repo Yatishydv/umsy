@@ -161,6 +161,20 @@ export async function getMarksV04(auth) {
 }
 
 /**
+ * Get student messages for V04 token session directly (WebMethods only)
+ */
+export async function getMessagesV04(auth) {
+    const response = await fetch(`${API_BASE_URL}/v04/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch messages');
+    return data;
+}
+
+/**
  * Get student attendance data
  */
 export async function getAttendance(auth) {

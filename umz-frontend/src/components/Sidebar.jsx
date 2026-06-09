@@ -22,7 +22,7 @@ import {
     Home,
     Sparkles
 } from 'lucide-react';
-import { startLogin, completeLogin, getStudentInfo } from '../services/api';
+import { startLogin, completeLogin, getStudentInfo, tokenLoginV04, getStudentInfoV04, getResultV04, getMarksV04, getCourses, getAttendanceDetails, getTimeTable } from '../services/api';
 import CaptchaModal from './CaptchaModal';
 import PrivacySettingsModal from './PrivacySettingsModal';
 
@@ -121,7 +121,7 @@ const Sidebar = () => {
         });
 
         // Redirect to login
-        navigate('/newlogin');
+        navigate('/v04/login');
     };
 
     const handleResync = async () => {
@@ -138,7 +138,7 @@ const Sidebar = () => {
                     console.log('🔍 Testing cookie validity...');
 
                     // Try a small API call to test if cookies are valid
-                    const testResult = await getStudentInfo(cookies);
+                    await getStudentInfo(cookies);
 
                     // Cookies are valid! Just clear cache and reload
                     console.log('✅ Cookies valid, clearing cache and reloading');
@@ -153,7 +153,7 @@ const Sidebar = () => {
                     return;
                 } catch (testError) {
                     // Cookies are expired or invalid
-                    console.log('❌ Cookies expired/invalid:', testError.message);
+                    console.log('❌ Cookies expired/invalid, starting V04 token resync:', testError.message);
                     setCaptchaLoading(false);
 
                     // Remove expired cookies and session-specific data
@@ -161,30 +161,50 @@ const Sidebar = () => {
                     localStorage.removeItem('umz_result_data');
                     localStorage.removeItem('umz_ai_buddy_history');
 
-                    // Fall through to login flow below
+                    // Fall through to V04 token login flow below
                 }
             }
 
             // No cookies OR expired cookies - need to re-authenticate
-            // Get stored credentials
             const savedRegno = localStorage.getItem('umz_regno');
-            const savedPassword = localStorage.getItem('umz_password');
 
-            if (!savedRegno || !savedPassword) {
-                // No credentials stored, logout and go to login page
-                alert('Session expired and no stored credentials found. Please login again.');
+            if (!savedRegno) {
+                alert('Session expired. Please login again.');
                 handleLogout();
                 return;
             }
 
-            // Start login process with stored credentials
+            // Perform token-based login process of refetching the regno with the token
             setCaptchaLoading(true);
-            const result = await startLogin(savedRegno, savedPassword);
+            const result = await tokenLoginV04(savedRegno);
 
-            setSessionId(result.sessionId);
-            setCaptchaImage(result.captchaImage);
-            setShowCaptchaModal(true);
-            setCaptchaLoading(false);
+            if (result.success && result.cookies) {
+                localStorage.setItem('umz_cookies', result.cookies);
+                localStorage.setItem('umz_is_v04', 'true');
+
+                // Clear stale cache
+                localStorage.removeItem('umz_student_info');
+                localStorage.removeItem('umz_attendance_data');
+                localStorage.removeItem('umz_marks_data');
+                localStorage.removeItem('umz_courses_data');
+                localStorage.removeItem('umz_timetable_data');
+                localStorage.removeItem('umz_result_data');
+
+                // Fetch student basic profile information (includes messages and termwise CGPA)
+                try {
+                    const infoRes = await getStudentInfoV04(result.cookies);
+                    if (infoRes?.data) {
+                        localStorage.setItem('umz_student_info', JSON.stringify(infoRes.data));
+                    }
+                } catch (fetchErr) {
+                    console.warn('⚠️ Profile fetch on resync failed:', fetchErr.message);
+                }
+
+                setCaptchaLoading(false);
+                window.location.reload();
+            } else {
+                throw new Error('Token login failed');
+            }
         } catch (error) {
             setCaptchaLoading(false);
             console.error('Error during resync:', error);

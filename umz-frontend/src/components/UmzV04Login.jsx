@@ -4,7 +4,7 @@ import logoUmz from '../assets/logoUMz.png';
 import loginImg1 from '../assets/login1.jpg';
 import loginImg2 from '../assets/login2.jpg';
 import loginImg3 from '../assets/login3.jpg';
-import { tokenLoginV04, saveSession, getStudentInfoV04, getResultV04, getMarksV04, getCourses, getAttendanceDetails, getTimeTable } from '../services/api';
+import { tokenLoginV04, saveSession, getStudentInfoV04, getResultV04, getMarksV04, getCourses, getAttendanceDetails, getTimeTable, getMessagesV04 } from '../services/api';
 
 const UmzV04Login = () => {
     const navigate = useNavigate();
@@ -18,6 +18,7 @@ const UmzV04Login = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [statusMsg, setStatusMsg] = useState('');
+    const [progress, setProgress] = useState(0);
 
     const slides = [
         { id: 'Instant Login', image: loginImg1 },
@@ -56,6 +57,7 @@ const UmzV04Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setProgress(0);
 
         const cleanRegno = regno.trim();
 
@@ -67,8 +69,15 @@ const UmzV04Login = () => {
         setLoading(true);
         setStatusMsg('Verifying credentials...');
 
+        // Smooth start progress interval up to 20%
+        const startProgressInterval = setInterval(() => {
+            setProgress(prev => Math.min(prev + 1, 20));
+        }, 120);
+
         try {
             const result = await tokenLoginV04(cleanRegno);
+            clearInterval(startProgressInterval);
+            setProgress(20);
 
             if (result.success && result.cookies) {
                 setStatusMsg('Setting up your session...');
@@ -102,50 +111,25 @@ const UmzV04Login = () => {
                     console.warn('⚠️ Could not save session to backend:', saveErr.message);
                 }
 
-                // Pre-fetch all required student data in parallel to eliminate UI lag
-                setStatusMsg('Loading your profile, grades, and attendance...');
-                try {
-                    const [infoRes, resultRes, marksRes, coursesRes, attendanceRes, timetableRes] = await Promise.all([
-                        getStudentInfoV04(result.cookies),
-                        getResultV04(result.cookies),
-                        getMarksV04(result.cookies),
-                        getCourses(result.cookies),
-                        getAttendanceDetails(result.cookies),
-                        getTimeTable(result.cookies)
-                    ]);
+                // Fetch student basic profile information (includes messages and termwise CGPA)
+                setStatusMsg('Loading your profile...');
+                setProgress(40);
 
+                try {
+                    const infoRes = await getStudentInfoV04(result.cookies);
+                    setProgress(80);
                     if (infoRes?.data) {
                         localStorage.setItem('umz_student_info', JSON.stringify(infoRes.data));
                     }
-                    if (resultRes?.data) {
-                        localStorage.setItem('umz_result_data', JSON.stringify(resultRes.data));
-                    }
-                    if (marksRes?.data) {
-                        localStorage.setItem('umz_marks_data', JSON.stringify(marksRes.data));
-                    }
-                    if (coursesRes?.data) {
-                        localStorage.setItem('umz_courses_data', JSON.stringify(coursesRes.data));
-                    }
-                    if (attendanceRes?.data) {
-                        const rawData = attendanceRes.data || [];
-                        const seenFetched = new Set();
-                        const uniqueData = rawData.filter(item => {
-                            if (seenFetched.has(item.courseCode)) return false;
-                            seenFetched.add(item.courseCode);
-                            return true;
-                        });
-                        localStorage.setItem('umz_attendance_data', JSON.stringify(uniqueData));
-                    }
-                    if (timetableRes?.data) {
-                        localStorage.setItem('umz_timetable_data', JSON.stringify(timetableRes.data));
-                    }
                 } catch (fetchErr) {
-                    console.warn('⚠️ Pre-fetch on login failed:', fetchErr.message);
+                    console.warn('⚠️ Profile fetch on login failed:', fetchErr.message);
                 }
 
+                setProgress(100);
                 navigate('/dashboard');
             }
         } catch (err) {
+            clearInterval(startProgressInterval);
             setError(err.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
@@ -241,22 +225,41 @@ const UmzV04Login = () => {
 
                             {/* Loading State */}
                             {loading && (
-                                <div className="flex flex-col items-center justify-center space-y-4 py-8 animate-in fade-in zoom-in duration-300">
-                                    <div className="relative">
-                                        <div className="w-16 h-16 rounded-full border-4 border-muted/20"></div>
-                                        <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
+                                <div className="flex flex-col items-center justify-center space-y-6 py-8 animate-in fade-in zoom-in duration-300">
+                                    <div className="relative w-24 h-24">
+                                        <svg className="w-full h-full transform -rotate-90">
+                                            <circle
+                                                cx="48"
+                                                cy="48"
+                                                r="40"
+                                                className="stroke-muted/20"
+                                                strokeWidth="6"
+                                                fill="transparent"
+                                            />
+                                            <circle
+                                                cx="48"
+                                                cy="48"
+                                                r="40"
+                                                className="stroke-primary transition-all duration-300 ease-out"
+                                                strokeWidth="6"
+                                                fill="transparent"
+                                                strokeDasharray={251.2}
+                                                strokeDashoffset={251.2 - (251.2 * progress) / 100}
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                            <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                            </svg>
+                                            <span className="text-lg font-black text-foreground">
+                                                {progress}%
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="text-center space-y-1">
-                                        <p className="text-sm font-medium text-foreground tracking-tight">
-                                            {statusMsg || 'Authenticating...'}
+                                        <p className="text-sm font-bold text-foreground tracking-tight">
+                                            {statusMsg || 'Connecting...'}
                                         </p>
                                         <p className="text-xs text-muted-foreground animate-pulse">
-                                            This usually takes a few seconds
+                                            Please wait while we sync your data
                                         </p>
                                     </div>
                                 </div>
@@ -301,26 +304,7 @@ const UmzV04Login = () => {
                                 </form>
                             )}
 
-                            {/* Alternative login methods */}
-                            <div className="pt-2 space-y-2">
-                                <div className="relative">
-                                    <div className="absolute inset-0 flex items-center">
-                                        <span className="w-full border-t border-border/50" />
-                                    </div>
-                                    <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-card px-2 text-muted-foreground/50 text-[10px] tracking-widest">or</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-center gap-4 text-xs">
-                                    <a href="/newlogin" className="text-muted-foreground hover:text-foreground transition-colors">
-                                        Password Login
-                                    </a>
-                                    <span className="text-border">•</span>
-                                    <a href="/cookie" className="text-muted-foreground hover:text-foreground transition-colors">
-                                        Session Gateway
-                                    </a>
-                                </div>
-                            </div>
+
                         </div>
                     </div>
                 </div>

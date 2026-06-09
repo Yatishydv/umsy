@@ -93,14 +93,12 @@ const Attendance = () => {
         return { present, absent, total };
     }, [attendanceData]);
 
-    const trendData = [
-        { month: 'Dec', value: 55 },
-        { month: 'Jan', value: 68 },
-        { month: 'Feb', value: 78 },
-        { month: 'Mar', value: 76 },
-        { month: 'Apr', value: 88 },
-        { month: 'May', value: Number(overallAttendance()) },
-    ];
+    const trendData = React.useMemo(() => {
+        return attendanceData.map(item => ({
+            subject: item.courseCode || '',
+            value: Math.round(getPercentage(item))
+        }));
+    }, [attendanceData]);
 
     const rplSubjectMap = React.useMemo(() => {
         try {
@@ -255,7 +253,7 @@ const Attendance = () => {
                                                 </defs>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                                                 <XAxis 
-                                                    dataKey="month" 
+                                                    dataKey="subject" 
                                                     axisLine={false} 
                                                     tickLine={false} 
                                                     tick={{fontSize: 10, fill: '#9CA3AF', fontWeight: 600}} 

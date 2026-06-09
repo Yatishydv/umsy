@@ -791,17 +791,25 @@ const handleStudentDashboardV04 = async (req, res) => {
         }
 
         const axiosClient = createAxiosClient(cookies);
-        const response = await axiosClient.post(
-            'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetStudentBasicInformation',
-            {},
-            {
-                headers: {
-                    'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
-                }
-            }
-        );
 
-        const d = response.data?.d || [];
+        // Fetch basic info and messages in parallel
+        const [infoResponse, messages] = await Promise.all([
+            axiosClient.post(
+                'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetStudentBasicInformation',
+                {},
+                {
+                    headers: {
+                        'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+                    }
+                }
+            ),
+            fetchStudentMessages(axiosClient).catch(err => {
+                console.warn('⚠️ Could not fetch V04 messages in dashboard:', err.message);
+                return [];
+            })
+        ]);
+
+        const d = infoResponse.data?.d || [];
         const studentInfo = d[0] || {};
         const filteredInfo = {};
         for (const [key, value] of Object.entries(studentInfo)) {
@@ -809,6 +817,9 @@ const handleStudentDashboardV04 = async (req, res) => {
                 filteredInfo[key] = value;
             }
         }
+
+        // Include messages in data
+        filteredInfo.Messages = messages;
 
         return res.json({
             success: true,
@@ -828,6 +839,38 @@ const handleStudentDashboardV04 = async (req, res) => {
 
 app.post('/api/v04/student-dashboard', handleStudentDashboardV04);
 app.post('/api/v04/student-basic-info', handleStudentDashboardV04);
+
+/**
+ * POST /api/v04/messages
+ * V04 Student Messages: calls the GetStudentMessages WebMethod directly with cookies and parses the HTML
+ */
+app.post('/api/v04/messages', async (req, res) => {
+    try {
+        const cookies = await getEffectiveCookies(req);
+
+        if (!cookies) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cookies or registration number are required'
+            });
+        }
+
+        const axiosClient = createAxiosClient(cookies);
+        const messages = await fetchStudentMessages(axiosClient);
+
+        return res.json({
+            success: true,
+            data: messages
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching V04 student messages:', error.message);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 /**
  * POST /api/v04/result

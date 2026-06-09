@@ -34,7 +34,7 @@ const Profile = () => {
         Object.keys(localStorage).forEach(key => {
             if (!keep.has(key)) localStorage.removeItem(key);
         });
-        navigate('/newlogin');
+        navigate('/v04/login');
     };
 
     return (
