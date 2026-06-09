@@ -38,7 +38,7 @@ import UserSession from './src/models/UserSession.js';
 // ── Load results.json into in-memory Map for O(1) token lookups ───────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const resultsPath = path.resolve(__dirname, '../results.json');
+const resultsPath = path.resolve(__dirname, './results.json');
 const studentTokenMap = new Map();
 try {
     const resultsData = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
