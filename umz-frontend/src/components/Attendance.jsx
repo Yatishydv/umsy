@@ -1,11 +1,138 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, X, Calculator, BarChart2, ChevronLeft, CalendarCheck2, TrendingUp, BookOpen, Star } from 'lucide-react';
+import { ChevronRight, X, Calculator, BarChart2, ChevronLeft, CalendarCheck2, TrendingUp, BookOpen, Star, ArrowRight } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import Sidebar from './Sidebar';
 import { getAttendanceDetails } from '../services/api';
 import AttendanceCalculator from './AttendanceCalculator';
 import MobileAttendanceCalculator from './MobileAttendanceCalculator';
+
+const AttendanceSkeleton = () => (
+    <div className="flex-1 pb-24 px-4 pt-6 space-y-8 animate-pulse">
+        {/* Circular Chart Skeleton */}
+        <div className="flex flex-col items-center justify-center">
+            <div className="relative w-48 h-48 rounded-full border-[12px] border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center">
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800/80 rounded-md mb-2" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+            </div>
+        </div>
+
+        {/* Summary Stats Card Skeleton */}
+        <div className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-5">
+            <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-800/80">
+                <div className="text-center space-y-2 flex flex-col items-center justify-center">
+                    <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-5 w-12 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                </div>
+                <div className="text-center space-y-2 flex flex-col items-center justify-center">
+                    <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-5 w-12 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                </div>
+                <div className="text-center space-y-2 flex flex-col items-center justify-center">
+                    <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-5 w-12 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                </div>
+            </div>
+        </div>
+
+        {/* Attendance Trend Skeleton */}
+        <div className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+                <TrendingUp className="h-4 w-4 text-gray-200 dark:text-gray-800" />
+                <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+            </div>
+            <div className="h-48 w-full bg-white dark:bg-gray-800/50 rounded-3xl border border-gray-100 dark:border-gray-800/80 p-4 flex flex-col justify-end space-y-3">
+                <div className="flex-1 border-b border-l border-gray-100 dark:border-gray-800/60 relative overflow-hidden">
+                    <svg className="absolute inset-0 w-full h-full text-gray-200 dark:text-gray-800/40" preserveAspectRatio="none">
+                        <path d="M 0 60 Q 30 50 60 70 T 120 60 T 180 80 T 240 60 T 300 70 T 360 60 L 360 100 L 0 100 Z" fill="currentColor" opacity="0.1" />
+                        <path d="M 0 60 Q 30 50 60 70 T 120 60 T 180 80 T 240 60 T 300 70 T 360 60" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+                    </svg>
+                </div>
+                <div className="flex justify-between px-2">
+                    <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                    <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-800/80 rounded" />
+                </div>
+            </div>
+        </div>
+
+        {/* Subject Wise Attendance Skeleton */}
+        <div className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+                <BookOpen className="h-4 w-4 text-gray-200 dark:text-gray-800" />
+                <div className="h-4 w-44 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+            </div>
+
+            {/* Filter pills skeleton */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
+                <div className="h-7 w-12 bg-gray-200 dark:bg-gray-800/80 rounded-full shrink-0" />
+                <div className="h-7 w-20 bg-gray-200 dark:bg-gray-800/80 rounded-full shrink-0" />
+                <div className="h-7 w-20 bg-gray-200 dark:bg-gray-800/80 rounded-full shrink-0" />
+                <div className="h-7 w-20 bg-gray-200 dark:bg-gray-800/80 rounded-full shrink-0" />
+            </div>
+
+            {/* Subject card skeletons */}
+            <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-2 flex-1">
+                                <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                                <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                            </div>
+                            <div className="h-5 w-10 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <div className="h-2.5 w-24 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                                <div className="h-2.5 w-12 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                            </div>
+                            <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800/80 rounded-full" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
+const DesktopAttendanceSkeleton = () => (
+    <div className="hidden lg:block max-w-6xl mx-auto px-6 lg:px-10 py-8 space-y-6 animate-pulse">
+        <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+                <div className="h-7 w-40 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+            </div>
+            <div className="w-32 h-16 bg-gray-200 dark:bg-gray-800/80 rounded-xl" />
+        </div>
+
+        <div className="h-11 w-full bg-gray-200 dark:bg-gray-800/80 rounded-xl" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800/80 rounded-xl p-5 space-y-4">
+                    <div className="flex justify-between items-start">
+                        <div className="space-y-2 flex-1 pr-4">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                            <div className="h-3 w-full bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                        </div>
+                        <div className="h-5 w-16 bg-gray-200 dark:bg-gray-800/80 rounded-full" />
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-baseline">
+                            <div className="h-6 w-12 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                        </div>
+                        <div className="h-2 w-full bg-gray-200 dark:bg-gray-800/80 rounded-full" />
+                    </div>
+                    <div className="h-8 w-full bg-gray-200 dark:bg-gray-800/80 rounded-lg" />
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 const Attendance = () => {
     const navigate = useNavigate();
@@ -137,13 +264,38 @@ const Attendance = () => {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-plus-jakarta">
                 <Sidebar />
-                <main className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-gray-800 dark:border-white border-r-transparent" />
-                        <p className="mt-3 text-sm text-gray-400">Loading attendance…</p>
+
+                <main className="flex-1 overflow-y-auto lg:p-0">
+                    {/* MOBILE SKELETON */}
+                    <div className="lg:hidden flex flex-col min-h-full">
+                        {/* Top bar */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-30">
+                            <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl active:bg-gray-100 dark:active:bg-gray-800 transition-colors">
+                                <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                            </button>
+                            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">Attendance</h1>
+                            <div className="w-9" />
+                        </div>
+
+                        {/* Segmented Control Tabs */}
+                        <div className="px-4 pt-4">
+                            <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+                                <div className="flex-1 py-2 rounded-xl text-[10px] font-bold text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm">
+                                    Overall
+                                </div>
+                                <div className="flex-1 py-2 rounded-xl text-[10px] font-bold text-center text-gray-400">
+                                    Calculator
+                                </div>
+                            </div>
+                        </div>
+
+                        <AttendanceSkeleton />
                     </div>
+
+                    {/* DESKTOP SKELETON */}
+                    <DesktopAttendanceSkeleton />
                 </main>
             </div>
         );

@@ -1,5 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bell, ChevronRight, Tag, Megaphone, DollarSign, Briefcase, BookOpen, Info } from 'lucide-react';
+import { X, Bell, ChevronRight, Tag, Megaphone, DollarSign, Briefcase, BookOpen, Info, ExternalLink } from 'lucide-react';
+
+/** Splits text on URLs and returns mixed array of strings + clickable <a> elements */
+const renderWithLinks = (text) => {
+    if (!text) return null;
+    const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(URL_REGEX);
+    return parts.map((part, i) => {
+        if (URL_REGEX.test(part)) {
+            URL_REGEX.lastIndex = 0;
+            return (
+                <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-0.5 text-blue-500 dark:text-blue-400 hover:text-blue-600 underline underline-offset-2 break-all font-medium"
+                >
+                    {part}
+                    <ExternalLink className="h-3 w-3 flex-shrink-0 inline" />
+                </a>
+            );
+        }
+        URL_REGEX.lastIndex = 0;
+        return part;
+    });
+};
 
 /* Derive a category + icon from message fields */
 const categorize = (msg) => {
@@ -121,7 +148,7 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
                                     {/* Content preview / expanded */}
                                     {msg.content && (
                                         <p className={`text-xs text-gray-500 dark:text-gray-400 mt-2.5 leading-relaxed pl-12 transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}>
-                                            {msg.content}
+                                            {renderWithLinks(msg.content)}
                                         </p>
                                     )}
 

@@ -395,13 +395,13 @@ export async function tokenLogin(regno, dob) {
 }
 
 /**
- * Token-based login for V04 using registration number only
+ * Token-based login for V04 using registration number and password
  */
-export async function tokenLoginV04(regno) {
+export async function tokenLoginV04(regno, password) {
     const response = await fetch(`${API_BASE_URL}/v04/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ regno }),
+        body: JSON.stringify({ regno, password }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Login failed');

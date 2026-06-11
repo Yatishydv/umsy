@@ -4,6 +4,83 @@ import { BookOpen, Search, SlidersHorizontal, X, GraduationCap, Tag, Star, Filte
 import Sidebar from './Sidebar';
 import { getCourses, getResult, getResultV04, getMarks, getMarksV04 } from '../services/api';
 
+const GradesSkeleton = () => (
+    <div className="flex-1 pb-24 px-4 pt-6 space-y-5 animate-pulse">
+        {/* Term Performance Card Skeleton */}
+        <div className="bg-slate-900 dark:bg-slate-950 rounded-3xl p-5 text-white relative overflow-hidden space-y-4">
+            <div className="flex items-center justify-between">
+                <div className="space-y-1.5">
+                    <div className="h-2.5 w-24 bg-slate-800 rounded" />
+                    <div className="h-8 w-20 bg-slate-800 rounded-md" />
+                </div>
+                <div className="text-right space-y-1.5 flex flex-col items-end">
+                    <div className="h-2.5 w-12 bg-slate-800 rounded" />
+                    <div className="h-5 w-20 bg-slate-800 rounded-md" />
+                </div>
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="h-3 w-16 bg-slate-800 rounded" />
+                <div className="h-3 w-20 bg-slate-800 rounded" />
+            </div>
+            <GraduationCap className="absolute -right-4 -bottom-4 h-24 w-24 text-white opacity-5 rotate-12" />
+        </div>
+
+        {/* Subject Card Skeletons */}
+        <div className="space-y-3">
+            {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-4 flex items-center justify-between gap-4 relative overflow-hidden">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-200 dark:bg-gray-700" />
+                    <div className="flex-1 min-w-0 space-y-2.5 pl-2">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded" />
+                            <div className="h-3.5 w-12 bg-gray-200 dark:bg-gray-800 rounded" />
+                        </div>
+                        <div className="h-4 w-5/6 bg-gray-200 dark:bg-gray-800 rounded" />
+                        <div className="h-3 w-20 bg-gray-200 dark:bg-gray-800 rounded" />
+                    </div>
+                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 border border-gray-150 dark:border-gray-700 flex flex-col items-center justify-center space-y-1">
+                        <div className="h-3 w-3 bg-gray-200 dark:bg-gray-700 rounded" />
+                        <div className="h-2 w-6 bg-gray-200 dark:bg-gray-700 rounded" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const DesktopGradesSkeleton = () => (
+    <div className="hidden lg:block max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-6 animate-pulse">
+        <div className="flex justify-between items-start">
+            <div className="space-y-2">
+                <div className="h-7 w-48 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800/80 rounded-md" />
+            </div>
+            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-800/80 rounded-xl" />
+        </div>
+
+        <div className="h-11 w-full bg-gray-200 dark:bg-gray-800/80 rounded-xl" />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800/80 rounded-2xl p-5 flex items-center justify-between gap-4">
+                    <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-20 bg-gray-200 dark:bg-gray-800 rounded-md" />
+                            <div className="h-3.5 w-16 bg-gray-200 dark:bg-gray-800 rounded-md" />
+                        </div>
+                        <div className="h-4.5 w-5/6 bg-gray-200 dark:bg-gray-800 rounded-md" />
+                        <div className="h-3.5 w-24 bg-gray-200 dark:bg-gray-800 rounded-md" />
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-gray-150 dark:bg-gray-800 flex flex-col items-center justify-center space-y-1">
+                        <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
+                        <div className="h-2 w-6 bg-gray-200 dark:bg-gray-700 rounded" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
 // Helpers for matching Roman numeral term IDs
 const isRoman = (str) => typeof str === 'string' && /^[IVXivx]+$/.test(str);
 
@@ -440,13 +517,67 @@ const Grades = () => {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-plus-jakarta">
                 <Sidebar />
-                <main className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-gray-800 dark:border-white border-r-transparent" />
-                        <p className="mt-3 text-sm text-gray-400">Loading records…</p>
+
+                <main className="flex-1 overflow-y-auto lg:p-0">
+                    {/* MOBILE SKELETON */}
+                    <div className="lg:hidden flex flex-col min-h-full">
+                        {/* Top bar */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-30">
+                            <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl active:bg-gray-100 dark:active:bg-gray-800 transition-colors">
+                                <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                            </button>
+                            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+                                {isMarksPath ? 'Marks Section' : 'Grades Section'}
+                            </h1>
+                            <div className="w-9" />
+                        </div>
+
+                        {/* View Switcher & Search Bar */}
+                        <div className="px-4 pt-4 pb-2 space-y-3">
+                            <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+                                <div className="flex-1 py-2.5 rounded-xl text-[11px] font-bold text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm flex items-center justify-center gap-2">
+                                    <LayoutGrid className="h-3.5 w-3.5" />
+                                    Grades
+                                </div>
+                                <div className="flex-1 py-2.5 rounded-xl text-[11px] font-bold text-center text-gray-400 flex items-center justify-center gap-2">
+                                    <FileText className="h-3.5 w-3.5" />
+                                    Marks
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl px-3 py-2.5 shadow-sm">
+                                    <Search className="h-4 w-4 text-gray-400" />
+                                    <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sem Tabs Placeholder */}
+                        <div className="px-4 pb-3">
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 pt-1 animate-pulse">
+                                {['Sem 6', 'Sem 5', 'Sem 4', 'Sem 3'].map((s, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold ${
+                                            idx === 1
+                                                ? 'bg-gray-900 text-white dark:bg-gray-800'
+                                                : 'bg-gray-150 dark:bg-gray-800/40 text-gray-400'
+                                        }`}
+                                    >
+                                        {s}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <GradesSkeleton />
                     </div>
+
+                    {/* DESKTOP SKELETON */}
+                    <DesktopGradesSkeleton />
                 </main>
             </div>
         );

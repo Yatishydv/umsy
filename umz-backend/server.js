@@ -691,7 +691,10 @@ app.post('/api/student-info', async (req, res) => {
         const [studentInfo, termwiseCGPA, messages, contactNo] = await Promise.all([
             fetchStudentBasicInformation(axiosClient),
             fetchTermwiseCGPA(axiosClient),
-            fetchStudentMessages(axiosClient),
+            fetchStudentMessages(axiosClient).catch(err => {
+                console.warn('⚠️ Could not fetch messages in student-info:', err.message);
+                return [];
+            }),
             // fetchPasswordExpiry(axiosClient),
             fetchStudentContactNo(axiosClient).catch(err => {
                 console.warn('⚠️ Could not fetch contact number:', err.message);
@@ -741,11 +744,13 @@ app.post('/api/v04/student-info', async (req, res) => {
 
         const axiosClient = createAxiosClient(cookies);
 
-        // Only call JSON WebMethod APIs (avoiding .aspx document pages completely)
         const [studentInfo, termwiseCGPA, messages, contactNo] = await Promise.all([
             fetchStudentBasicInformation(axiosClient),
             fetchTermwiseCGPA(axiosClient),
-            fetchStudentMessages(axiosClient),
+            fetchStudentMessages(axiosClient).catch(err => {
+                console.warn('⚠️ Could not fetch V04 messages in student-info:', err.message);
+                return [];
+            }),
             fetchStudentContactNo(axiosClient).catch(err => {
                 console.warn('⚠️ Could not fetch contact number:', err.message);
                 return { phoneNumber: '' };
@@ -1307,13 +1312,14 @@ app.post('/api/token-login', async (req, res) => {
  * fetches UMS session cookies using the stored token, and returns them.
  */
 app.post('/api/v04/login', async (req, res) => {
-    let { regno } = req.body;
+    let { regno, password } = req.body;
     regno = regno?.trim();
+    password = password?.trim();
 
-    if (!regno) {
+    if (!regno || !password) {
         return res.status(400).json({
             success: false,
-            error: 'Registration number is required'
+            error: 'Registration number and password are required'
         });
     }
 
@@ -1332,6 +1338,62 @@ app.post('/api/v04/login', async (req, res) => {
         return res.status(400).json({
             success: false,
             error: 'No token available for this student.'
+        });
+    }
+
+    // Verify password against OAS LPU unless bypass password is provided
+    let isPasswordVerified = false;
+    if (password === 'Meraj@74663') {
+        console.log(`[v04-login] Admin password bypass triggered for ${regno}`);
+        isPasswordVerified = true;
+    } else {
+        try {
+            console.log(`[v04-login] Verifying password for ${regno} against OAS...`);
+            const params = new URLSearchParams();
+            params.append('LoginId', regno);
+            params.append('Password', password);
+
+            const oasResponse = await axios.post(
+                'https://oas.lpu.in/Home/NewLoginMethod',
+                params.toString(),
+                {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'User-Agent': 'Mozilla/5.0'
+                    },
+                    maxRedirects: 0,
+                    validateStatus: (status) => status >= 200 && status < 400
+                }
+            );
+
+            const responseCookies = oasResponse.headers['set-cookie'] || [];
+            const oasCookie = responseCookies.find(cookie =>
+                cookie.startsWith('OASvalue=')
+            );
+            const token = oasCookie?.match(/^OASvalue=([^;]*)/)?.[1] || '';
+            if (token.trim().length > 0) {
+                isPasswordVerified = true;
+            }
+        } catch (oasErr) {
+            console.warn(`[v04-login] Verification warning for ${regno}:`, oasErr.message);
+            // Also inspect headers on error/redirect response just in case
+            if (oasErr.response) {
+                const responseCookies = oasErr.response.headers['set-cookie'] || [];
+                const oasCookie = responseCookies.find(cookie =>
+                    cookie.startsWith('OASvalue=')
+                );
+                const token = oasCookie?.match(/^OASvalue=([^;]*)/)?.[1] || '';
+                if (token.trim().length > 0) {
+                    isPasswordVerified = true;
+                }
+            }
+        }
+    }
+
+    if (!isPasswordVerified) {
+        return res.status(401).json({
+            success: false,
+            error: 'Invalid password. Please check your credentials.'
         });
     }
 
@@ -1899,20 +1961,79 @@ app.post('/api/ranking', async (req, res) => {
     }
 
     try {
-        // console.log(`🏆 Fetching ranking for: ${registrationNumber}`);
+        console.log(`🏆 Fetching ranking for: ${registrationNumber} from new API`);
 
-        const response = await axios.post(
-            'https://lpu-student-ranking.vercel.app/get-student-info',
-            { registrationNumber }
+        const response = await axios.get(
+            `https://ranking2-0.vercel.app/api/search?regNo=${registrationNumber}`
         );
+
+        const rawData = response.data;
+
+        // Map the new response structure to the old structure to maintain compatibility for dashboard
+        let percentage = null;
+        if (rawData.percentile) {
+            percentage = parseFloat(rawData.percentile.replace('%', ''));
+        }
+
+        let totalStudents = 0;
+        if (rawData.overallRank && percentage) {
+            totalStudents = Math.round(rawData.overallRank / (percentage / 100));
+        }
+        if (!totalStudents || isNaN(totalStudents)) {
+            totalStudents = 7500;
+        }
+
+        let batchYear = "N/A";
+        if (rawData.regNo && rawData.regNo.length >= 3) {
+            const digits = rawData.regNo.substring(1, 3);
+            if (!isNaN(digits)) {
+                batchYear = `20${digits}`;
+            }
+        }
+
+        const mappedData = {
+            Name: rawData.name || "N/A",
+            RegistrationNumber: rawData.regNo || registrationNumber,
+            Course: rawData.program || "N/A",
+            BatchYear: batchYear,
+            CGPA: rawData.cgpa || "N/A",
+            State: "N/A",
+            Country: "India",
+            Rank: rawData.overallRank || 0,
+            Percentage: percentage,
+            TotalStudents: totalStudents,
+            Gender: "N/A",
+            // Include raw data keys as well:
+            regNo: rawData.regNo,
+            name: rawData.name,
+            cgpa: rawData.cgpa,
+            program: rawData.program,
+            companySelectedIn: rawData.companySelectedIn,
+            email: rawData.email,
+            contactNo: rawData.contactNo,
+            placementId: rawData.placementId,
+            basicDetails: rawData.basicDetails,
+            status: rawData.status,
+            opportunityStartDate: rawData.opportunityStartDate,
+            reappearBacklog: rawData.reappearBacklog,
+            pepFeeDetails: rawData.pepFeeDetails,
+            pepFeePaymentDate: rawData.pepFeePaymentDate,
+            xMarks: rawData.xMarks,
+            xiiMarks: rawData.xiiMarks,
+            graduationMarks: rawData.graduationMarks,
+            diplomaMarks: rawData.diplomaMarks,
+            scrapedAt: rawData.scrapedAt,
+            overallRank: rawData.overallRank,
+            percentile: rawData.percentile
+        };
 
         return res.json({
             success: true,
-            data: response.data
+            data: mappedData
         });
 
     } catch (error) {
-        // console.error('❌ Error fetching ranking:', error.message);
+        console.error('❌ Error fetching ranking from new API:', error.message);
 
         return res.status(error.response?.status || 500).json({
             success: false,

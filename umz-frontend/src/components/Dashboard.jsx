@@ -7,7 +7,7 @@ import MessagesCard from './MessagesCard';
 import SeatingPlanCardCompact from './SeatingPlanCardCompact';
 import MobileNotificationsSheet from './MobileNotificationsSheet';
 import { Building2,Bed,Table } from 'lucide-react';
-import { getStudentInfo, getStudentDashboardV04, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl } from '../services/api';
+import { getStudentInfo, getStudentDashboardV04, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl, getResult, getResultV04, getMessagesV04 } from '../services/api';
 import { sendNotification } from '../utils/notificationHelper';
 import LeaveSlipModal from './LeaveSlipModal';
 
@@ -35,9 +35,10 @@ const Dashboard = () => {
     const [showAssignments, setShowAssignments] = useState(false);
     const [showSeatingPlan, setShowSeatingPlan] = useState(false);
     const [showLeaveSlip, setShowLeaveSlip] = useState(false);
-    const [leaveSlipUrl, setLeaveSlipUrl] = useState('');
     const [leaveSlipData, setLeaveSlipData] = useState(null);
+    const [leaveSlipLoading, setLeaveSlipLoading] = useState(false);
     const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+    const [backlogCount, setBacklogCount] = useState(0);
 
     const handleTestNotification = async () => {
         const title = 'UMz Test Notification';
@@ -148,57 +149,104 @@ const Dashboard = () => {
         return () => clearInterval(interval);
     }, [timetable]);
 
-    const handleHostelLeave = async () => {
+    const handleHostelLeave = async (force = false) => {
         try {
             const cookies = localStorage.getItem('umz_cookies');
             const auth = cookies ? cookies : { regno: localStorage.getItem('umz_regno') };
 
-            // 🚀 FAST PATH: Try fetching with cached URL first
+            // Start loading and open modal immediately to remove lag feeling
+            setShowLeaveSlip(true);
+            setLeaveSlipLoading(true);
+
+            // Check if cached data exists
             const cached = localStorage.getItem('umz_leave_slip');
+            let cachedData = null;
+            let isFresh = false;
+
             if (cached) {
                 try {
-                    const { url, timestamp, data } = JSON.parse(cached);
-                    const isFresh = (Date.now() - timestamp) < 12 * 60 * 60 * 1000;
+                    const parsed = JSON.parse(cached);
+                    cachedData = parsed.data;
+                    isFresh = (Date.now() - parsed.timestamp) < 12 * 60 * 60 * 1000;
                     
-                    if (isFresh) {
-                        setNotifToast('Generating leave slip...');
-                        const directRes = await getLeaveSlipHtmlFromUrl(url, auth);
-                        if (directRes.success && directRes.data) {
-                            setLeaveSlipUrl(url);
-                            setLeaveSlipData(directRes.data);
-                            setShowLeaveSlip(true);
-                            
-                            localStorage.setItem('umz_leave_slip', JSON.stringify({ url, data: directRes.data, timestamp: Date.now() }));
-                            setNotifToast('Slip generated');
-                            setTimeout(() => setNotifToast(''), 2000);
-                            return;
+                    if (cachedData) {
+                        // Immediately display the cached data to eliminate load lag!
+                        setLeaveSlipData(cachedData);
+                        
+                        // If it's fresh and not a forced refresh, we can stop loading immediately
+                        if (isFresh && !force) {
+                            setLeaveSlipLoading(false);
                         }
                     }
-                } catch (e) { console.warn('Cache fetch failed:', e); }
+                } catch (e) {
+                    console.warn('Cache parse failed:', e);
+                }
             }
 
-            // setNotifToast('Generating secure link...');
-            const result = await getLeaveSlipUrl(auth);
-            if (result.success && result.url) {
-                setLeaveSlipUrl(result.url);
-                setLeaveSlipData(result.data || null);
-                setShowLeaveSlip(true);
-                
-                localStorage.setItem('umz_leave_slip', JSON.stringify({
-                    url: result.url,
-                    data: result.data,
-                    timestamp: Date.now()
-                }));
-                
-                // setNotifToast('Leave slip loaded');
-            } else {
-                setNotifToast('Failed to generate slip');
+            // If we have no cached data, or the cache is expired, or we want a fresh forced fetch
+            if (!cachedData || !isFresh || force) {
+                // If we already have fresh cached data and not forcing, skip fetch
+                if (cachedData && isFresh && !force) {
+                    setLeaveSlipLoading(false);
+                    return;
+                }
+
+                let freshUrl = null;
+                let freshData = null;
+
+                // Try reusing the cached URL to directly fetch HTML and bypass main routing (faster)
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        if (parsed.url) {
+                            const directRes = await getLeaveSlipHtmlFromUrl(parsed.url, auth);
+                            if (directRes.success && directRes.data) {
+                                freshUrl = parsed.url;
+                                freshData = directRes.data;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed direct fetch from cached URL, trying full fetch:', e.message);
+                    }
+                }
+
+                if (!freshData) {
+                    // Full fetch (getting new URL and details)
+                    const result = await getLeaveSlipUrl(auth);
+                    if (result.success && result.url) {
+                        freshUrl = result.url;
+                        freshData = result.data || null;
+                    }
+                }
+
+                if (freshData && freshUrl) {
+                    setLeaveSlipData(freshData);
+                    localStorage.setItem('umz_leave_slip', JSON.stringify({
+                        url: freshUrl,
+                        data: freshData,
+                        timestamp: Date.now()
+                    }));
+                } else {
+                    if (!cachedData) {
+                        // If no cache and failed, close modal
+                        setNotifToast('Failed to generate slip');
+                        setTimeout(() => setNotifToast(''), 3000);
+                        setShowLeaveSlip(false);
+                    } else {
+                        setNotifToast('Failed to update. Showing offline data.');
+                        setTimeout(() => setNotifToast(''), 3000);
+                    }
+                }
             }
-            // setTimeout(() => setNotifToast(''), 3000);
         } catch (err) {
             console.error('Leave slip error:', err);
             setNotifToast('Error: ' + err.message);
             setTimeout(() => setNotifToast(''), 3000);
+            if (!localStorage.getItem('umz_leave_slip')) {
+                setShowLeaveSlip(false);
+            }
+        } finally {
+            setLeaveSlipLoading(false);
         }
     };
 
@@ -277,6 +325,25 @@ const Dashboard = () => {
                         const cookies = localStorage.getItem('umz_cookies');
                         const auth = cookies ? cookies : { regno: currentRegno };
                         fetchSeatingPlanData(auth);
+
+                        // 🔔 For V04 sessions: always re-fetch messages in the background
+                        // so the notification count is always up-to-date, even with cached profile data
+                        const isV04 = localStorage.getItem('umz_is_v04') === 'true';
+                        if (isV04 && auth) {
+                            getMessagesV04(auth)
+                                .then(msgRes => {
+                                    if (msgRes?.data) {
+                                        setStudentInfo(prev => {
+                                            if (!prev) return prev;
+                                            const updated = { ...prev, Messages: msgRes.data };
+                                            localStorage.setItem('umz_student_info', JSON.stringify(updated));
+                                            return updated;
+                                        });
+                                        console.log('🔔 Background messages refreshed:', msgRes.data?.length);
+                                    }
+                                })
+                                .catch(err => console.warn('⚠️ Background message fetch failed:', err.message));
+                        }
 
                         return; // Use cache, don't fetch student info again
                     }
@@ -400,6 +467,49 @@ const Dashboard = () => {
             }
         };
         loadAssignments();
+
+        // Load backlogs/results separately so reappear count can update dynamically
+        const loadBacklogs = async () => {
+            const calculateCount = (data) => {
+                let count = 0;
+                const backlogGrades = new Set(['E', 'F', 'G', 'I']);
+                if (data && data.semesters) {
+                    data.semesters.forEach(sem => {
+                        (sem.subjects || []).forEach(sub => {
+                            if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) count++;
+                        });
+                    });
+                }
+                return count;
+            };
+
+            const cached = localStorage.getItem('umz_result_data');
+            if (cached) {
+                try {
+                    setBacklogCount(calculateCount(JSON.parse(cached)));
+                } catch (e) {
+                    localStorage.removeItem('umz_result_data');
+                }
+            }
+
+            const cookies = localStorage.getItem('umz_cookies');
+            const regno = localStorage.getItem('umz_regno');
+            const isV04 = localStorage.getItem('umz_is_v04') === 'true';
+
+            if (!cookies && !regno) return;
+            const auth = cookies ? cookies : { regno };
+
+            try {
+                const result = isV04 ? await getResultV04(auth) : await getResult(auth);
+                if (result.success && result.data) {
+                    localStorage.setItem('umz_result_data', JSON.stringify(result.data));
+                    setBacklogCount(calculateCount(result.data));
+                }
+            } catch (e) {
+                console.warn('⚠️ Could not load grades/backlogs:', e.message);
+            }
+        };
+        loadBacklogs();
     }, [navigate]);
 
     const dayName = ['Sun','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
@@ -424,25 +534,7 @@ const Dashboard = () => {
         ];
     };
 
-    const backlogCount = React.useMemo(() => {
-        try {
-            const cached = localStorage.getItem('umz_result_data');
-            if (!cached) return 0;
-            const parsed = JSON.parse(cached);
-            let count = 0;
-            const backlogGrades = new Set(['E', 'F', 'G', 'I']);
 
-            
-            if (parsed.semesters) {
-                parsed.semesters.forEach(sem => {
-                    (sem.subjects || []).forEach(sub => {
-                        if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) count++;
-                    });
-                });
-            }
-            return count;
-        } catch { return 0; }
-    }, []);
 
     if (loading) {
         return (
@@ -1205,6 +1297,7 @@ const Dashboard = () => {
                 data={leaveSlipData}
                 profileImage={studentInfo?.profilePic}
                 onRefresh={handleHostelLeave}
+                loading={leaveSlipLoading}
             />
         </div >
     );

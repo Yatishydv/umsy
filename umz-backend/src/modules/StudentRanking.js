@@ -2,8 +2,7 @@ import axios from "axios";
 
 export async function fetchStudentRanking(client) {
     const regno = "12301135"
-    const url = "https://lpu-student-ranking.vercel.app/get-student-info";
-    const payload = { "registrationNumber": regno }
+    const url = `https://ranking2-0.vercel.app/api/search?regNo=${regno}`;
     // console.log("Fetching data...");
-    axios.post(url, payload).then((response) => { console.log(response.data) }).catch((error) => { console.log(error) })
+    axios.get(url).then((response) => { console.log(response.data) }).catch((error) => { console.log(error) })
 }

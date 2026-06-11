@@ -1,10 +1,36 @@
 import React, { useState } from 'react';
-import { Mail, Calendar, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, Calendar, User, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+
+/** Splits text on URLs and returns mixed array of strings + clickable <a> elements */
+const renderWithLinks = (text) => {
+    if (!text) return null;
+    const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(URL_REGEX);
+    return parts.map((part, i) => {
+        if (URL_REGEX.test(part)) {
+            // Reset lastIndex after test()
+            URL_REGEX.lastIndex = 0;
+            return (
+                <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-700 underline underline-offset-2 break-all font-medium"
+                >
+                    {part}
+                    <ExternalLink className="h-3 w-3 flex-shrink-0 inline" />
+                </a>
+            );
+        }
+        URL_REGEX.lastIndex = 0;
+        return part;
+    });
+};
 
 const MessagesCard = ({ messages = [] }) => {
     const [expandedMessages, setExpandedMessages] = useState(new Set());
-
-    console.log('🔍 MessagesCard received:', messages, 'Length:', messages?.length);
 
     const toggleMessage = (index) => {
         const newExpanded = new Set(expandedMessages);
@@ -105,12 +131,11 @@ const MessagesCard = ({ messages = [] }) => {
                                     )}
                                 </div>
 
-                                {/* Message Content */}
+                                {/* Message Content with clickable links */}
                                 {message.content && (
                                     <div>
-                                        <p className={`text-sm text-gray-600 whitespace-pre-wrap ${expanded ? '' : 'line-clamp-2'
-                                            }`}>
-                                            {message.content}
+                                        <p className={`text-sm text-gray-600 whitespace-pre-wrap ${expanded ? '' : 'line-clamp-2'}`}>
+                                            {renderWithLinks(message.content)}
                                         </p>
                                         {hasLongContent && !expanded && (
                                             <button
