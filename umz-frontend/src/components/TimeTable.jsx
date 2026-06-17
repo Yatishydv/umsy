@@ -87,6 +87,7 @@ const TimeTable = () => {
                 if (err.message.includes('session') || err.message.includes('unauthorized')) {
                     // Session expired - remove cookies
                     localStorage.removeItem('umz_cookies');
+                    window.dispatchEvent(new CustomEvent('trigger-resync'));
                 }
             } finally {
                 setLoading(false);

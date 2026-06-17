@@ -89,24 +89,17 @@ const UmzV04Login = () => {
                 // Store cookies in localStorage (same as existing login flows)
                 localStorage.setItem('umz_cookies', result.cookies);
                 localStorage.setItem('umz_regno', cleanRegno);
+                localStorage.setItem('umz_password', cleanPassword);
                 localStorage.setItem('umz_is_v04', 'true');
 
-                // Clear any stale cached data from a different student
-                const cachedInfo = localStorage.getItem('umz_student_info');
-                if (cachedInfo) {
-                    try {
-                        const parsed = JSON.parse(cachedInfo);
-                        if (parsed.Registrationnumber && parsed.Registrationnumber !== cleanRegno) {
-                            localStorage.removeItem('umz_student_info');
-                            localStorage.removeItem('umz_timetable_data');
-                            localStorage.removeItem('umz_ranking_data');
-                            localStorage.removeItem('umz_result_data');
-                            localStorage.removeItem('umz_marks_data');
-                            localStorage.removeItem('umz_courses_data');
-                            localStorage.removeItem('umz_attendance_data');
-                        }
-                    } catch { }
-                }
+                // Clear academic cached data unconditionally on fresh login
+                localStorage.removeItem('umz_student_info');
+                localStorage.removeItem('umz_timetable_data');
+                localStorage.removeItem('umz_ranking_data');
+                localStorage.removeItem('umz_result_data');
+                localStorage.removeItem('umz_marks_data');
+                localStorage.removeItem('umz_courses_data');
+                localStorage.removeItem('umz_attendance_data');
 
                 // Persist to backend DB
                 try {
@@ -120,9 +113,10 @@ const UmzV04Login = () => {
                 setProgress(40);
 
                 try {
-                    const [infoRes, resultRes] = await Promise.allSettled([
+                    const [infoRes, resultRes, messagesRes] = await Promise.allSettled([
                         getStudentInfoV04(result.cookies),
-                        getResultV04(result.cookies)
+                        getResultV04(result.cookies),
+                        getMessagesV04(result.cookies)
                     ]);
 
                     setProgress(80);
@@ -135,10 +129,26 @@ const UmzV04Login = () => {
                         console.warn('⚠️ Profile fetch failed:', infoRes.reason?.message);
                     }
 
-                    // Store student info in localStorage (messages are already inside this object)
+                    // 2. Process Messages from dedicated endpoint
+                    let messages = [];
+                    if (messagesRes.status === 'fulfilled' && messagesRes.value?.data) {
+                        messages = messagesRes.value.data;
+                    } else if (messagesRes.status === 'rejected') {
+                        console.warn('⚠️ Messages fetch failed:', messagesRes.reason?.message);
+                    }
+
+                    // Merge messages into studentInfo (prefer dedicated endpoint if available)
+                    if (messages.length > 0) {
+                        studentInfo.Messages = messages;
+                    }
+
+                    // Store student info in localStorage (with messages included)
                     localStorage.setItem('umz_student_info', JSON.stringify(studentInfo));
 
-                    // 2. Process Result (for CGPA/reappear grades)
+                    // Also store messages separately for easy access
+                    localStorage.setItem('umz_messages_data', JSON.stringify(messages));
+
+                    // 3. Process Result (for CGPA/reappear grades)
                     if (resultRes.status === 'fulfilled' && resultRes.value?.data) {
                         localStorage.setItem('umz_result_data', JSON.stringify(resultRes.value.data));
                         

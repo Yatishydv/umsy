@@ -167,43 +167,55 @@ const Sidebar = () => {
 
             // No cookies OR expired cookies - need to re-authenticate
             const savedRegno = localStorage.getItem('umz_regno');
+            const savedPassword = localStorage.getItem('umz_password');
+            const isV04 = localStorage.getItem('umz_is_v04') === 'true';
 
-            if (!savedRegno) {
+            if (!savedRegno || !savedPassword) {
                 alert('Session expired. Please login again.');
                 handleLogout();
                 return;
             }
 
-            // Perform token-based login process of refetching the regno with the token
             setCaptchaLoading(true);
-            const result = await tokenLoginV04(savedRegno);
 
-            if (result.success && result.cookies) {
-                localStorage.setItem('umz_cookies', result.cookies);
-                localStorage.setItem('umz_is_v04', 'true');
+            if (isV04) {
+                // Perform token-based login process of refetching the regno with the token
+                const result = await tokenLoginV04(savedRegno, savedPassword);
 
-                // Clear stale cache
-                localStorage.removeItem('umz_student_info');
-                localStorage.removeItem('umz_attendance_data');
-                localStorage.removeItem('umz_marks_data');
-                localStorage.removeItem('umz_courses_data');
-                localStorage.removeItem('umz_timetable_data');
-                localStorage.removeItem('umz_result_data');
+                if (result.success && result.cookies) {
+                    localStorage.setItem('umz_cookies', result.cookies);
+                    localStorage.setItem('umz_is_v04', 'true');
 
-                // Fetch student basic profile information (includes messages and termwise CGPA)
-                try {
-                    const infoRes = await getStudentInfoV04(result.cookies);
-                    if (infoRes?.data) {
-                        localStorage.setItem('umz_student_info', JSON.stringify(infoRes.data));
+                    // Clear stale cache
+                    localStorage.removeItem('umz_student_info');
+                    localStorage.removeItem('umz_attendance_data');
+                    localStorage.removeItem('umz_marks_data');
+                    localStorage.removeItem('umz_courses_data');
+                    localStorage.removeItem('umz_timetable_data');
+                    localStorage.removeItem('umz_result_data');
+
+                    // Fetch student basic profile information (includes messages and termwise CGPA)
+                    try {
+                        const infoRes = await getStudentInfoV04(result.cookies);
+                        if (infoRes?.data) {
+                            localStorage.setItem('umz_student_info', JSON.stringify(infoRes.data));
+                        }
+                    } catch (fetchErr) {
+                        console.warn('⚠️ Profile fetch on resync failed:', fetchErr.message);
                     }
-                } catch (fetchErr) {
-                    console.warn('⚠️ Profile fetch on resync failed:', fetchErr.message);
-                }
 
-                setCaptchaLoading(false);
-                window.location.reload();
+                    setCaptchaLoading(false);
+                    window.location.reload();
+                } else {
+                    throw new Error('Token login failed');
+                }
             } else {
-                throw new Error('Token login failed');
+                // Perform captcha-based login flow: get new captcha and show modal
+                const result = await startLogin(savedRegno, savedPassword);
+                setSessionId(result.sessionId);
+                setCaptchaImage(result.captchaImage);
+                setShowCaptchaModal(true);
+                setCaptchaLoading(false);
             }
         } catch (error) {
             setCaptchaLoading(false);
@@ -564,7 +576,7 @@ const Sidebar = () => {
 
             {/* Loading Overlay - Shows while fetching captcha */}
             {captchaLoading && !showCaptchaModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
                         <div className="relative w-16 h-16">
                             <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>

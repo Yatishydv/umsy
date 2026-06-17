@@ -218,6 +218,16 @@ const Login = () => {
                 localStorage.setItem('umz_regno', regno);
                 localStorage.setItem('umz_password', password);
 
+                // Clear academic cached data unconditionally on fresh login
+                localStorage.removeItem('umz_student_info');
+                localStorage.removeItem('umz_timetable_data');
+                localStorage.removeItem('umz_ranking_data');
+                localStorage.removeItem('umz_result_data');
+                localStorage.removeItem('umz_marks_data');
+                localStorage.removeItem('umz_courses_data');
+                localStorage.removeItem('umz_attendance_data');
+                localStorage.removeItem('umz_attendance_summary');
+
                 // Navigate to dashboard
                 navigate('/dashboard');
             }

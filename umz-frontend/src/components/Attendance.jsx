@@ -180,7 +180,13 @@ const Attendance = () => {
                 });
                 setAttendanceData(uniqueData);
                 localStorage.setItem('umz_attendance_data', JSON.stringify(uniqueData));
-            } catch (err) { setError(err.message || 'Failed to load attendance'); }
+            } catch (err) { 
+                setError(err.message || 'Failed to load attendance'); 
+                if (err.message?.includes('session') || err.message?.includes('unauthorized')) {
+                    localStorage.removeItem('umz_cookies');
+                    window.dispatchEvent(new CustomEvent('trigger-resync'));
+                }
+            }
             finally { setLoading(false); }
         };
         fetchAttendance();

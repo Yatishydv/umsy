@@ -33,6 +33,10 @@ const Courses = () => {
                     localStorage.setItem('umz_courses_data', JSON.stringify(result.data));
                 } catch (err) { 
                     setError(err.message); 
+                    if (err.message.includes('session') || err.message.includes('unauthorized')) {
+                        localStorage.removeItem('umz_cookies');
+                        window.dispatchEvent(new CustomEvent('trigger-resync'));
+                    }
                 } finally { 
                     setLoading(false); 
                 }

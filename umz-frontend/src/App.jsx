@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Attendance from './components/Attendance';
@@ -63,7 +63,7 @@ function AppContent() {
         <Route path="/ai-buddy" element={<AiBuddy />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/backlogs" element={<MobileBacklogs />} />
-        <Route path="/" element={<ByeBye />} />
+        <Route path="/" element={<Navigate to="/v04/login" replace />} />
       </Routes>
       <GlobalSearch />
       {!isLoginPage && (
