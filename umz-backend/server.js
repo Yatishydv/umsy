@@ -56,6 +56,46 @@ try {
     console.error('❌ Failed to load results.json:', err.message);
 }
 
+// ── Load credits.json into in-memory Map for O(1) credit lookups ────────────
+const creditsPath = path.resolve(__dirname, './credits.json');
+const courseCreditsMap = new Map();
+try {
+    const creditsData = JSON.parse(fs.readFileSync(creditsPath, 'utf-8'));
+    for (const record of creditsData) {
+        if (record.course_code) {
+            const cleanKey = record.course_code.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            courseCreditsMap.set(cleanKey, parseFloat(record.credit));
+        }
+    }
+    console.log(`✅ Loaded ${courseCreditsMap.size} course credits from credits.json`);
+} catch (err) {
+    console.error('❌ Failed to load credits.json:', err.message);
+}
+
+/**
+ * Helper to look up course credits using clean base matching (e.g. matching CSE111-L or CSE111A to CSE111).
+ * @param {string} courseCode
+ * @returns {number|null}
+ */
+function getCreditsForCourse(courseCode) {
+    if (!courseCode) return null;
+    const clean = courseCode.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    
+    // 1. Direct match (e.g. "CSE111")
+    if (courseCreditsMap.has(clean)) {
+        return courseCreditsMap.get(clean);
+    }
+    
+    // 2. Base course prefix + digits match (e.g. "CSE111L" -> "CSE111", "CSE1112" -> "CSE111")
+    const match = clean.match(/^([A-Z]+[0-9]+)/);
+    if (match && courseCreditsMap.has(match[1])) {
+        return courseCreditsMap.get(match[1]);
+    }
+    
+    return null;
+}
+
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -947,10 +987,12 @@ app.post('/api/v04/result', async (req, res) => {
                 const name = sepIdx !== -1 ? courseRaw.slice(sepIdx + 2).trim() : courseRaw;
                 const grade = gradeRaw || null;
 
+                const credit = getCreditsForCourse(code);
+
                 subjects.push({
                     code,
                     name,
-                    credit: null,
+                    credit,
                     grade
                 });
             });
@@ -996,6 +1038,19 @@ app.post('/api/v04/marks', async (req, res) => {
 
         const axiosClient = createAxiosClient(cookies);
         const marksData = await fetchTermWiseMarks(axiosClient);
+
+        // Enrich marks with credits from credits.json if missing/null
+        if (marksData) {
+            marksData.forEach(term => {
+                if (term.subjects) {
+                    term.subjects.forEach(sub => {
+                        if (sub.credit === null || sub.credit === undefined || isNaN(sub.credit)) {
+                            sub.credit = getCreditsForCourse(sub.courseCode);
+                        }
+                    });
+                }
+            });
+        }
 
         return res.json({
             success: true,
@@ -1621,6 +1676,32 @@ app.post('/api/result', async (req, res) => {
         const axiosClient = createAxiosClient(cookies);
         const resultData = await fetchStudentResult(axiosClient);
 
+        // Enrich resultData with credits from credits.json if missing/null
+        if (resultData) {
+            if (resultData.semesters) {
+                resultData.semesters.forEach(sem => {
+                    if (sem.subjects) {
+                        sem.subjects.forEach(sub => {
+                            if (sub.credit === null || sub.credit === undefined || isNaN(sub.credit)) {
+                                sub.credit = getCreditsForCourse(sub.code);
+                            }
+                        });
+                    }
+                });
+            }
+            if (resultData.rplGrades) {
+                resultData.rplGrades.forEach(sem => {
+                    if (sem.subjects) {
+                        sem.subjects.forEach(sub => {
+                            if (sub.credit === null || sub.credit === undefined || isNaN(sub.credit)) {
+                                sub.credit = getCreditsForCourse(sub.code);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
         return res.json({ success: true, data: resultData });
     } catch (error) {
         // console.error('❌ Error fetching result:', error.message);
@@ -1647,6 +1728,19 @@ app.post('/api/marks', async (req, res) => {
 
         const axiosClient = createAxiosClient(cookies);
         const marksData = await fetchTermWiseMarks(axiosClient);
+
+        // Enrich marks with credits from credits.json if missing/null
+        if (marksData) {
+            marksData.forEach(term => {
+                if (term.subjects) {
+                    term.subjects.forEach(sub => {
+                        if (sub.credit === null || sub.credit === undefined || isNaN(sub.credit)) {
+                            sub.credit = getCreditsForCourse(sub.courseCode);
+                        }
+                    });
+                }
+            });
+        }
 
         return res.json({
             success: true,

@@ -5,16 +5,76 @@ const gradePoints = {
     "O": 10, "A+": 9, "A": 8, "B+": 7, "B": 6, "C": 5, "D": 4, "E": 0, "F": 0,
 };
 
-const MobileCalculator = ({ semesterData = [], resultData = null }) => {
-    const getSemLabel = (tid) => {
-        const idStr = String(tid);
-        if (idStr.length < 6) return `Term ${tid}`;
+const isRomanSymbol = (str) => /^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/i.test(String(str).trim());
+const romanToInteger = (str) => {
+    const map = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10 };
+    return map[String(str).trim().toLowerCase()] || 0;
+};
+
+const getSemesterNumber = (tid) => {
+    const idStr = String(tid).trim();
+    if (isRomanSymbol(idStr)) return romanToInteger(idStr);
+    if (/^\d{6}$/.test(idStr)) {
         const year = parseInt(idStr[0]);
         const semInYear = parseInt(idStr[idStr.length - 1]);
-        const semNum = (year - 1) * 2 + (semInYear === 1 ? 1 : 2);
+        return (year - 1) * 2 + (semInYear === 1 ? 1 : 2);
+    }
+    const m = idStr.match(/\d+/);
+    return m ? parseInt(m[0]) : null;
+};
+
+const isRegularTerm = (tid) => {
+    const idStr = String(tid).trim();
+    if (isRomanSymbol(idStr)) return true;
+    if (/[a-zA-Z]/.test(idStr)) return false;
+    return true;
+};
+
+const MobileCalculator = ({ semesterData = [], resultData = null, marksData = [] }) => {
+    const getSemLabel = (tid) => {
+        const idStr = String(tid).trim();
         const romans = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII' };
-        return `Sem ${romans[semNum] || semNum}`;
+        
+        if (isRomanSymbol(idStr)) return `Sem ${idStr.toUpperCase()}`;
+        if (/^\d{6}$/.test(idStr)) {
+            const year = parseInt(idStr[0]);
+            const semInYear = parseInt(idStr[idStr.length - 1]);
+            const semNum = (year - 1) * 2 + (semInYear === 1 ? 1 : 2);
+            return `Sem ${romans[semNum] || semNum}`;
+        }
+        const m = idStr.match(/\d+/);
+        if (m) {
+            const num = parseInt(m[0]);
+            return `Sem ${romans[num] || num}`;
+        }
+        return `Sem ${tid}`;
     };
+
+    const termOptions = React.useMemo(() => {
+        const list = [];
+        const seenSemNums = new Set();
+
+        const addTerm = (termId) => {
+            if (!termId) return;
+            if (!isRegularTerm(termId)) return;
+            const semNum = getSemesterNumber(termId);
+            if (semNum && !seenSemNums.has(semNum)) {
+                seenSemNums.add(semNum);
+                list.push({
+                    value: String(termId),
+                    semNum: semNum,
+                    label: getSemLabel(termId)
+                });
+            }
+        };
+
+        (resultData?.semesters || []).forEach(s => addTerm(s.termId));
+        (marksData || []).forEach(s => addTerm(s.termId || s.term));
+        (semesterData || []).forEach(s => addTerm(s.term || s.termId));
+
+        list.sort((a, b) => b.semNum - a.semNum);
+        return list;
+    }, [resultData, marksData, semesterData]);
 
     const [calcMode, setCalcMode] = useState(() => {
         return localStorage.getItem('umz_calc_last_mode') || 'tgpa';
@@ -71,6 +131,9 @@ const MobileCalculator = ({ semesterData = [], resultData = null }) => {
         if (val) {
             // Auto-fill logic
             const resultSem = resultData?.semesters?.find(s => String(s.termId) === String(val));
+            const marksSem = marksData?.find(s => String(s.termId || s.term) === String(val));
+            const cgpaSem = semesterData?.find(s => String(s.term || s.termId) === String(val));
+
             if (resultSem?.subjects?.length > 0) {
                 setSubjects(resultSem.subjects.map(sub => {
                     const creditVal = sub.credit ?? sub.credits ?? sub.Credit ?? sub.CourseCredit ?? '0';
@@ -82,21 +145,29 @@ const MobileCalculator = ({ semesterData = [], resultData = null }) => {
                         credit: creditVal.toString(),
                     };
                 }));
-            } else {
-                const sem = semesterData.find(s => String(s.term) === String(val));
-                if (sem?.subjects?.length > 0) {
-                    setSubjects(sem.subjects.map(subject => {
-                        const [code, ...nameParts] = subject.course.split('::');
-                        const creditVal = subject.credit ?? subject.credits ?? subject.Credit ?? subject.CourseCredit ?? '0';
-                        return {
-                            id: crypto.randomUUID(),
-                            code: code?.trim() || '',
-                            name: nameParts.join('::').trim() || code?.trim() || 'Subject',
-                            grade: subject.grade || '',
-                            credit: creditVal.toString(),
-                        };
-                    }));
-                }
+            } else if (marksSem?.subjects?.length > 0) {
+                setSubjects(marksSem.subjects.map(sub => {
+                    const creditVal = sub.credit ?? sub.credits ?? sub.Credit ?? sub.CourseCredit ?? '0';
+                    return {
+                        id: crypto.randomUUID(),
+                        code: sub.courseCode || '',
+                        name: sub.courseName || sub.courseCode || 'Subject',
+                        grade: sub.grade || '',
+                        credit: creditVal.toString(),
+                    };
+                }));
+            } else if (cgpaSem?.subjects?.length > 0) {
+                setSubjects(cgpaSem.subjects.map(subject => {
+                    const [code, ...nameParts] = subject.course?.split('::') || [subject.courseCode, subject.courseName];
+                    const creditVal = subject.credit ?? subject.credits ?? subject.Credit ?? subject.CourseCredit ?? '0';
+                    return {
+                        id: crypto.randomUUID(),
+                        code: code?.trim() || subject.courseCode || '',
+                        name: nameParts.join('::').trim() || subject.courseName || code?.trim() || 'Subject',
+                        grade: subject.grade || '',
+                        credit: creditVal.toString(),
+                    };
+                }));
             }
             setView('edit');
         }
@@ -472,8 +543,8 @@ const MobileCalculator = ({ semesterData = [], resultData = null }) => {
                                 className="w-full h-14 pl-14 pr-12 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm font-semibold appearance-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                             >
                                 <option value="" disabled>Choose semester</option>
-                                {(resultData?.semesters || []).map(s => (
-                                    <option key={s.termId} value={s.termId}>{getSemLabel(s.termId)}</option>
+                                {termOptions.map(o => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
                                 ))}
                             </select>
                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />

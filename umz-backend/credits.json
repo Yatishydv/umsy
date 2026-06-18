@@ -1,0 +1,1377 @@
+[
+  {
+    "course_code": "CSE111",
+    "course_title": "ORIENTATION TO COMPUTING-I",
+    "credit": 2.0
+  },
+  {
+    "course_code": "CSE326",
+    "course_title": "INTERNET PROGRAMMING LABORATORY",
+    "credit": 2.0
+  },
+  {
+    "course_code": "INT108",
+    "course_title": "PYTHON PROGRAMMING",
+    "credit": 4.0
+  },
+  {
+    "course_code": "MTH174",
+    "course_title": "ENGINEERING MATHEMATICS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "PES318",
+    "course_title": "SOFT SKILLS-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE249",
+    "course_title": "BASIC ELECTRICAL AND",
+    "credit": 4.0
+  },
+  {
+    "course_code": "MEC136",
+    "course_title": "ENGINEERING GRAPHICS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CHE110",
+    "course_title": "ENVIRONMENTAL",
+    "credit": 2.0
+  },
+  {
+    "course_code": "PHY110",
+    "course_title": "ENGINEERING PHYSICS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE279",
+    "course_title": "BASIC ELECTRICAL AND",
+    "credit": 1.0
+  },
+  {
+    "course_code": "CSE101",
+    "course_title": "COMPUTER PROGRAMMING",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE121",
+    "course_title": "ORIENTATION TO COMPUTING-II",
+    "credit": 2.0
+  },
+  {
+    "course_code": "CSE320",
+    "course_title": "SOFTWARE ENGINEERING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT306",
+    "course_title": "DATABASE MANAGEMENT SYSTEMS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "MTH401",
+    "course_title": "DISCRETE MATHEMATICS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEL121",
+    "course_title": "COMMUNICATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEL125",
+    "course_title": "UPPER INTERMEDIATE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEL130",
+    "course_title": "ADVANCED",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE202",
+    "course_title": "OBJECT ORIENTED PROGRAMMING",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE205",
+    "course_title": "DATA STRUCTURES AND ALGORITHMS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE211",
+    "course_title": "COMPUTER ORGANIZATION AND DESIGN",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE306",
+    "course_title": "COMPUTER NETWORKS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE307",
+    "course_title": "INTERNETWORKING ESSENTIALS",
+    "credit": 1.0
+  },
+  {
+    "course_code": "GEN231",
+    "course_title": "COMMUNITY DEVELOPMENT PROJECT",
+    "credit": 2.0
+  },
+  {
+    "course_code": "CSE316",
+    "course_title": "OPERATING SYSTEMS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MTH302",
+    "course_title": "PROBABILITY AND",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE325",
+    "course_title": "OPERATING SYSTEMS",
+    "credit": 1.0
+  },
+  {
+    "course_code": "PEL132",
+    "course_title": "COMMUNICATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEL134",
+    "course_title": "UPPER INTERMEDIATE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEL136",
+    "course_title": "ADVANCED",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE310",
+    "course_title": "PROGRAMMING IN JAVA",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE408",
+    "course_title": "DESIGN AND ANALYSIS OF ALGORITHMS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT428",
+    "course_title": "ARTIFICIAL INTELLIGENCE ESSENTIALS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "PEA305",
+    "course_title": "ANALYTICAL SKILLS-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEA307",
+    "course_title": "ADVANCED",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT330",
+    "course_title": "MANAGING CLOUD",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT242",
+    "course_title": "CYBER SECURITY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT217",
+    "course_title": "INTRODUCTION TO DATA",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT219",
+    "course_title": "FRONT END WEB",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE217",
+    "course_title": "INTRODUCTION TO",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT254",
+    "course_title": "FOUNDATIONS OF",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE374",
+    "course_title": "ADVANCE SOFTWARE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT362",
+    "course_title": "CLOUD ARCHITECTURE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT249",
+    "course_title": "SYSTEM",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT375",
+    "course_title": "DATA SCIENCE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT220",
+    "course_title": "SERVER SIDE SCRIPTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE341",
+    "course_title": "PROGRAMMING IOT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT354",
+    "course_title": "MACHINE LEARNING-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE375",
+    "course_title": "SOFTWARE TESTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE322",
+    "course_title": "FORMAL LANGUAGES AND AUTOMATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT363",
+    "course_title": "CLOUD MICROSERVICES",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT250",
+    "course_title": "DIGITAL EVIDENCE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT374",
+    "course_title": "DATA ANALYTICS WITH",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT252",
+    "course_title": "WEB APP DEVELOPMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE128",
+    "course_title": "INTRODUCTION TO IOT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT344",
+    "course_title": "NATURAL LANGUAGE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE376",
+    "course_title": "AUTOMATED TESTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT364",
+    "course_title": "CLOUD ARCHITECTURE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT244",
+    "course_title": "SECURING COMPUTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT234",
+    "course_title": "PREDICTIVE ANALYTICS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT222",
+    "course_title": "ADVANCED WEB",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE237",
+    "course_title": "ARCHITECTING SMART",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT423",
+    "course_title": "MACHINE LEARNING-II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE377",
+    "course_title": "ADVANCE TESTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEA306",
+    "course_title": "ANALYTICAL SKILLS-II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEA308",
+    "course_title": "ADVANCED",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE329",
+    "course_title": "PRELUDE TO",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE333",
+    "course_title": "COMBINATORIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE330",
+    "course_title": "COMPETITIVE CODING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PEV301",
+    "course_title": "VERBAL ABILITY",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE343",
+    "course_title": "TRAINING IN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE443",
+    "course_title": "SEMINAR ON SUMMER",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE332",
+    "course_title": "INDUSTRY ETHICS AND LEGAL ISSUES",
+    "credit": 2.0
+  },
+  {
+    "course_code": "CSE393",
+    "course_title": "ONLINE ACADEMIC COURSE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT327",
+    "course_title": "CLOUD",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT245",
+    "course_title": "PENETRATION TESTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT312",
+    "course_title": "BIG DATA",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT221",
+    "course_title": "MVC PROGRAMMING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE129",
+    "course_title": "IOT FOR DIGITAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT345",
+    "course_title": "COMPUTER VISION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE378",
+    "course_title": "WEB SERVICES API",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE334",
+    "course_title": "COMBINATORIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE331",
+    "course_title": "CODING PEARLS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE357",
+    "course_title": "COMBINATORIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PES319",
+    "course_title": "SOFT SKILLS-II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE339",
+    "course_title": "CAPSTONE PROJECT-I",
+    "credit": 2.0
+  },
+  {
+    "course_code": "CSE304",
+    "course_title": "COMPUTER GRAPHICS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE327",
+    "course_title": "SIMULATION AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE406",
+    "course_title": "ADVANCED JAVA",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE434",
+    "course_title": "GAME DEVELOPMENT IN",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE436",
+    "course_title": "BLOCKCHAIN",
+    "credit": 4.0
+  },
+  {
+    "course_code": "INT402",
+    "course_title": "MODERN WEB",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE328",
+    "course_title": "SIMULATION AND",
+    "credit": 1.0
+  },
+  {
+    "course_code": "INT328",
+    "course_title": "NETWORK",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT251",
+    "course_title": "MALWARE ANALYSIS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT315",
+    "course_title": "CLUSTER COMPUTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT253",
+    "course_title": "WEB DEVELOPMENT IN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECE140",
+    "course_title": "WORKSHOP ON IOT FOR",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT422",
+    "course_title": "DEEP LEARNING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE379",
+    "course_title": "MOBILE AUTOMATED",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE335",
+    "course_title": "COMBINATORIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE447",
+    "course_title": "INDUSTRY CO-OP PROJECT-I",
+    "credit": 16.0
+  },
+  {
+    "course_code": "CSE435",
+    "course_title": "COMPREHENSIVE SEMINAR",
+    "credit": 1.0
+  },
+  {
+    "course_code": "CSE439",
+    "course_title": "CAPSTONE PROJECT-II",
+    "credit": 8.0
+  },
+  {
+    "course_code": "CSE403",
+    "course_title": "NETWORK SECURITY",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE493",
+    "course_title": "LINUX SYSTEM",
+    "credit": 4.0
+  },
+  {
+    "course_code": "CSE504",
+    "course_title": "STORAGE TECHNOLOGY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT411",
+    "course_title": "SOFTWARE PROJECT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE507",
+    "course_title": "STORAGE TECHNOLOGY",
+    "credit": 1.0
+  },
+  {
+    "course_code": "INT416",
+    "course_title": "SOFTWARE PROJECT",
+    "credit": 2.0
+  },
+  {
+    "course_code": "CSE441",
+    "course_title": "INDUSTRY INTERNSHIP",
+    "credit": 16.0
+  },
+  {
+    "course_code": "CSE448",
+    "course_title": "INDUSTRY CO-OP",
+    "credit": 16.0
+  },
+  {
+    "course_code": "CSE273",
+    "course_title": "FOUNDATIONS OF MACHINE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE274",
+    "course_title": "APPLIED MACHINE LEARNING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE470",
+    "course_title": "APPLIED ARTIFICIAL INTELLIGENCE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE471",
+    "course_title": "DEEP LEARNING FOR COMPUTER",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE472",
+    "course_title": "DEEP LEARNING FOR NATURAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE473",
+    "course_title": "LARGE LANGUAGE MODELS AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE224",
+    "course_title": "FUNDAMENTALS OF ANDROID",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE225",
+    "course_title": "DEVELOPING ANDROID APPS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE226",
+    "course_title": "ANDROID APP DEPLOYMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE227",
+    "course_title": "ADVANCED ANDROID APP",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT397",
+    "course_title": "WEB DEVELOPMENT AND ANDROID",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT398",
+    "course_title": "DIGITAL MARKETING AND MEDIA",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT399",
+    "course_title": "ENTREPRENEURSHIP AND PROJECT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT400",
+    "course_title": "FINANCIAL MARKETS AND CAREER",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN314",
+    "course_title": "CAPITAL MARKET OPERATIONS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN318",
+    "course_title": "MONEY, BANKING AND FINANCIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN319",
+    "course_title": "INVESTMENT BANKING AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN901",
+    "course_title": "FUNDAMENTALS OF BANKING AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW252",
+    "course_title": "BASICS OF CONTRACT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW255",
+    "course_title": "SPECIAL CONTRACTS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW256",
+    "course_title": "BASICS OF COMPANY LAW",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW257",
+    "course_title": "BASICS OF INVESTMENT LAW",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT373",
+    "course_title": "AGILE DRIVEN DEVELOPMENT AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT377",
+    "course_title": "CLOUD COMPUTING AND DEVOPS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT378",
+    "course_title": "ADVANCEMENTS IN CLOUD AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT379",
+    "course_title": "SITE RELIABILITY ENGINEERING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT233",
+    "course_title": "DATA VISUALIZATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT387",
+    "course_title": "DATA ANALYSIS AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT388",
+    "course_title": "MLOPS:WORKFLOW AUTOMATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT331",
+    "course_title": "FUNDAMENTALS OF DEVOPS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT332",
+    "course_title": "DEVOPS VIRTUALIZATION AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT333",
+    "course_title": "DEVOPS ADVANCE CONFIGURATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT334",
+    "course_title": "ENTERPRISE APPLICATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT311",
+    "course_title": "DIGITAL MARKETING",
+    "credit": 2.0
+  },
+  {
+    "course_code": "MKT905",
+    "course_title": "SEARCH ENGINE OPTIMIZATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT906",
+    "course_title": "SOCIAL MEDIA MARKETING",
+    "credit": 2.0
+  },
+  {
+    "course_code": "MKT907",
+    "course_title": "WEB ANALYTICS",
+    "credit": 2.0
+  },
+  {
+    "course_code": "ECO214",
+    "course_title": "INTRODUCTION TO ECONOMIC",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECO215",
+    "course_title": "INDIAN ECONOMIC ISSUES AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECO324",
+    "course_title": "ECONOMICS OF MONEY AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ECO325",
+    "course_title": "ECONOMICS OF TRADE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ENG606",
+    "course_title": "CONTEMPORARY SHORT STORIES",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ENG607",
+    "course_title": "CONTEMPORARY PROSE AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ENG608",
+    "course_title": "CONTEMPORARY DRAMA",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ENG609",
+    "course_title": "CONTEMPORARY FICTION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FST801",
+    "course_title": "FASHION STUDIES",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FST802",
+    "course_title": "INDIAN CULTURE STUDIES",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FST803",
+    "course_title": "FASHION DESIGN PROCESS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FST804",
+    "course_title": "SURFACE DEVELOPMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN214",
+    "course_title": "INTRODUCTION TO FINANCIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN215",
+    "course_title": "MUTUAL FUNDS AND EXCHANGE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN358",
+    "course_title": "DERIVATIVE MARKET OPERATIONS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FRN114",
+    "course_title": "ELEMENTARY FRENCH I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FRN115",
+    "course_title": "ELEMENTARY FRENCH II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FRN116",
+    "course_title": "ELEMENTARY FRENCH III",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FRN117",
+    "course_title": "ELEMENTARY FRENCH IV",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT257",
+    "course_title": "MODERN WEB APPLICATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT258",
+    "course_title": "ADVANCED DATABASES, SECURITY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT340",
+    "course_title": "DEVOPS AND SYSTEM DESIGN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN212",
+    "course_title": "BASIC FINANCIAL MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN213",
+    "course_title": "INDIAN FINANCIAL SYSTEM",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN308",
+    "course_title": "BANKING AND INSURANCE",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CAP818",
+    "course_title": "GAME TOOL-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CAP819",
+    "course_title": "GAME TOOL-II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CAP820",
+    "course_title": "GAME TOOL-III",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CAP821",
+    "course_title": "PROJECT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SSC231",
+    "course_title": "INDIAN CULTURE AND HISTORY",
+    "credit": 4.0
+  },
+  {
+    "course_code": "SSC232",
+    "course_title": "INDIAN GEOGRAPHY AND SOCIETY",
+    "credit": 4.0
+  },
+  {
+    "course_code": "SSC233",
+    "course_title": "INDIAN POLITY, GOVERNANCE AND",
+    "credit": 4.0
+  },
+  {
+    "course_code": "SSC234",
+    "course_title": "INDIAN ECONOMY",
+    "credit": 4.0
+  },
+  {
+    "course_code": "GEO295",
+    "course_title": "PHYSICAL GEOGRAPHY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GEO296",
+    "course_title": "HUMAN GEOGRAPHY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GEO297",
+    "course_title": "GEOGRAPHY OF INDIA-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GEO298",
+    "course_title": "GEOGRAPHY OF INDIA-II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GER107",
+    "course_title": "ELEMENTARY GERMAN I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GER108",
+    "course_title": "ELEMENTARY GERMAN II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GER109",
+    "course_title": "ELEMENTARY GERMAN III",
+    "credit": 3.0
+  },
+  {
+    "course_code": "GER110",
+    "course_title": "ELEMENTARY GERMAN IV",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HIS291",
+    "course_title": "ANCIENT INDIAN HISTORY AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HIS292",
+    "course_title": "MEDIEVAL INDIAN HISTORY AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HIS293",
+    "course_title": "HISTORY OF THE BRITISH RAAJ IN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HIS294",
+    "course_title": "MODERN WORLD HISTORY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HRM203",
+    "course_title": "HUMAN RESOURCE PLANNING AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HRM204",
+    "course_title": "COMPENSATION MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HRM301",
+    "course_title": "INDUSTRIAL PSYCHOLOGY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "HRM302",
+    "course_title": "CONFLICT MANAGEMENT AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT323",
+    "course_title": "DATABASE ESSENTIALS TOWARDS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT324",
+    "course_title": "INFORMATICA DATA QUALITY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT325",
+    "course_title": "INFORMATICA DATA INTEGRATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT326",
+    "course_title": "CLOUD APPLICATION INTEGRATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW351",
+    "course_title": "COPYRIGHTS AND DESIGNS LAW",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW352",
+    "course_title": "TRADEMARKS AND ALLIED LAWS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW353",
+    "course_title": "PATENTS AND GEOGRAPHICAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "LAW354",
+    "course_title": "CYBER LAWS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IFD801",
+    "course_title": "FUNDAMENTALS OF DESIGN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IFD802",
+    "course_title": "STUDIES IN FORM",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IFD803",
+    "course_title": "COMPUTER SKILLS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IFD804",
+    "course_title": "SET DESIGN STUDIO",
+    "credit": 3.0
+  },
+  {
+    "course_code": "FIN348",
+    "course_title": "INTERNATIONAL FINANCIAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MGN220",
+    "course_title": "INTRODUCTION TO INTERNATIONAL",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MGN902",
+    "course_title": "EXPORT IMPORT PROCEDURE AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT211",
+    "course_title": "INTERNATIONAL MARKETING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ACC211",
+    "course_title": "FINANCIAL ACCOUNTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT202",
+    "course_title": "MARKETING MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT257",
+    "course_title": "PERSONAL SELLING SKILLS",
+    "credit": 2.0
+  },
+  {
+    "course_code": "MKT258",
+    "course_title": "SALES MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT203",
+    "course_title": "PRODUCT AND BRAND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT302",
+    "course_title": "MOBILE MARKETING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MKT303",
+    "course_title": "WEB AND SOCIAL MEDIA",
+    "credit": 2.0
+  },
+  {
+    "course_code": "MTH265",
+    "course_title": "DISCRETE MATHEMATICS FOR",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MTH280",
+    "course_title": "LINEAR ALGEBRA",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MTH381",
+    "course_title": "NUMBER THEORY AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "MTH563",
+    "course_title": "COMPUTATIONAL TECHNIQUES",
+    "credit": 2.0
+  },
+  {
+    "course_code": "POL371",
+    "course_title": "POLITICAL CRISIS MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "POL372",
+    "course_title": "THE GLOBAL DIPLOMACY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "POL373",
+    "course_title": "ETHNIC STUDIES",
+    "credit": 3.0
+  },
+  {
+    "course_code": "POL374",
+    "course_title": "MORAL FOUNDATIONS OF POLITICS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PID801",
+    "course_title": "FUNDAMENTALS OF DESIGN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PID802",
+    "course_title": "PRODUCT DESIGN STUDIO-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PID803",
+    "course_title": "PRODUCT DESIGN STUDIO-II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PID804",
+    "course_title": "PACKAGING DESIGN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY291",
+    "course_title": "PSYCHOLOGICAL TESTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY292",
+    "course_title": "POSITIVE PSYCHOLOGY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY293",
+    "course_title": "PSYCHOLOGY OF HIGH",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY294",
+    "course_title": "PSYCHOMETRICS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY281",
+    "course_title": "FOUNDATIONS OF PSYCHOLOGY-I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY282",
+    "course_title": "FOUNDATIONS OF PSYCHOLOGY - II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY283",
+    "course_title": "ISSUES AND APPLICATIONS OF",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PSY284",
+    "course_title": "ISSUES AND APPLICATIONS OF",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PBA396",
+    "course_title": "INTRODUCTION TO PUBLIC",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PBA397",
+    "course_title": "INTRODUCTION TO",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PBA398",
+    "course_title": "COMPARATIVE PUBLIC",
+    "credit": 3.0
+  },
+  {
+    "course_code": "PBA399",
+    "course_title": "PUBLIC POLICY AND ANALYSIS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE271",
+    "course_title": "SOFTWARE TESTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE272",
+    "course_title": "SOFTWARE QUALITY ENGINEERING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT346",
+    "course_title": "ROBOTIC PROCESS AUTOMATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT347",
+    "course_title": "SOFTWARE BOTS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT348",
+    "course_title": "BOT AUTOMATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT349",
+    "course_title": "ROBOTICS AND AUTOMATION",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SOC371",
+    "course_title": "SOCIOLOGY OF MEDIA",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SOC372",
+    "course_title": "SOCIOLOGY OF AGING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SOC373",
+    "course_title": "ENVIRONMENT AND SOCIETY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SOC374",
+    "course_title": "UNDERSTANDING CRIMINOLOGY",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SPA107",
+    "course_title": "ELEMENTARY SPANISH I",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SPA108",
+    "course_title": "ELEMENTARY SPANISH II",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SPA109",
+    "course_title": "ELEMENTARY SPANISH III",
+    "credit": 3.0
+  },
+  {
+    "course_code": "SPA110",
+    "course_title": "ELEMENTARY SPANISH IV",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IXD801",
+    "course_title": "INTERACTION DESIGN",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IXD802",
+    "course_title": "FUNDAMENTALS TOOLS OF USER",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IXD803",
+    "course_title": "DESIGN OF USER INTERFACE AND",
+    "credit": 3.0
+  },
+  {
+    "course_code": "IXD804",
+    "course_title": "HUMAN COMPUTER INTERACTIONS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE209",
+    "course_title": "ARTIFICIAL INTELLIGENCE AND EXPERT SYSTEMS",
+    "credit": 4.0
+  },
+  {
+    "course_code": "INT255",
+    "course_title": "MATHEMATICS BEHIND MACHINE LEARNING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT256",
+    "course_title": "SOFT COMPUTING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT394",
+    "course_title": "MACHINE LEARNING ALGORITHMS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT395",
+    "course_title": "SUPERVISED LEARNING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "INT396",
+    "course_title": "UNSUPERVISED LEARNING",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE474",
+    "course_title": "AI ETHICS AND RESPONSIBLE AI",
+    "credit": 3.0
+  },
+  {
+    "course_code": "CSE475",
+    "course_title": "MLOPS AND PRODUCTION AI SYSTEMS",
+    "credit": 3.0
+  },
+  {
+    "course_code": "ACC304",
+    "course_title": "COST MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "OPR201",
+    "course_title": "LEAN MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "OPR202",
+    "course_title": "SUPPLY CHAIN MANAGEMENT",
+    "credit": 3.0
+  },
+  {
+    "course_code": "OPR301",
+    "course_title": "TOTAL QUALITY MANAGEMENT",
+    "credit": 3.0
+  }
+]

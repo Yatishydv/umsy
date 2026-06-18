@@ -15,6 +15,31 @@ const gradePoints = {
 
 const gradeOptions = ['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'E', 'F'];
 
+const isRomanSymbol = (str) => /^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/i.test(String(str).trim());
+const romanToInteger = (str) => {
+    const map = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10 };
+    return map[String(str).trim().toLowerCase()] || 0;
+};
+
+const getSemesterNumber = (tid) => {
+    const idStr = String(tid).trim();
+    if (isRomanSymbol(idStr)) return romanToInteger(idStr);
+    if (/^\d{6}$/.test(idStr)) {
+        const year = parseInt(idStr[0]);
+        const semInYear = parseInt(idStr[idStr.length - 1]);
+        return (year - 1) * 2 + (semInYear === 1 ? 1 : 2);
+    }
+    const m = idStr.match(/\d+/);
+    return m ? parseInt(m[0]) : null;
+};
+
+const isRegularTerm = (tid) => {
+    const idStr = String(tid).trim();
+    if (isRomanSymbol(idStr)) return true;
+    if (/[a-zA-Z]/.test(idStr)) return false;
+    return true;
+};
+
 const getGPAMessage = (gpa) => {
     if (gpa >= 9.0) return 'Outstanding! 🌟';
     if (gpa >= 8.0) return 'Excellent! 💫';
@@ -24,7 +49,7 @@ const getGPAMessage = (gpa) => {
     return 'You Can Do It! 🎯';
 };
 
-const TPGACalculator = ({ semesterData = [], resultData = null }) => {
+const TPGACalculator = ({ semesterData = [], resultData = null, marksData = [] }) => {
     const [subjects, setSubjects] = useState([]);
     const [result, setResult] = useState(null);
     const [selectedSemester, setSelectedSemester] = useState('');
@@ -59,7 +84,10 @@ const TPGACalculator = ({ semesterData = [], resultData = null }) => {
         if (!termId) return;
 
         // Prefer resultData (has credit)
-        const resultSem = resultData?.semesters?.find(s => s.termId === termId);
+        const resultSem = resultData?.semesters?.find(s => String(s.termId) === String(termId));
+        const marksSem = marksData?.find(s => String(s.termId || s.term) === String(termId));
+        const cgpaSem = semesterData?.find(s => String(s.term || s.termId) === String(termId));
+
         if (resultSem?.subjects?.length > 0) {
             setSubjects(resultSem.subjects.map(sub => ({
                 id: crypto.randomUUID(),
@@ -72,15 +100,25 @@ const TPGACalculator = ({ semesterData = [], resultData = null }) => {
             return;
         }
 
-        // Fallback: TermwiseCGPA
-        const sem = semesterData.find(s => s.term === termId);
-        if (sem?.subjects?.length > 0) {
-            setSubjects(sem.subjects.map(subject => {
-                const [code, ...nameParts] = subject.course.split('::');
+        if (marksSem?.subjects?.length > 0) {
+            setSubjects(marksSem.subjects.map(sub => ({
+                id: crypto.randomUUID(),
+                courseCode: sub.courseCode || '',
+                courseName: sub.courseName || sub.courseCode || 'Subject',
+                grade: sub.grade || '',
+                credit: sub.credit != null ? sub.credit.toString() : '',
+            })));
+            setResult(null);
+            return;
+        }
+
+        if (cgpaSem?.subjects?.length > 0) {
+            setSubjects(cgpaSem.subjects.map(subject => {
+                const [code, ...nameParts] = subject.course?.split('::') || [subject.courseCode, subject.courseName];
                 return {
                     id: crypto.randomUUID(),
-                    courseCode: code?.trim() || '',
-                    courseName: nameParts.join('::').trim() || code?.trim() || 'Subject',
+                    courseCode: code?.trim() || subject.courseCode || '',
+                    courseName: nameParts.join('::').trim() || subject.courseName || code?.trim() || 'Subject',
                     grade: subject.grade || '',
                     credit: subject.credit?.toString() || '',
                 };
@@ -138,9 +176,50 @@ const TPGACalculator = ({ semesterData = [], resultData = null }) => {
     };
 
     // ── Semester options ───────────────────────────────────────────────────
-    const semesterOptions = resultData?.semesters?.length > 0
-        ? resultData.semesters.map(s => ({ value: s.termId, label: `Term ${s.termId}${s.tgpa ? ` — ${s.tgpa}` : ''}` }))
-        : semesterData.map(s => ({ value: s.term, label: `Sem ${s.term} — TGPA ${s.tgpa}` }));
+    const semesterOptions = React.useMemo(() => {
+        const list = [];
+        const seenSemNums = new Set();
+        
+        const getLabel = (tid) => {
+            const idStr = String(tid).trim();
+            const romans = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII' };
+            
+            if (isRomanSymbol(idStr)) return `Sem ${idStr.toUpperCase()}`;
+            if (/^\d{6}$/.test(idStr)) {
+                const year = parseInt(idStr[0]);
+                const semInYear = parseInt(idStr[idStr.length - 1]);
+                const semNum = (year - 1) * 2 + (semInYear === 1 ? 1 : 2);
+                return `Sem ${romans[semNum] || semNum}`;
+            }
+            const m = idStr.match(/\d+/);
+            if (m) {
+                const num = parseInt(m[0]);
+                return `Sem ${romans[num] || num}`;
+            }
+            return `Sem ${tid}`;
+        };
+
+        const addTerm = (termId, tgpa = null) => {
+            if (!termId) return;
+            if (!isRegularTerm(termId)) return;
+            const semNum = getSemesterNumber(termId);
+            if (semNum && !seenSemNums.has(semNum)) {
+                seenSemNums.add(semNum);
+                list.push({
+                    value: String(termId),
+                    semNum: semNum,
+                    label: `${getLabel(termId)}${tgpa ? ` — TGPA ${tgpa}` : ''}`
+                });
+            }
+        };
+
+        (resultData?.semesters || []).forEach(s => addTerm(s.termId, s.tgpa));
+        (marksData || []).forEach(s => addTerm(s.termId || s.term));
+        (semesterData || []).forEach(s => addTerm(s.term || s.termId, s.tgpa));
+
+        list.sort((a, b) => b.semNum - a.semNum);
+        return list;
+    }, [resultData, marksData, semesterData]);
 
     const hasSubjects = subjects.length > 0;
 

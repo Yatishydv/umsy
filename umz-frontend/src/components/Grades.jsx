@@ -149,7 +149,7 @@ const Grades = () => {
     
     // Persist View State
     const [search, setSearch]         = useState(() => localStorage.getItem('umz_grades_search') || '');
-    const [activeSem, setActiveSem]   = useState(() => localStorage.getItem('umz_grades_active_sem') || '');
+    const [activeSem, setActiveSem]   = useState('');
     const [viewMode, setViewMode]     = useState(() => {
         if (isMarksPath) return 'marks';
         return localStorage.getItem('umz_grades_view_mode') || 'grades';
@@ -162,6 +162,7 @@ const Grades = () => {
     const [showGradePicker, setShowGradePicker] = useState(false);
     const [studentInfo, setStudentInfo] = useState(null);
     const tabRefs = useRef({});
+    const prevLatestSemRef = useRef('');
 
     // Save state to localStorage
     useEffect(() => { localStorage.setItem('umz_grades_search', search); }, [search]);
@@ -179,9 +180,43 @@ const Grades = () => {
 
             // Load Results/Grades
             const cachedResult = localStorage.getItem('umz_result_data');
+            let hasNullCredits = false;
             if (cachedResult) {
-                try { setResultData(JSON.parse(cachedResult)); } catch {}
-            } else if (cookies) {
+                try {
+                    const parsed = JSON.parse(cachedResult);
+                    setResultData(parsed);
+                    if (parsed) {
+                        if (parsed.semesters) {
+                            for (const sem of parsed.semesters) {
+                                if (sem.subjects) {
+                                    for (const sub of sem.subjects) {
+                                        if (sub.credit === null || sub.credit === undefined) {
+                                            hasNullCredits = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (hasNullCredits) break;
+                            }
+                        }
+                        if (parsed.rplGrades && !hasNullCredits) {
+                            for (const sem of parsed.rplGrades) {
+                                if (sem.subjects) {
+                                    for (const sub of sem.subjects) {
+                                        if (sub.credit === null || sub.credit === undefined) {
+                                            hasNullCredits = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (hasNullCredits) break;
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
+            if ((!cachedResult || hasNullCredits) && cookies) {
                 try {
                     const res = isV04
                         ? await getResultV04(cookies)
@@ -193,9 +228,28 @@ const Grades = () => {
 
             // Load Marks
             const cachedMarks = localStorage.getItem('umz_marks_data');
+            let hasNullMarksCredits = false;
             if (cachedMarks) {
-                try { setMarksData(JSON.parse(cachedMarks)); } catch {}
-            } else if (cookies) {
+                try {
+                    const parsed = JSON.parse(cachedMarks);
+                    setMarksData(parsed);
+                    if (parsed && Array.isArray(parsed)) {
+                        for (const term of parsed) {
+                            if (term.subjects) {
+                                for (const sub of term.subjects) {
+                                    if (sub.credit === null || sub.credit === undefined) {
+                                        hasNullMarksCredits = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (hasNullMarksCredits) break;
+                        }
+                    }
+                } catch {}
+            }
+
+            if ((!cachedMarks || hasNullMarksCredits) && cookies) {
                 try {
                     const res = isV04
                         ? await getMarksV04(cookies)
@@ -392,7 +446,7 @@ const Grades = () => {
                     rows.push({
                         name: sub.courseName || '',
                         code: sub.courseCode || '',
-                        credit: null,
+                        credit: sub.credit !== undefined ? sub.credit : null,
                         grade: '—',
                         termId: term.termId,
                         termTitle: mappedTitle,
@@ -419,7 +473,7 @@ const Grades = () => {
                     rows.push({
                         name: sub.courseName || '',
                         code: sub.courseCode || '',
-                        credit: null,
+                        credit: sub.credit !== undefined ? sub.credit : null,
                         grade: '—',
                         termId: term.termId,
                         termTitle: mappedTitle,
@@ -472,8 +526,12 @@ const Grades = () => {
     }, [allSubjects, viewMode]);
 
     useEffect(() => {
-        if (semList.length > 0 && (!activeSem || !semList.includes(activeSem))) {
-            setActiveSem(semList[0]);
+        if (semList.length > 0) {
+            const latestSem = semList[0];
+            if (latestSem !== prevLatestSemRef.current || !activeSem || !semList.includes(activeSem)) {
+                setActiveSem(latestSem);
+                prevLatestSemRef.current = latestSem;
+            }
         }
     }, [semList, activeSem]);
 
@@ -832,7 +890,7 @@ const Grades = () => {
                                                                     {sub.name && sub.name !== 'N/A' ? sub.name : sub.code}
                                                                 </p>
                                                                 <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
-                                                                    <Star className="h-2.5 w-2.5" /> {sub.credit?.toFixed(1) || '0.0'} Credits
+                                                                    <Star className="h-2.5 w-2.5" /> {sub.credit != null ? `${sub.credit.toFixed(1)} Credits` : '— Credits'}
                                                                 </p>
                                                             </div>
                                                             <div className={`flex-shrink-0 w-12 h-12 rounded-2xl ${cfg.bg} flex flex-col items-center justify-center border ${cfg.border} transition-transform group-active:scale-95`}>
@@ -887,7 +945,7 @@ const Grades = () => {
                                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{sub.name}</p>
                                     </div>
                                     <div className="shrink-0 text-right">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{sub.credit} Credits</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{sub.credit != null ? sub.credit.toFixed(1) : '—'} Credits</p>
                                         <span className={`text-[10px] font-bold ${cfg.text}`}>Grade {sub.grade}</span>
                                     </div>
                                 </div>

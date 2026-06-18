@@ -271,7 +271,7 @@ const CGPA = () => {
 
                     <div className="flex-1 pb-24 px-4 pt-6">
                         {mobileTab === 'calculator' ? (
-                            <MobileCalculator semesterData={studentInfo?.TermwiseCGPA || []} resultData={resultData} />
+                            <MobileCalculator semesterData={studentInfo?.TermwiseCGPA || []} resultData={resultData} marksData={marksData} />
                         ) : (
                             <>
                                 {/* Circular CGPA Chart */}
@@ -523,9 +523,9 @@ const CGPA = () => {
                                 <button onClick={() => setCalcMode('overall')} className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${calcMode === 'overall' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-500 hover:bg-gray-50'}`}>🎓 Overall CGPA</button>
                             </div>
                             {calcMode === 'term' ? (
-                                <TPGACalculator semesterData={studentInfo?.TermwiseCGPA || []} resultData={resultData} />
+                                <TPGACalculator semesterData={studentInfo?.TermwiseCGPA || []} resultData={resultData} marksData={marksData} />
                             ) : (
-                                <OverallCGPACalculator semesterData={studentInfo?.TermwiseCGPA || []} resultData={resultData} />
+                                <OverallCGPACalculator semesterData={studentInfo?.TermwiseCGPA || []} resultData={resultData} marksData={marksData} />
                             )}
                         </div>
                     )}
