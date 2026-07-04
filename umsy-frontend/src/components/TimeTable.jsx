@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Download } from 'lucide-react';
 import Sidebar from './Sidebar';
 import HeaderNav from './HeaderNav';
-import { getTimeTable } from '../services/api';
+import { getTimeTable, parseTimeTable } from '../services/api';
 import { generateTimetablePDF } from '../utils/generateTimetablePDF';
 
 const TimeTable = () => {
@@ -12,6 +12,12 @@ const TimeTable = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [downloadLoading, setDownloadLoading] = useState(false);
+
+    // Manual Import UI States
+    const [pastedHtml, setPastedHtml] = useState('');
+    const [importLoading, setImportLoading] = useState(false);
+    const [showImportArea, setShowImportArea] = useState(false);
+    const [importError, setImportError] = useState('');
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -40,6 +46,31 @@ const TimeTable = () => {
             alert('Failed to download PDF. Please try again.');
         } finally {
             setDownloadLoading(false);
+        }
+    };
+
+    const handleManualImport = async () => {
+        if (!pastedHtml.trim()) {
+            setImportError('Please paste UMS Timetable HTML content.');
+            return;
+        }
+        try {
+            setImportLoading(true);
+            setImportError('');
+            const res = await parseTimeTable(pastedHtml);
+            if (res.success && res.data) {
+                setTimetable(res.data);
+                localStorage.setItem('umsy_timetable_data', JSON.stringify(res.data));
+                setShowImportArea(false);
+                setPastedHtml('');
+                setError(''); // clear any page errors
+            } else {
+                setImportError('Failed to parse timetable. Please verify you copied the full page HTML.');
+            }
+        } catch (err) {
+            setImportError(err.message || 'An error occurred while parsing HTML.');
+        } finally {
+            setImportLoading(false);
         }
     };
 
@@ -161,16 +192,49 @@ const TimeTable = () => {
 
     if (error) {
         return (
-            <div className="flex min-h-screen bg-gray-50">
+            <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
                 <Sidebar />
-                <main className="flex-1 p-8">
-                    <div className="max-w-7xl mx-auto">
-                        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error</h3>
-                            <p className="text-gray-600">{error}</p>
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <HeaderNav />
+                    <main className="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10 bg-[#f6f8fa] dark:bg-zinc-950">
+                        <div className="max-w-4xl mx-auto space-y-6">
+                            <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                                <h3 className="text-lg font-bold text-red-650 dark:text-red-400 mb-2">Sync Blocked by Cloudflare</h3>
+                                <p className="text-zinc-550 dark:text-zinc-400 text-sm mb-6">
+                                    LPU's Cloudflare security is preventing the server from syncing your timetable automatically.
+                                    You can bypass this by copying and pasting the timetable page HTML from UMS below:
+                                </p>
+                                
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={pastedHtml}
+                                        onChange={(e) => setPastedHtml(e.target.value)}
+                                        placeholder="1. Open UMS -> Academic -> Timetable Report&#10;2. Right-click anywhere on the page and select 'View Page Source' (or press Ctrl+U)&#10;3. Copy everything (Ctrl+A, Ctrl+C) and paste it here."
+                                        className="w-full h-48 px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-55 dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500 resize-none"
+                                    />
+                                    {importError && (
+                                        <p className="text-xs text-red-500 font-medium">{importError}</p>
+                                    )}
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={handleManualImport}
+                                            disabled={importLoading}
+                                            className="px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-semibold rounded-xl hover:scale-[1.02] transition-transform disabled:opacity-50 cursor-pointer text-sm"
+                                        >
+                                            {importLoading ? 'Parsing...' : 'Sync Timetable'}
+                                        </button>
+                                        <button
+                                            onClick={() => setError('')}
+                                            className="px-5 py-2.5 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-medium rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer text-sm"
+                                        >
+                                            Go to Empty State
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </main>
+                    </main>
+                </div>
             </div>
         );
     }
@@ -186,28 +250,79 @@ const TimeTable = () => {
                             </div>
                         </div>
 
-                        {/* Download PDF Button */}
-                        {Object.keys(timetable).length > 0 && (
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-3">
                             <button
-                                onClick={handleDownloadPDF}
-                                disabled={downloadLoading}
-                                className="flex items-center gap-2 px-4 py-2.5  text-white rounded-xl bg-gray-900 hover:scale-105 hover:shadow-xl cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                onClick={() => setShowImportArea(!showImportArea)}
+                                className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-sm font-semibold"
                             >
-                                <Download className="h-4 w-4" />
-                                {/* <span className="font-medium">
-                                    {downloadLoading ? 'Generating...' : 'Download PDF'}
-                                </span> */}
+                                <Calendar className="h-4 w-4" />
+                                <span>Sync HTML</span>
                             </button>
-                        )}
+                            {Object.keys(timetable).length > 0 && (
+                                <button
+                                    onClick={handleDownloadPDF}
+                                    disabled={downloadLoading}
+                                    className="flex items-center gap-2 px-4 py-2.5 text-white rounded-xl bg-gray-900 hover:scale-105 hover:shadow-xl cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                >
+                                    <Download className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
                     </div>
+
+                    {/* Manual Import Section (Toggled) */}
+                    {showImportArea && (
+                        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-4">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Manual Timetable Sync</h3>
+                            <textarea
+                                value={pastedHtml}
+                                onChange={(e) => setPastedHtml(e.target.value)}
+                                placeholder="1. Open UMS -> Academic -> Timetable Report&#10;2. Right-click anywhere on the page and select 'View Page Source' (or press Ctrl+U)&#10;3. Copy everything (Ctrl+A, Ctrl+C) and paste it here."
+                                className="w-full h-40 px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500 resize-none"
+                            />
+                            {importError && (
+                                <p className="text-xs text-red-500 font-medium">{importError}</p>
+                            )}
+                            <button
+                                onClick={handleManualImport}
+                                disabled={importLoading}
+                                className="px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-semibold rounded-xl hover:scale-[1.01] transition-transform disabled:opacity-50 cursor-pointer text-sm"
+                            >
+                                {importLoading ? 'Parsing...' : 'Sync Timetable'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Timetable Grid */}
                     {timeSlots.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                                <Calendar className="h-8 w-8 text-gray-400" />
+                        <div className="max-w-4xl mx-auto py-12 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-8 shadow-sm">
+                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-zinc-50 dark:bg-zinc-800 mb-4 text-zinc-400">
+                                <Calendar className="h-8 w-8" />
                             </div>
-                            <p className="text-gray-500">No classes scheduled</p>
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">No Timetable Synced</h3>
+                            <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-md mx-auto mb-6">
+                                Cloudflare blocks automatic timetable syncing. Copy and paste the timetable page source from UMS below to sync your schedule manually:
+                            </p>
+                            
+                            <div className="max-w-xl mx-auto space-y-4 text-left">
+                                <textarea
+                                    value={pastedHtml}
+                                    onChange={(e) => setPastedHtml(e.target.value)}
+                                    placeholder="1. Open UMS -> Academic -> Timetable Report&#10;2. Right-click anywhere and select 'View Page Source' (or press Ctrl+U)&#10;3. Copy everything (Ctrl+A, Ctrl+C) and paste it here."
+                                    className="w-full h-40 px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500 resize-none"
+                                />
+                                {importError && (
+                                    <p className="text-xs text-red-500 font-medium">{importError}</p>
+                                )}
+                                <button
+                                    onClick={handleManualImport}
+                                    disabled={importLoading}
+                                    className="w-full px-5 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-semibold rounded-xl hover:scale-[1.01] transition-transform disabled:opacity-50 cursor-pointer text-sm text-center"
+                                >
+                                    {importLoading ? 'Parsing...' : 'Sync Timetable'}
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <>

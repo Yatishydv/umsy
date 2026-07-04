@@ -484,3 +484,17 @@ export async function getLeaveSlipHtmlFromUrl(url, auth) {
     if (!response.ok) throw new Error(data.error || 'Failed to fetch slip HTML');
     return data;
 }
+
+/**
+ * Send raw timetable HTML to backend for parsing
+ */
+export async function parseTimeTable(html) {
+    const response = await fetch(`${API_BASE_URL}/parse-timetable`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to parse timetable');
+    return data;
+}
