@@ -11,7 +11,7 @@ build/
 coverage/
 .idea/
 Thumbs.db
-umz-backend/test-pool.js
-httpumz
+umsy-backend/test-pool.js
+httpumsy
 test.html
-umzy/
+umsy/

@@ -1,0 +1,9 @@
+2026/07/04-15:44:21.943 542c90 Reusing MANIFEST /Users/yatishydv/Documents/GitHub/umzV3.0/umsy-backend/tmp_chrome_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/07/04-15:44:21.947 542c90 Recovering log #14
+2026/07/04-15:44:21.948 542c90 Level-0 table #17: started
+2026/07/04-15:44:21.950 542c90 Level-0 table #17: 15413 bytes OK
+2026/07/04-15:44:21.951 542c90 Recovering log #16
+2026/07/04-15:44:21.951 542c90 Reusing old log /Users/yatishydv/Documents/GitHub/umzV3.0/umsy-backend/tmp_chrome_profile/Default/Local Storage/leveldb/000016.log 
+2026/07/04-15:44:21.953 542c90 Delete type=0 #14
+2026/07/04-15:44:37.405 542c90 Level-0 table #19: started
+2026/07/04-15:44:37.413 542c90 Level-0 table #19: 15417 bytes OK

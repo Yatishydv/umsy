@@ -10,10 +10,10 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Paths to frontend and backend
-FRONTEND_DIR="$SCRIPT_DIR/umz-frontend"
-BACKEND_DIR="$SCRIPT_DIR/umz-backend"
+FRONTEND_DIR="$SCRIPT_DIR/umsy-frontend"
+BACKEND_DIR="$SCRIPT_DIR/umsy-backend"
 
-echo -e "${BLUE}Starting UMZ Servers...${NC}\n"
+echo -e "${BLUE}Starting UMSY Servers...${NC}\n"
 
 # Function to cleanup background processes on exit
 cleanup() {

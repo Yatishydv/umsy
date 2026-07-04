@@ -1,14 +1,14 @@
-# Render Blueprint for UMZ Backend
+# Render Blueprint for UMSY Backend
 services:
   - type: web
-    name: umz-backend
+    name: umsy-backend
     env: docker
     region: oregon
     plan: free
-    dockerfilePath: ./umz-backend/Dockerfile
-    dockerContext: ./umz-backend
+    dockerfilePath: ./umsy-backend/Dockerfile
+    dockerContext: ./umsy-backend
     envVars:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        value: https://umz.vercel.app
+        value: https://umsy.vercel.app

@@ -1,0 +1,18 @@
+2026/07/04-15:45:45.763 543507 Reusing MANIFEST /Users/yatishydv/Documents/GitHub/umzV3.0/umsy-backend/tmp_chrome_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/07/04-15:45:45.766 543507 Recovering log #16
+2026/07/04-15:45:45.767 543507 Level-0 table #19: started
+2026/07/04-15:45:45.777 543507 Level-0 table #19: 15417 bytes OK
+2026/07/04-15:45:45.778 543507 Recovering log #18
+2026/07/04-15:45:45.778 543507 Reusing old log /Users/yatishydv/Documents/GitHub/umzV3.0/umsy-backend/tmp_chrome_profile/Default/Local Storage/leveldb/000018.log 
+2026/07/04-15:45:45.780 543507 Delete type=0 #16
+2026/07/04-15:45:45.781 54350f Compacting 4@0 + 1@1 files
+2026/07/04-15:45:45.793 54350f Generated table #20@0: 7 keys, 15528 bytes
+2026/07/04-15:45:45.793 54350f Compacted 4@0 + 1@1 files => 15528 bytes
+2026/07/04-15:45:45.794 54350f compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/07/04-15:45:45.796 54350f Delete type=2 #15
+2026/07/04-15:45:45.796 54350f Delete type=2 #17
+2026/07/04-15:45:45.796 54350f Delete type=2 #13
+2026/07/04-15:45:45.796 54350f Delete type=2 #11
+2026/07/04-15:45:45.796 54350f Delete type=2 #19
+2026/07/04-15:46:02.453 543507 Level-0 table #22: started
+2026/07/04-15:46:02.461 543507 Level-0 table #22: 15416 bytes OK
