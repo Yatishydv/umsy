@@ -289,80 +289,81 @@ export async function fetchTimeTable(client, termId) {
             console.log('📝 Saved debug export HTML to debug_export.html');
         } catch (e) { /* ignore */ }
 
-        const $ = cheerio.load(reportAreaHtml);
-        const timetable = {
-            'Monday': [],
-            'Tuesday': [],
-            'Wednesday': [],
-            'Thursday': [],
-            'Friday': [],
-            'Saturday': [],
-            'Sunday': []
-        };
-        const days = Object.keys(timetable);
+        const timetable = parseTimeTableHtml(reportAreaHtml);
+        return timetable;
 
-        // Parse all tables found inside the ReportArea
-        const tables = $('table');
-        console.log(`🔍 Found ${tables.length} tables in ReportArea HTML`);
+    } catch (error) {
+        console.error('❌ Error fetching timetable:', error.message);
+        throw error;
+    }
+}
 
-        tables.each((tIdx, tableEl) => {
-            const matrix = parseHtmlTableTo2DArray($, tableEl);
-            console.log(`📊 Table #${tIdx + 1} parsed to 2D matrix: ${matrix.length} rows, ${matrix[0] ? matrix[0].length : 0} columns`);
-            if (matrix.length === 0) return;
+/**
+ * Parses raw UMS Timetable HTML content (ReportViewer output) into a structured JSON timetable object.
+ * @param {string} reportAreaHtml - Raw HTML string of the timetable report area
+ * @returns {Object} - Parsed timetable by day
+ */
+export function parseTimeTableHtml(reportAreaHtml) {
+    const $ = cheerio.load(reportAreaHtml);
+    const timetable = {
+        'Monday': [],
+        'Tuesday': [],
+        'Wednesday': [],
+        'Thursday': [],
+        'Friday': [],
+        'Saturday': [],
+        'Sunday': []
+    };
+    const days = Object.keys(timetable);
 
-            // Check for List/Table layout:
-            let headerRow = -1;
-            let dayCol = -1;
-            let timeCol = -1;
-            let courseCol = -1;
-            let roomCol = -1;
-            let typeCol = -1;
-            let teacherCol = -1;
-            let sectionCol = -1;
-            let groupCol = -1;
+    $('table').each((tIdx, tableEl) => {
+        const matrix = parseHtmlTableTo2DArray($, tableEl);
+        if (!matrix || matrix.length === 0) return;
 
-            for (let r = 0; r < Math.min(matrix.length, 3); r++) {
+        // Check if Table is a simple List/Row format (e.g. Day, Time, Course...)
+        let dayCol = -1, timeCol = -1, courseCol = -1;
+        let roomCol = -1, typeCol = -1, teacherCol = -1;
+        let sectionCol = -1, groupCol = -1;
+
+        // Try auto-detecting headers from the first few rows
+        for (let r = 0; r < Math.min(matrix.length, 3); r++) {
+            const row = matrix[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c++) {
+                const txt = (row[c]?.text || '').toLowerCase().trim();
+                if (txt.includes('day')) dayCol = c;
+                else if (txt.includes('time') || txt.includes('slot')) timeCol = c;
+                else if (txt.includes('course') || txt.includes('subject')) courseCol = c;
+                else if (txt.includes('room')) roomCol = c;
+                else if (txt.includes('type')) typeCol = c;
+                else if (txt.includes('teacher') || txt.includes('faculty')) teacherCol = c;
+                else if (txt.includes('sec')) sectionCol = c;
+                else if (txt.includes('group')) groupCol = c;
+            }
+            if (dayCol !== -1 && timeCol !== -1 && courseCol !== -1) {
+                break;
+            }
+        }
+
+        // If simple list detected:
+        if (dayCol !== -1 && timeCol !== -1 && courseCol !== -1) {
+            console.log(`📋 Simple list layout detected in Table #${tIdx + 1}`);
+            for (let r = 1; r < matrix.length; r++) {
                 const row = matrix[r];
                 if (!row) continue;
-                for (let c = 0; c < row.length; c++) {
-                    const cell = row[c];
-                    if (!cell) continue;
-                    const txt = cell.text.toLowerCase();
-                    if (txt.includes('day')) dayCol = c;
-                    else if (txt.includes('time')) timeCol = c;
-                    else if (txt.includes('course') || txt.includes('subject') || txt.includes('code')) courseCol = c;
-                    else if (txt.includes('room')) roomCol = c;
-                    else if (txt.includes('type') || txt.includes('lecture') || txt.includes('practical')) typeCol = c;
-                    else if (txt.includes('teacher') || txt.includes('faculty')) teacherCol = c;
-                    else if (txt.includes('section')) sectionCol = c;
-                    else if (txt.includes('group')) groupCol = c;
-                }
-                if (dayCol !== -1 && timeCol !== -1 && dayCol < 20 && timeCol < 20) {
-                    headerRow = r;
-                    break;
-                }
-            }
+                const dayRaw = (row[dayCol]?.text || '').trim();
+                const timeRaw = (row[timeCol]?.text || '').trim();
+                const courseRaw = (row[courseCol]?.text || '').trim();
 
-            if (headerRow !== -1 && dayCol !== -1 && timeCol !== -1) {
-                console.log(`📋 List layout detected in Table #${tIdx + 1}. Day column: ${dayCol}, Time column: ${timeCol}`);
-                for (let r = headerRow + 1; r < matrix.length; r++) {
-                    const row = matrix[r];
-                    if (!row || row.length <= Math.max(dayCol, timeCol)) continue;
+                if (!courseRaw || courseRaw.toLowerCase() === 'course' || courseRaw === '-') continue;
 
-                    const rawDay = row[dayCol]?.text || '';
-                    const matchedDay = days.find(d => d.toLowerCase() === rawDay.toLowerCase() || d.toLowerCase().substring(0, 3) === rawDay.toLowerCase().substring(0, 3));
-                    if (!matchedDay) continue;
-
-                    const timeRaw = row[timeCol]?.text || '';
-                    if (!timeRaw || timeRaw.toLowerCase().includes('time')) continue;
-
-                    const courseRaw = courseCol !== -1 ? row[courseCol]?.text || '' : '';
+                const matchedDay = days.find(d => dayRaw.toLowerCase() === d.toLowerCase() || dayRaw.toLowerCase() === d.toLowerCase().substring(0, 3));
+                if (matchedDay) {
                     const roomRaw = roomCol !== -1 ? row[roomCol]?.text || '' : '';
                     const typeRaw = typeCol !== -1 ? row[typeCol]?.text || '' : '';
                     const teacherRaw = teacherCol !== -1 ? row[teacherCol]?.text || '' : '';
                     const sectionRaw = sectionCol !== -1 ? row[sectionCol]?.text || '' : '';
                     const groupRaw = groupCol !== -1 ? row[groupCol]?.text || '' : '';
-
                     timetable[matchedDay].push({
                         type: typeRaw || courseRaw.split('/')[0] || 'Class',
                         group: groupRaw || 'All',
@@ -373,66 +374,130 @@ export async function fetchTimeTable(client, termId) {
                         time: cleanTimeFormat(timeRaw)
                     });
                 }
-                // Don't return here — continue processing other tables for more data
             }
+            return;
+        }
 
-            // Check for Grid/Matrix layout:
-            let timeRowIndex = -1;
-            const colIndexToTime = {};
-            const rowIndexToDay = {};
-            const timeRegex = /(?:\d{1,2}:\d{2})|(?:\d{1,2}-\d{1,2}\s*(?:AM|PM))/i;
+        // Check for Grid/Matrix layout:
+        let timeRowIndex = -1;
+        const colIndexToTime = {};
+        const rowIndexToDay = {};
+        const timeRegex = /(?:\d{1,2}:\d{2})|(?:\d{1,2}-\d{1,2}\s*(?:AM|PM))/i;
 
-            // 1. Detect if columns represent days of the week (Inverted Grid)
-            let dayHeaderRowIndex = -1;
-            const colIndexToDay = {};
-            const rowIndexToTime = {};
+        // 1. Detect if columns represent days of the week (Inverted Grid)
+        let dayHeaderRowIndex = -1;
+        const colIndexToDay = {};
+        const rowIndexToTime = {};
 
-            for (let r = 0; r < Math.min(matrix.length, 5); r++) {
+        for (let r = 0; r < Math.min(matrix.length, 5); r++) {
+            const row = matrix[r];
+            if (!row) continue;
+            let dayMatches = 0;
+            for (let c = 0; c < row.length; c++) {
+                const txt = (row[c]?.text || '').trim();
+                const matchedDay = days.find(d => txt.toLowerCase() === d.toLowerCase() || txt.toLowerCase() === d.toLowerCase().substring(0, 3));
+                if (matchedDay) {
+                    colIndexToDay[c] = matchedDay;
+                    dayMatches++;
+                }
+            }
+            if (dayMatches >= 3) {
+                dayHeaderRowIndex = r;
+                break;
+            }
+        }
+
+        if (dayHeaderRowIndex !== -1) {
+            console.log(`📋 Inverted Grid layout detected in Table #${tIdx + 1}`);
+            for (let r = dayHeaderRowIndex + 1; r < matrix.length; r++) {
                 const row = matrix[r];
                 if (!row) continue;
-                let dayMatches = 0;
-                for (let c = 0; c < row.length; c++) {
-                    const txt = (row[c]?.text || '').trim();
-                    const matchedDay = days.find(d => txt.toLowerCase() === d.toLowerCase() || txt.toLowerCase() === d.toLowerCase().substring(0, 3));
-                    if (matchedDay) {
-                        colIndexToDay[c] = matchedDay;
-                        dayMatches++;
+                for (let c = 0; c < Math.min(row.length, 3); c++) {
+                    const cellText = (row[c]?.text || '').trim();
+                    if (timeRegex.test(cellText)) {
+                        rowIndexToTime[r] = cleanTimeFormat(cellText);
+                        break;
                     }
                 }
-                if (dayMatches >= 3) {
-                    dayHeaderRowIndex = r;
+            }
+
+            for (const rStr of Object.keys(rowIndexToTime)) {
+                const r = parseInt(rStr, 10);
+                const time = rowIndexToTime[r];
+                const row = matrix[r];
+                if (!row) continue;
+
+                for (const cStr of Object.keys(colIndexToDay)) {
+                    const c = parseInt(cStr, 10);
+                    const day = colIndexToDay[c];
+                    const cell = row[c];
+                    if (!cell) continue;
+
+                    const text = cell.text.trim();
+                    if (!text || text === '-' || days.some(d => d.toLowerCase() === text.toLowerCase() || d.toLowerCase().substring(0, 3) === text.toLowerCase().substring(0, 3))) {
+                        continue;
+                    }
+                    if (timeRegex.test(text)) continue;
+
+                    const classInfo = parseClassCellText(text, time);
+                    if (classInfo) {
+                        const exists = timetable[day].some(cls => cls.time === classInfo.time && cls.courseCode === classInfo.courseCode);
+                        if (!exists) {
+                            timetable[day].push(classInfo);
+                        }
+                    }
+                }
+            }
+        } else {
+            // 2. Normal Grid: Rows are days, columns are times
+            for (let r = 0; r < matrix.length; r++) {
+                const row = matrix[r];
+                if (!row) continue;
+                let timeCount = 0;
+                for (let c = 0; c < row.length; c++) {
+                    if (row[c] && timeRegex.test(row[c].text)) {
+                        timeCount++;
+                    }
+                }
+                if (timeCount >= 2) {
+                    timeRowIndex = r;
+                    for (let c = 0; c < row.length; c++) {
+                        if (row[c] && timeRegex.test(row[c].text)) {
+                            colIndexToTime[c] = cleanTimeFormat(row[c].text);
+                        }
+                    }
                     break;
                 }
             }
 
-            // If we found day headers in a row, columns are days and rows are times
-            if (dayHeaderRowIndex !== -1) {
-                console.log(`📋 Inverted Grid layout detected in Table #${tIdx + 1}. Day header row: ${dayHeaderRowIndex}`);
-                // Map rows to times
-                for (let r = dayHeaderRowIndex + 1; r < matrix.length; r++) {
-                    const row = matrix[r];
-                    if (!row) continue;
-                    // Check if the first cell or any of the first few cells contain a time slot
-                    for (let c = 0; c < Math.min(row.length, 3); c++) {
-                        const cellText = (row[c]?.text || '').trim();
-                        if (timeRegex.test(cellText)) {
-                            rowIndexToTime[r] = cleanTimeFormat(cellText);
-                            break;
-                        }
+            for (let r = 0; r < matrix.length; r++) {
+                if (r === timeRowIndex) continue;
+                const row = matrix[r];
+                if (!row) continue;
+                for (let c = 0; c < Math.min(row.length, 3); c++) {
+                    const cellText = (row[c]?.text || '').trim();
+                    const matchedDay = days.find(d => {
+                        const dl = d.toLowerCase();
+                        const cl = cellText.toLowerCase();
+                        return cl === dl || cl === dl.substring(0, 3);
+                    });
+                    if (matchedDay) {
+                        rowIndexToDay[r] = matchedDay;
+                        break;
                     }
                 }
+            }
 
-                console.log(`🚀 Parsing inverted grid intersections for Table #${tIdx + 1}: Found ${Object.keys(rowIndexToTime).length} time rows and ${Object.keys(colIndexToDay).length} day columns`);
-
-                for (const rStr of Object.keys(rowIndexToTime)) {
+            if (Object.keys(rowIndexToDay).length > 0 && Object.keys(colIndexToTime).length > 0) {
+                for (const rStr of Object.keys(rowIndexToDay)) {
                     const r = parseInt(rStr, 10);
-                    const time = rowIndexToTime[r];
+                    const day = rowIndexToDay[r];
                     const row = matrix[r];
                     if (!row) continue;
 
-                    for (const cStr of Object.keys(colIndexToDay)) {
+                    for (const cStr of Object.keys(colIndexToTime)) {
                         const c = parseInt(cStr, 10);
-                        const day = colIndexToDay[c];
+                        const time = colIndexToTime[c];
                         const cell = row[c];
                         if (!cell) continue;
 
@@ -451,91 +516,11 @@ export async function fetchTimeTable(client, termId) {
                         }
                     }
                 }
-            } else {
-                // 2. Normal Grid: Rows are days, columns are times
-                for (let r = 0; r < matrix.length; r++) {
-                    const row = matrix[r];
-                    if (!row) continue;
-                    let timeCount = 0;
-                    for (let c = 0; c < row.length; c++) {
-                        if (row[c] && timeRegex.test(row[c].text)) {
-                            timeCount++;
-                        }
-                    }
-                    if (timeCount >= 2) {
-                        timeRowIndex = r;
-                        for (let c = 0; c < row.length; c++) {
-                            if (row[c] && timeRegex.test(row[c].text)) {
-                                colIndexToTime[c] = cleanTimeFormat(row[c].text);
-                            }
-                        }
-                        break;
-                    }
-                }
-
-                for (let r = 0; r < matrix.length; r++) {
-                    if (r === timeRowIndex) continue;
-                    const row = matrix[r];
-                    if (!row) continue;
-                    for (let c = 0; c < Math.min(row.length, 3); c++) {
-                        const cellText = (row[c]?.text || '').trim();
-                        const matchedDay = days.find(d => {
-                            const dl = d.toLowerCase();
-                            const cl = cellText.toLowerCase();
-                            return cl === dl || cl === dl.substring(0, 3);
-                        });
-                        if (matchedDay) {
-                            rowIndexToDay[r] = matchedDay;
-                            break;
-                        }
-                    }
-                }
-
-                console.log(`📋 Normal Grid/Matrix layout check in Table #${tIdx + 1}: Found ${Object.keys(rowIndexToDay).length} day rows and ${Object.keys(colIndexToTime).length} time columns`);
-
-                if (Object.keys(rowIndexToDay).length > 0 && Object.keys(colIndexToTime).length > 0) {
-                    console.log(`🚀 Parsing grid intersections for Table #${tIdx + 1}...`);
-                    for (const rStr of Object.keys(rowIndexToDay)) {
-                        const r = parseInt(rStr, 10);
-                        const day = rowIndexToDay[r];
-                        const row = matrix[r];
-                        if (!row) continue;
-
-                        for (const cStr of Object.keys(colIndexToTime)) {
-                            const c = parseInt(cStr, 10);
-                            const time = colIndexToTime[c];
-                            const cell = row[c];
-                            if (!cell) continue;
-
-                            const text = cell.text.trim();
-                            if (!text || text === '-' || days.some(d => d.toLowerCase() === text.toLowerCase() || d.toLowerCase().substring(0, 3) === text.toLowerCase().substring(0, 3))) {
-                                continue;
-                            }
-                            if (timeRegex.test(text)) continue;
-
-                            const classInfo = parseClassCellText(text, time);
-                            if (classInfo) {
-                                const exists = timetable[day].some(cls => cls.time === classInfo.time && cls.courseCode === classInfo.courseCode);
-                                if (!exists) {
-                                    timetable[day].push(classInfo);
-                                }
-                            }
-                        }
-                    }
-                }
             }
-        });
-
-        const totalClasses = Object.values(timetable).reduce((acc, curr) => acc + curr.length, 0);
-        console.log(`✅ Timetable parse completed. Total classes parsed: ${totalClasses}`);
-        for (const [day, list] of Object.entries(timetable)) {
-            console.log(`   - ${day}: ${list.length} classes`);
         }
+    });
 
-        return timetable;
-
-    } catch (error) {
-        console.error('❌ Error fetching timetable:', error.message);
-        throw error;
-    }
+    const totalClasses = Object.values(timetable).reduce((acc, curr) => acc + curr.length, 0);
+    console.log(`✅ Timetable parse completed. Total classes parsed: ${totalClasses}`);
+    return timetable;
 }
