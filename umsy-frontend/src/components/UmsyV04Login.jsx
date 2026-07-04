@@ -3,11 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import illustration1 from '../assets/illustration1.png';
 import illustration2 from '../assets/illustration2.png';
 import illustration3 from '../assets/illustration3.png';
-import { newLogin, saveSession, getNewLoginStatus } from '../services/api';
+import { tokenLoginV04, saveSession, getNewLoginStatus } from '../services/api';
 import { Eye, EyeOff, Sun, Moon, HelpCircle, Loader2 } from 'lucide-react';
-
-// ─── Cloudflare Turnstile sitekey for LPU UMS ───────────────────────────────
-const UMS_TURNSTILE_SITEKEY = '0x4AAAAAABqizXa69CuLKKuQ';
 
 const UmsyV04Login = () => {
     const navigate = useNavigate();
@@ -20,15 +17,11 @@ const UmsyV04Login = () => {
     const [regno, setRegno] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [turnstileToken, setTurnstileToken] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [statusMsg, setStatusMsg] = useState('');
     const [progress, setProgress] = useState(0);
     const [displayedPercent, setDisplayedPercent] = useState(0);
-
-    const turnstileRef = useRef(null);
-    const widgetIdRef = useRef(null);
 
     const slides = [
         {
@@ -71,58 +64,7 @@ const UmsyV04Login = () => {
         return () => clearInterval(interval);
     }, [slides.length]);
 
-    // ── Turnstile script loader ────────────────────────────────────────────
-    useEffect(() => {
-        const scriptId = 'cf-turnstile-script';
 
-        const renderWidget = () => {
-            if (!turnstileRef.current) return;
-            if (widgetIdRef.current !== null) return; // already rendered
-
-            widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
-                sitekey: UMS_TURNSTILE_SITEKEY,
-                theme: theme,
-                callback: (token) => {
-                    setTurnstileToken(token);
-                    setError('');
-                },
-                'expired-callback': () => {
-                    setTurnstileToken('');
-                    setError('Verification expired — please verify again.');
-                },
-                'error-callback': () => {
-                    setTurnstileToken('');
-                    setError('Verification failed — please try again.');
-                },
-            });
-        };
-
-        if (window.turnstile) {
-            renderWidget();
-        } else if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-            script.async = true;
-            script.defer = true;
-            script.onload = renderWidget;
-            document.head.appendChild(script);
-        } else {
-            const poll = setInterval(() => {
-                if (window.turnstile) {
-                    clearInterval(poll);
-                    renderWidget();
-                }
-            }, 200);
-        }
-
-        return () => {
-            if (widgetIdRef.current !== null && window.turnstile) {
-                try { window.turnstile.remove(widgetIdRef.current); } catch {}
-            }
-            widgetIdRef.current = null;
-        };
-    }, [theme]);
 
     // ── Theme toggle ───────────────────────────────────────────────────────
     const toggleTheme = () => {
@@ -201,7 +143,7 @@ const UmsyV04Login = () => {
         try {
             setProgress(5);
             
-            const result = await newLogin(cleanRegno, cleanPassword, turnstileToken);
+            const result = await tokenLoginV04(cleanRegno, cleanPassword);
 
             if (result.success && result.cookies) {
                 setDisplayedPercent(100);
@@ -211,7 +153,7 @@ const UmsyV04Login = () => {
                 localStorage.setItem('umsy_cookies', result.cookies);
                 localStorage.setItem('umsy_regno', cleanRegno);
                 localStorage.setItem('umsy_password', cleanPassword);
-                localStorage.removeItem('umsy_is_v04');
+                localStorage.setItem('umsy_is_v04', 'true');
 
                 localStorage.removeItem('umsy_student_info');
                 localStorage.removeItem('umsy_timetable_data');
@@ -234,10 +176,6 @@ const UmsyV04Login = () => {
             }
         } catch (err) {
             setError(err.message || 'Login failed. Please try again.');
-            if (widgetIdRef.current !== null && window.turnstile) {
-                window.turnstile.reset(widgetIdRef.current);
-            }
-            setTurnstileToken('');
         } finally {
             setLoading(false);
             setStatusMsg('');
@@ -438,10 +376,7 @@ const UmsyV04Login = () => {
                                 </div>
                             </div>
 
-                            {/* Cloudflare Turnstile Widget */}
-                            <div className="space-y-1.5 flex justify-center py-2">
-                                <div ref={turnstileRef} />
-                            </div>
+
 
                             {/* Submit btn */}
                             <button
