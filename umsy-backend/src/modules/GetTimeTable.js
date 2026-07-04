@@ -218,65 +218,143 @@ export async function fetchTimeTable(client, termId) {
             console.warn('⚠️ Session warming pre-flight failed (non-fatal):', warmErr.message);
         }
 
-        // Fetch the main Student Timetable page to retrieve the ReportViewer session data
-        const response = await client.get('https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx', {
-            headers: {
-                'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
-                'Accept-Encoding': 'identity',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Cookie': sessionCookies
-            },
-            decompress: false
-        });
-
-        // Merge any new session cookies returned by IIS
-        const setCookieHeaders = response.headers['set-cookie'];
+        let html;
         let activeCookies = originalCookies;
-        if (setCookieHeaders) {
-            activeCookies = mergeCookies(originalCookies, setCookieHeaders);
-            console.log('🔄 Merged new cookies from timetable page response');
+        let reportAreaHtml;
+
+        try {
+            // Fetch the main Student Timetable page to retrieve the ReportViewer session data
+            const response = await client.get('https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx', {
+                headers: {
+                    'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
+                    'Accept-Encoding': 'identity',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Cookie': sessionCookies
+                },
+                decompress: false
+            });
+
+            // Merge any new session cookies returned by IIS
+            const setCookieHeaders = response.headers['set-cookie'];
+            if (setCookieHeaders) {
+                activeCookies = mergeCookies(originalCookies, setCookieHeaders);
+                console.log('🔄 Merged new cookies from timetable page response');
+            }
+
+            html = response.data;
+            if (!html || typeof html !== 'string') {
+                throw new Error('Failed to load timetable page HTML (empty response)');
+            }
+            console.log(`✅ Loaded timetable page HTML, length: ${html.length} chars`);
+
+            // Check if we hit the Cloudflare challenge page
+            if (html.includes('cf-challenge') || html.includes('challenges.cloudflare.com') || html.includes('cf-turnstile')) {
+                throw new Error('Cloudflare challenge detected');
+            }
+
+            // Extract the ExportUrlBase containing the active session keys
+            const exportUrlMatch = html.match(/"ExportUrlBase"\s*:\s*"([^"]+)"/);
+            if (!exportUrlMatch) {
+                throw new Error('Unable to find ReportViewer export URL.');
+            }
+
+            const exportUrlDecoded = exportUrlMatch[1].replace(/\\u0026/g, '&').replace(/\/LpuUms\//i, '/lpuums/');
+            console.log('✅ Extracted ExportUrlBase:', exportUrlDecoded);
+
+            const exportUrl = 'https://ums.lpu.in' + exportUrlDecoded.replace(/&Format=$/, '&Format=HTML4.0').replace(/&Format=&/, '&Format=HTML4.0&');
+            const finalExportUrl = exportUrl.includes('Format=HTML4.0') ? exportUrl : exportUrl + 'HTML4.0';
+
+            console.log('🌐 Fetching Export HTML4.0 from:', finalExportUrl);
+            const reportAreaResponse = await client.get(finalExportUrl, {
+                headers: {
+                    'Referer': 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx',
+                    'Accept-Encoding': 'identity',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Cookie': activeCookies
+                },
+                decompress: false,
+                timeout: 30000
+            });
+
+            reportAreaHtml = reportAreaResponse.data;
+            if (!reportAreaHtml || typeof reportAreaHtml !== 'string') {
+                throw new Error('Failed to fetch timetable export content');
+            }
+            console.log(`✅ Fetched Export HTML via Axios, length: ${reportAreaHtml.length} chars`);
+
+        } catch (axiosErr) {
+            console.warn('⚠️ Axios timetable fetch failed (possibly Cloudflare block). Attempting Playwright fallback...');
+            console.warn('   Reason:', axiosErr.message);
+
+            let browser;
+            try {
+                const { chromium } = await import('playwright');
+                // Launch headless playwright browser
+                browser = await chromium.launch({ headless: true });
+                const context = await browser.newContext({
+                    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                });
+
+                // Set cookies
+                const cookieList = sessionCookies.split(';').map(c => {
+                    const parts = c.trim().split('=');
+                    if (parts.length >= 2) {
+                        return {
+                            name: parts[0].trim(),
+                            value: parts.slice(1).join('=').trim(),
+                            domain: 'ums.lpu.in',
+                            path: '/'
+                        };
+                    }
+                    return null;
+                }).filter(Boolean);
+
+                await context.addCookies(cookieList);
+
+                const page = await context.newPage();
+                console.log('🌐 Playwright navigating to frmStudentTimeTable...');
+                await page.goto('https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx', {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 45000
+                });
+
+                // Wait 2 seconds for any client-side scripts
+                await page.waitForTimeout(2000);
+
+                html = await page.content();
+                console.log(`✅ Playwright loaded page HTML, length: ${html.length}`);
+
+                // Extract the ExportUrlBase containing the active session keys
+                const exportUrlMatch = html.match(/"ExportUrlBase"\s*:\s*"([^"]+)"/);
+                if (!exportUrlMatch) {
+                    console.error('❌ Playwright: Unable to find ExportUrlBase in page HTML');
+                    throw new Error('Unable to find ReportViewer export URL.');
+                }
+
+                const exportUrlDecoded = exportUrlMatch[1].replace(/\\u0026/g, '&').replace(/\/LpuUms\//i, '/lpuums/');
+                const exportUrl = 'https://ums.lpu.in' + exportUrlDecoded.replace(/&Format=$/, '&Format=HTML4.0').replace(/&Format=&/, '&Format=HTML4.0&');
+                const finalExportUrl = exportUrl.includes('Format=HTML4.0') ? exportUrl : exportUrl + 'HTML4.0';
+
+                console.log('🌐 Playwright fetching Export HTML4.0 from:', finalExportUrl);
+                await page.goto(finalExportUrl, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 45000
+                });
+
+                // Wait 1.5 seconds for rendering
+                await page.waitForTimeout(1500);
+
+                reportAreaHtml = await page.content();
+                console.log(`✅ Playwright fetched Export HTML, length: ${reportAreaHtml.length} chars`);
+            } catch (pwErr) {
+                console.error('❌ Playwright timetable fallback failed:', pwErr.message);
+                throw pwErr;
+            } finally {
+                if (browser) {
+                    await browser.close().catch(() => {});
+                }
+            }
         }
-
-        const html = response.data;
-        if (!html || typeof html !== 'string') {
-            console.error('❌ Failed to load timetable page HTML (empty response)');
-            throw new Error('Failed to load timetable page HTML');
-        }
-        console.log(`✅ Loaded timetable page HTML, length: ${html.length} chars`);
-
-        // Extract the ExportUrlBase containing the active session keys
-        const exportUrlMatch = html.match(/"ExportUrlBase"\s*:\s*"([^"]+)"/);
-        if (!exportUrlMatch) {
-            console.error('❌ Unable to find ExportUrlBase in page HTML');
-            throw new Error('Unable to find ReportViewer export URL. Please verify your connection.');
-        }
-
-        const exportUrlDecoded = exportUrlMatch[1].replace(/\\u0026/g, '&').replace(/\/LpuUms\//i, '/lpuums/');
-        console.log('✅ Extracted ExportUrlBase:', exportUrlDecoded);
-        
-        // Use OpType=Export with Format=HTML4.0 for synchronous server-side rendering.
-        // OpType=ReportArea requires the ReportViewer JavaScript lifecycle (POST-based
-        // polling and callbacks) and will return 404 when called from a raw HTTP client.
-        // The Export handler renders the report synchronously and returns clean HTML.
-        const exportUrl = 'https://ums.lpu.in' + exportUrlDecoded.replace(/&Format=$/, '&Format=HTML4.0').replace(/&Format=&/, '&Format=HTML4.0&');
-        
-        // If the URL doesn't end with a Format param, append it
-        const finalExportUrl = exportUrl.includes('Format=HTML4.0') ? exportUrl : exportUrl + 'HTML4.0';
-
-        console.log('🌐 Fetching Export HTML4.0 from:', finalExportUrl);
-        const reportAreaResponse = await client.get(finalExportUrl, {
-            headers: {
-                'Referer': 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx',
-                'Accept-Encoding': 'identity',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Cookie': activeCookies
-            },
-            decompress: false,
-            // Export may take a moment for server-side rendering
-            timeout: 30000
-        });
-
-        const reportAreaHtml = reportAreaResponse.data;
         if (!reportAreaHtml || typeof reportAreaHtml !== 'string') {
             console.error('❌ Failed to fetch timetable export content');
             throw new Error('Failed to fetch timetable export content');
