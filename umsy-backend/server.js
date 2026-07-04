@@ -23,7 +23,7 @@ import { fetchStudentAttendanceDetail } from './src/modules/StudentAttendanceDet
 import { fetchTermwiseCGPA } from './src/modules/TermwiseCGPA.js';
 import { fetchTermWiseMarks } from './src/modules/TermWiseMarks.js';
 import { fetchStudentMessages } from './src/modules/GetStudentMessages.js';
-import { fetchTimeTable } from './src/modules/GetTimeTable.js';
+import { fetchTimeTable, parseTimeTableHtml } from './src/modules/GetTimeTable.js';
 import { fetchStudentCourses } from './src/modules/GetStudentCourses.js';
 import { fetchStudentSeatingPlan } from './src/modules/GetSeatingPlan.js';
 import { fetchPasswordExpiry } from './src/modules/GetPasswordExpiry.js';
@@ -693,6 +693,59 @@ app.post('/api/save-session', async (req, res) => {
             success: false,
             error: 'Failed to save session'
         });
+    }
+});
+
+/**
+ * GET /api/test-cloudflare
+ * Diagnostic endpoint to see exactly what Cloudflare displays to the server.
+ */
+app.get('/api/test-cloudflare', async (req, res) => {
+    let browser;
+    try {
+        console.log('[test-cf] Launching Playwright browser...');
+        const { chromium } = await import('playwright');
+        browser = await chromium.launch({ headless: true });
+        const context = await browser.newContext({
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        });
+        const page = await context.newPage();
+        
+        console.log('[test-cf] Navigating to UMS Login...');
+        await page.goto('https://ums.lpu.in/lpuums/Login.aspx', {
+            waitUntil: 'networkidle',
+            timeout: 30000
+        });
+        
+        await page.waitForTimeout(5000);
+        
+        const pageTitle = await page.title();
+        const pageUrl = page.url();
+        const htmlSnippet = (await page.content()).substring(0, 1000);
+        
+        console.log('[test-cf] Taking screenshot...');
+        const screenshotBuffer = await page.screenshot({ fullPage: true });
+        const base64Image = screenshotBuffer.toString('base64');
+        
+        await browser.close();
+        
+        res.send(`
+            <html>
+                <body style="font-family: sans-serif; padding: 20px; background: #f0f0f0;">
+                    <h2>Cloudflare Diagnostic Result</h2>
+                    <p><b>URL:</b> ${pageUrl}</p>
+                    <p><b>Title:</b> ${pageTitle}</p>
+                    <p><b>Snippet:</b></p>
+                    <pre style="background: #fff; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow: auto;">${htmlSnippet.replace(/</g, '&lt;')}</pre>
+                    <h3>Screenshot:</h3>
+                    <img src="data:image/png;base64,${base64Image}" style="border: 2px solid #000; max-width: 100%;" />
+                </body>
+            </html>
+        `);
+    } catch (err) {
+        console.error('[test-cf] Diagnostic failed:', err.message);
+        if (browser) await browser.close().catch(() => {});
+        res.status(500).send(`Error: ${err.message}`);
     }
 });
 
@@ -1817,6 +1870,35 @@ app.post('/api/timetable', async (req, res) => {
     } catch (error) {
         console.error('❌ Timetable route error:', error.message);
 
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/parse-timetable
+ * Parse raw HTML of timetable page manually uploaded/pasted by user
+ */
+app.post('/api/parse-timetable', async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html || typeof html !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: 'HTML content is required'
+            });
+        }
+
+        console.log(`📋 Received raw HTML for manual parsing, length: ${html.length} chars`);
+        const parsedData = parseTimeTableHtml(html);
+        return res.json({
+            success: true,
+            data: parsedData
+        });
+    } catch (error) {
+        console.error('❌ Manual timetable parse error:', error.message);
         return res.status(500).json({
             success: false,
             error: error.message
