@@ -1467,99 +1467,42 @@ app.post('/api/v04/login', async (req, res) => {
 
         const tokenUrl = `https://ums.lpu.in/lpuums/frmSickStudentFoodRequest.aspx?uid=${record.token}==`;
 
-        // Make the GET request, collecting cookies across redirects
-        // We use maxRedirects: 0 to manually handle and capture Set-Cookie headers
+        // Make the GET request, collecting cookies across redirects using Playwright to bypass Cloudflare
         let allCookies = [];
-        let currentUrl = tokenUrl;
-        let maxHops = 10;
+        let browser;
+        try {
+            const { chromium } = await import('playwright');
+            browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            });
 
-        while (maxHops-- > 0) {
-            try {
-                const response = await axios.get(currentUrl, {
-                    maxRedirects: 0,
-                    validateStatus: (status) => status >= 200 && status < 400,
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    },
-                    // Include collected cookies in subsequent requests
-                    ...(allCookies.length > 0 && {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                            'Cookie': allCookies.map(c => `${c.name}=${c.value}`).join('; ')
-                        }
-                    })
-                });
+            const page = await context.newPage();
+            console.log(`[v04-login] Playwright loading token URL: ${tokenUrl}`);
+            await page.goto(tokenUrl, {
+                waitUntil: 'networkidle',
+                timeout: 60000
+            });
 
-                // Extract Set-Cookie headers
-                const setCookies = response.headers['set-cookie'];
-                if (setCookies) {
-                    console.log(`[v04-login] 🍪 Set-Cookie headers from ${currentUrl}:`, setCookies);
-                    for (const cookieStr of setCookies) {
-                        const parts = cookieStr.split(';')[0].split('=');
-                        const name = parts[0].trim();
-                        const value = parts.slice(1).join('=').trim();
-                        // Update or add cookie
-                        const existing = allCookies.findIndex(c => c.name === name);
-                        if (existing >= 0) {
-                            allCookies[existing].value = value;
-                        } else {
-                            allCookies.push({ name, value });
-                        }
-                    }
-                }
+            // Settle time for ASP.NET / session validation scripts
+            await page.waitForTimeout(2000);
 
-                // Check for redirect
-                if (response.status >= 300 && response.status < 400 && response.headers.location) {
-                    const location = response.headers.location;
-                    // Handle relative URLs
-                    if (location.startsWith('http')) {
-                        currentUrl = location;
-                    } else {
-                        const base = new URL(currentUrl);
-                        currentUrl = new URL(location, base).href;
-                    }
-                    continue;
-                }
+            const pageTitle = await page.title();
+            const pageUrl = page.url();
+            console.log(`[v04-login] Playwright reached page: "${pageTitle}" at URL: ${pageUrl}`);
 
-                // Success — no more redirects
-                break;
-            } catch (axiosErr) {
-                // axios throws on 3xx when maxRedirects: 0, handle it
-                if (axiosErr.response) {
-                    const resp = axiosErr.response;
-                    // Extract cookies from error response too
-                    const setCookies = resp.headers['set-cookie'];
-                    if (setCookies) {
-                        console.log(`[v04-login] 🍪 Catch Set-Cookie headers from ${currentUrl}:`, setCookies);
-                        for (const cookieStr of setCookies) {
-                            const parts = cookieStr.split(';')[0].split('=');
-                            const name = parts[0].trim();
-                            const value = parts.slice(1).join('=').trim();
-                            const existing = allCookies.findIndex(c => c.name === name);
-                            if (existing >= 0) {
-                                allCookies[existing].value = value;
-                            } else {
-                                allCookies.push({ name, value });
-                            }
-                        }
-                    }
+            const playwrightCookies = await context.cookies();
+            allCookies = playwrightCookies.map(c => ({
+                name: c.name,
+                value: c.value
+            }));
 
-                    if (resp.status >= 300 && resp.status < 400 && resp.headers.location) {
-                        const location = resp.headers.location;
-                        if (location.startsWith('http')) {
-                            currentUrl = location;
-                        } else {
-                            const base = new URL(currentUrl);
-                            currentUrl = new URL(location, base).href;
-                        }
-                        continue;
-                    }
-                    // Non-redirect error
-                    break;
-                }
-                throw axiosErr;
+        } catch (pwErr) {
+            console.error(`[v04-login] Playwright cookie fetch failed:`, pwErr.message);
+            throw pwErr;
+        } finally {
+            if (browser) {
+                await browser.close().catch(() => {});
             }
         }
 
