@@ -45,7 +45,7 @@ const Dashboard = () => {
     const [marksData, setMarksData] = useState([]);
 
     const handleTestNotification = async () => {
-        const title = 'UMz Test Notification';
+        const title = 'UMsy Test Notification';
         const body = 'This is a real-time test notification from your device! 🚀';
 
         // 🔥 Android App Bridge

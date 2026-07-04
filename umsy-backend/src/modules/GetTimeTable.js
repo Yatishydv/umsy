@@ -286,7 +286,7 @@ export async function fetchTimeTable(client, termId) {
         // DEBUG: Save export HTML for structure analysis
         try {
             const fs = await import('fs');
-            fs.writeFileSync('/Users/yatishydv/Documents/GitHub/umzV3.0/umsy-backend/debug_export.html', reportAreaHtml);
+            fs.writeFileSync('debug_export.html', reportAreaHtml);
             console.log('📝 Saved debug export HTML to debug_export.html');
         } catch (e) { /* ignore */ }
 

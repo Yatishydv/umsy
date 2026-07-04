@@ -490,7 +490,7 @@ app.post('/api/newlogin', async (req, res) => {
                 '--window-size=1920,1080',
                 '--disable-blink-features=AutomationControlled',
                 '--remote-debugging-port=0',
-                '--user-data-dir=/Users/yatishydv/Documents/GitHub/umzV3.0/umsy-backend/tmp_chrome_profile'
+                `--user-data-dir=${path.resolve(__dirname, './tmp_chrome_profile')}`
             ]
         });
 
