@@ -244,7 +244,7 @@ app.post('/api/start-login', async (req, res) => {
             // console.log(`🌐 Starting login process for: ${regno}`);
 
             // Launch browser
-            browser = await chromium.launch({ headless: false });
+            browser = await chromium.launch({ headless: process.env.NODE_ENV === 'production' });
             const context = await browser.newContext({
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             });
@@ -480,9 +480,10 @@ app.post('/api/newlogin', async (req, res) => {
 
     let browser;
     try {
+        const isProd = process.env.NODE_ENV === 'production';
         browser = await puppeteer.launch({
             headless: true,
-            executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            executablePath: isProd ? undefined : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
             ignoreDefaultArgs: ['--enable-automation'],
             args: [
                 '--no-sandbox',
