@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { Info, Bell, Shield, GraduationCap, CheckCircle, AlertCircle, Menu, RefreshCw, ChevronRight, BookOpen, FileText, Award, Calendar, ClipboardList, IdCard, Ticket, Trophy, Send, X, Bot } from 'lucide-react';
+import { Info, Bell, Shield, GraduationCap, CheckCircle, AlertCircle, Menu, RefreshCw, ChevronRight, BookOpen, FileText, Award, Calendar, ClipboardList, IdCard, Ticket, Trophy, Send, X, Bot, Download } from 'lucide-react';
 import Sidebar from './Sidebar';
 import MessagesCard from './MessagesCard';
 import SeatingPlanCardCompact from './SeatingPlanCardCompact';
@@ -698,6 +698,16 @@ const Dashboard = () => {
                                         {studentInfo?.StudentName || 'Student'} 👋
                                     </h1>
                                     <p className="text-xs text-zinc-450 dark:text-zinc-500 mt-1">Here's your academic overview</p>
+                                </div>
+                                <div className="hidden md:block">
+                                    <a
+                                        href="/umsy.apk"
+                                        download="umsy.apk"
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm"
+                                    >
+                                        <Download className="w-4.5 h-4.5" />
+                                        <span>Download Android App</span>
+                                    </a>
                                 </div>
                             </div>
 
