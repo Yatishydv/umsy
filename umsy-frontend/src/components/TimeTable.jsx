@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Download, BookOpen, MapPin, Users, Award, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Download, BookOpen, MapPin, Users, Award, AlertCircle, Bell, BellOff } from 'lucide-react';
 import { getTimeTable } from '../services/api';
 import { generateTimetablePDF } from '../utils/generateTimetablePDF';
+import { Capacitor } from '@capacitor/core';
 
 const TimetableSkeleton = () => (
     <div className="space-y-6 animate-pulse p-4">
@@ -34,6 +35,7 @@ const TimeTable = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [downloadLoading, setDownloadLoading] = useState(false);
+    const [liveNotificationActive, setLiveNotificationActive] = useState(false);
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -78,6 +80,31 @@ const TimeTable = () => {
         }
     };
 
+    const toggleLiveNotification = async () => {
+        try {
+            if (!Capacitor.isNativePlatform()) {
+                alert('Live Notification is only available on the Android app.');
+                return;
+            }
+            
+            const newState = !liveNotificationActive;
+            setLiveNotificationActive(newState);
+            
+            if (newState) {
+                // Ensure data is in Preferences before starting
+                await Capacitor.Plugins.LiveNotification.saveTimetable({
+                    data: JSON.stringify(timetable)
+                });
+                await Capacitor.Plugins.LiveNotification.startService();
+            } else {
+                await Capacitor.Plugins.LiveNotification.stopService();
+            }
+        } catch (e) {
+            console.error('Failed to toggle live notification', e);
+            setLiveNotificationActive(!liveNotificationActive); // Revert on failure
+        }
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             const cachedTimetable = localStorage.getItem('umsy_timetable_data');
@@ -114,6 +141,19 @@ const TimeTable = () => {
                 }
             } finally {
                 setLoading(false);
+                // Also update native preferences
+                if (Object.keys(timetable).length > 0 || localStorage.getItem('umsy_timetable_data')) {
+                    const dataToSave = Object.keys(timetable).length > 0 ? timetable : JSON.parse(localStorage.getItem('umsy_timetable_data') || '{}');
+                    try {
+                        if (Capacitor.isNativePlatform() && Capacitor.Plugins.LiveNotification) {
+                            await Capacitor.Plugins.LiveNotification.saveTimetable({
+                                data: JSON.stringify(dataToSave)
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Failed to save to capacitor preferences', e);
+                    }
+                }
             }
         };
 
@@ -170,14 +210,27 @@ const TimeTable = () => {
                 </div>
 
                 {hasData && (
-                    <button
-                        onClick={handleDownloadPDF}
-                        disabled={downloadLoading}
-                        className="flex items-center justify-center w-10 h-10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700/80 rounded-xl transition-all active:scale-95 shadow-sm"
-                        title="Download PDF Timetable"
-                    >
-                        <Download className="h-5 w-5" />
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={toggleLiveNotification}
+                            className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all active:scale-95 shadow-sm border ${
+                                liveNotificationActive 
+                                ? 'bg-[#bef227] text-[#1c312e] border-[#bef227]' 
+                                : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-slate-200/60 dark:border-zinc-700/80'
+                            }`}
+                            title="Toggle Live Android Notification"
+                        >
+                            {liveNotificationActive ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+                        </button>
+                        <button
+                            onClick={handleDownloadPDF}
+                            disabled={downloadLoading}
+                            className="flex items-center justify-center w-10 h-10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700/80 rounded-xl transition-all active:scale-95 shadow-sm"
+                            title="Download PDF Timetable"
+                        >
+                            <Download className="h-5 w-5" />
+                        </button>
+                    </div>
                 )}
             </div>
 
