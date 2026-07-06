@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, X, Calculator, BarChart2, ChevronLeft, CalendarCheck2, TrendingUp, BookOpen, Star, ArrowRight } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import Sidebar from './Sidebar';
 import HeaderNav from './HeaderNav';
 import { getAttendanceDetails } from '../services/api';
@@ -230,7 +230,10 @@ const Attendance = () => {
     const trendData = React.useMemo(() => {
         return attendanceData.map(item => ({
             subject: item.courseCode || '',
-            value: Math.round(getPercentage(item))
+            value: Math.round(getPercentage(item)),
+            Attended: item.presentCount || 0,
+            Total: item.totalRecords || 0,
+            DL: item.od || 0
         }));
     }, [attendanceData]);
 
@@ -392,29 +395,50 @@ const Attendance = () => {
                                     </h3>
                                     <div className="h-48 w-full bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-4">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={trendData} margin={{ left: 15, right: 15, top: 10, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1}/>
-                                                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                                            <BarChart data={trendData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" className="dark:stroke-zinc-800/30" />
                                                 <XAxis 
                                                     dataKey="subject" 
                                                     axisLine={false} 
                                                     tickLine={false} 
-                                                    tick={{fontSize: 10, fill: '#9CA3AF', fontWeight: 600}} 
-                                                    dy={10} 
-                                                    padding={{ left: 10, right: 10 }}
+                                                    tick={{fontSize: 9, fill: '#9CA3AF', fontWeight: 700}} 
+                                                    dy={5}
                                                 />
-                                                <YAxis hide domain={[0, 100]} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#9CA3AF'}} domain={[0, 100]} />
                                                 <Tooltip 
-                                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: 'bold' }}
-                                                    cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                                    cursor={{ fill: 'rgba(200, 200, 200, 0.1)' }}
+                                                    content={({ active, payload }) => {
+                                                        if (active && payload && payload.length) {
+                                                            const d = payload[0].payload;
+                                                            return (
+                                                                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-3.5 rounded-2xl shadow-xl text-xs font-bold space-y-1.5 z-50">
+                                                                    <p className="text-zinc-550 dark:text-zinc-400 mb-1">{d.subject}</p>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <span className="text-zinc-450 font-semibold">Attendance:</span>
+                                                                        <span className="text-emerald-500">{d.value}%</span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <span className="text-zinc-450 font-semibold">Classes:</span>
+                                                                        <span className="text-blue-500">{d.Attended} / {d.Total}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <span className="text-zinc-450 font-semibold">Duty Leaves (DL):</span>
+                                                                        <span className="text-amber-500">{d.DL}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
                                                 />
-                                                <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" dot={{ r: 4, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
-                                            </AreaChart>
+                                                <Bar dataKey="value" radius={[5, 5, 0, 0]} barSize={16}>
+                                                    {trendData.map((entry, idx) => {
+                                                        const pct = entry.value;
+                                                        const color = pct >= 75 ? '#10B981' : pct >= 65 ? '#F59E0B' : '#EF4444';
+                                                        return <Cell key={`cell-${idx}`} fill={color} />;
+                                                    })}
+                                                </Bar>
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
@@ -515,32 +539,122 @@ const Attendance = () => {
                     </div>
 
                     {activeTab === 'view' ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {attendanceData.map((item, index) => {
-                                const pct = getPercentage(item);
-                                const status = getStatus(pct);
-                                return (
-                                    <div key={index} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md transition-shadow duration-200">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="min-w-0 flex-1 pr-3">
-                                                <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{item.courseCode}</h3>
-                                                <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.courseTitle}</p>
-                                            </div>
-                                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.badge}`}>{status.label}</span>
+                        <div className="space-y-6">
+                            {/* Graphical Analysis Section for PC */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Circular gauge card */}
+                                <div className="bg-white dark:bg-zinc-850 rounded-[28px] border border-slate-200/50 dark:border-zinc-800/80 p-6 flex flex-col items-center justify-center shadow-sm min-h-[220px]">
+                                    <h3 className="text-xs font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Overall Status</h3>
+                                    <div className="relative w-36 h-36">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={[
+                                                        { name: 'Attended', value: Number(overallAttendance()) },
+                                                        { name: 'Total', value: 100 - Number(overallAttendance()) }
+                                                    ]}
+                                                    cx="50%" cy="50%"
+                                                    innerRadius={45} outerRadius={60}
+                                                    paddingAngle={0} 
+                                                    cornerRadius={40}
+                                                    dataKey="value" startAngle={90} endAngle={-270}
+                                                >
+                                                    <Cell fill={getStatus(Number(overallAttendance())).color} stroke="none" />
+                                                    <Cell fill="#F3F4F6" className="dark:fill-zinc-800" stroke="none" />
+                                                </Pie>
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <span className="text-3xl font-black text-slate-900 dark:text-white">{overallAttendance()}%</span>
+                                            <span className="text-[9px] font-bold text-slate-450 dark:text-zinc-500 uppercase tracking-wider mt-0.5">Aggregate</span>
                                         </div>
-                                        <div className="mb-4">
-                                            <div className="flex items-baseline justify-between mb-1.5">
-                                                <span className={`text-2xl font-bold ${status.text}`}>{pct.toFixed(2)}%</span>
-                                                <span className="text-xs text-gray-400">{item.presentCount}/{item.totalRecords} classes</span>
-                                            </div>
-                                            <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                <div className={`h-full rounded-full ${status.bar}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                                            </div>
-                                        </div>
-                                        <button onClick={() => { setSelectedCourse(item); setIsModalOpen(true); }} className="w-full py-2 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold rounded-lg border border-gray-100 dark:border-gray-600">View Detailed Records</button>
                                     </div>
-                                );
-                            })}
+                                </div>
+
+                                {/* Trend Bar Chart card */}
+                                <div className="md:col-span-2 bg-white dark:bg-zinc-850 rounded-[28px] border border-slate-200/50 dark:border-zinc-800/80 p-6 flex flex-col shadow-sm">
+                                    <h3 className="text-xs font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Subject-wise Attendance Overview</h3>
+                                    <div className="h-36 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={trendData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" className="dark:stroke-zinc-800/30" />
+                                                <XAxis 
+                                                    dataKey="subject" 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    tick={{fontSize: 9, fill: '#9CA3AF', fontWeight: 700}} 
+                                                    dy={5}
+                                                />
+                                                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#9CA3AF'}} domain={[0, 100]} />
+                                                <Tooltip 
+                                                    cursor={{ fill: 'rgba(200, 200, 200, 0.1)' }}
+                                                    content={({ active, payload }) => {
+                                                        if (active && payload && payload.length) {
+                                                            const d = payload[0].payload;
+                                                            return (
+                                                                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-3.5 rounded-2xl shadow-xl text-xs font-bold space-y-1.5 z-50">
+                                                                    <p className="text-zinc-550 dark:text-zinc-400 mb-1">{d.subject}</p>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <span className="text-zinc-450 font-semibold">Attendance:</span>
+                                                                        <span className="text-emerald-500">{d.value}%</span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <span className="text-zinc-450 font-semibold">Classes:</span>
+                                                                        <span className="text-blue-500">{d.Attended} / {d.Total}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <span className="text-zinc-450 font-semibold">Duty Leaves (DL):</span>
+                                                                        <span className="text-amber-500">{d.DL}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
+                                                />
+                                                <Bar dataKey="value" radius={[5, 5, 0, 0]} barSize={20}>
+                                                    {trendData.map((entry, idx) => {
+                                                        const pct = entry.value;
+                                                        const color = pct >= 75 ? '#10B981' : pct >= 65 ? '#F59E0B' : '#EF4444';
+                                                        return <Cell key={`cell-${idx}`} fill={color} />;
+                                                    })}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Subjects Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {attendanceData.map((item, index) => {
+                                    const pct = getPercentage(item);
+                                    const status = getStatus(pct);
+                                    return (
+                                        <div key={index} className="bg-white dark:bg-zinc-850 border border-slate-200/50 dark:border-zinc-800/80 rounded-[24px] p-5 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="min-w-0 flex-1 pr-3">
+                                                        <h3 className="text-sm font-black text-slate-800 dark:text-white truncate">{item.courseCode}</h3>
+                                                        <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-bold mt-0.5 line-clamp-1">{item.courseTitle}</p>
+                                                    </div>
+                                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${status.badge}`}>{status.label}</span>
+                                                </div>
+                                                <div className="mb-4">
+                                                    <div className="flex items-baseline justify-between mb-1.5">
+                                                        <span className={`text-2xl font-black ${status.text}`}>{pct.toFixed(1)}%</span>
+                                                        <span className="text-xs font-semibold text-slate-400 dark:text-zinc-500">{item.presentCount}/{item.totalRecords} classes</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                                        <div className={`h-full rounded-full ${status.bar}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => { setSelectedCourse(item); setIsModalOpen(true); }} className="w-full py-2 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700/50 text-slate-700 dark:text-white text-[10px] font-bold uppercase tracking-wider rounded-xl border border-slate-150/40 dark:border-zinc-700 transition-colors">View Detailed Records</button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : (
                         <AttendanceCalculator />

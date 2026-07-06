@@ -75,7 +75,7 @@ const Ranking = () => {
                             type="text"
                             value={regno}
                             onChange={(e) => setRegno(e.target.value)}
-                            placeholder="Enter registration number (e.g. 12317530)"
+                            placeholder="Enter registration number (e.g. 12301310)"
                             className="w-full h-12 px-4 pl-11 bg-slate-50 dark:bg-zinc-850 border border-slate-100 dark:border-zinc-800/80 rounded-2xl text-xs font-bold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-650 focus:outline-none focus:border-[#bef227] focus:ring-4 focus:ring-[#bef227]/10 transition-all"
                             disabled={loading}
                         />

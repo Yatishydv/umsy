@@ -128,3 +128,26 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* Global overrides to eliminate inner scrollbars from subpages and force one main window scrollbar */
+main .flex.h-screen.bg-gray-50,
+main .flex.min-h-screen.bg-gray-50,
+main .flex.h-screen.bg-gray-50.dark\:bg-gray-900,
+main .flex.min-h-screen.bg-gray-50.dark\:bg-gray-900 {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+main aside.fixed.lg\:hidden,
+main aside.lg\:hidden {
+  display: none !important;
+}
+
+main main.flex-1.overflow-y-auto,
+main main.flex-1 {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 0 !important;
+}

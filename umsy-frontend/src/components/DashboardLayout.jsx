@@ -152,28 +152,33 @@ const DashboardLayout = () => {
     const activeTab = getActiveTab(location.pathname);
 
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-zinc-950 overflow-hidden font-plus-jakarta relative">
+        <div className="flex min-h-screen bg-gray-50 dark:bg-zinc-950 font-plus-jakarta relative">
             {/* Persistent Sidebar for mobile layout (hidden on desktop lg:hidden) */}
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto lg:p-0">
+            <main className="flex-1 min-h-screen lg:p-0">
                 {/* DESKTOP LAYOUT */}
-                <div className="hidden lg:flex flex-col p-6 min-h-screen bg-slate-950 dark:bg-black w-full">
-                    <div className="w-full max-w-7xl mx-auto bg-[#f8fafc] dark:bg-zinc-900 rounded-[32px] shadow-2xl p-6 lg:p-8 flex flex-col gap-6 transition-colors duration-500 border border-white/5 min-h-[90vh]">
-                        {/* Persistent Navbar header with sliding capsule animation */}
-                        <HeaderNav activeTab={activeTab} />
+                <div className="hidden lg:flex flex-col min-h-screen bg-[#f8fafc] dark:bg-zinc-900 w-full">
+                    <div className="w-full max-w-7xl mx-auto px-6 lg:px-8 flex flex-col gap-6 transition-colors duration-500 min-h-screen relative">
+                        {/* Persistent Navbar header - Sticky at top of the window */}
+                        <div className="sticky top-0 bg-[#f8fafc] dark:bg-zinc-900 z-50 pt-6 lg:pt-8 pb-2">
+                            <HeaderNav activeTab={activeTab} />
+                        </div>
                         
                         {/* Subpage content injection slot */}
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 pb-12">
                             <Outlet />
                         </div>
                     </div>
                 </div>
 
                 {/* MOBILE VIEW LAYOUT */}
-                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-zinc-950 p-4">
-                    <HeaderNav activeTab={activeTab} />
-                    <div className="flex-1 overflow-y-auto mt-4 pb-20">
+                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-zinc-950 p-4 relative">
+                    {/* Sticky Mobile Nav */}
+                    <div className="sticky top-0 bg-gray-50 dark:bg-zinc-950 z-50 pt-2 pb-2">
+                        <HeaderNav activeTab={activeTab} />
+                    </div>
+                    <div className="flex-1 mt-4 pb-28">
                         <Outlet />
                     </div>
                 </div>

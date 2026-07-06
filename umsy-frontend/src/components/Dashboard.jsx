@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { Info, Bell, Shield, GraduationCap, CheckCircle, AlertCircle, Menu, RefreshCw, ChevronRight, BookOpen, FileText, Award, Calendar, ClipboardList, IdCard, Ticket, Trophy, Send, X, Bot } from 'lucide-react';
 import Sidebar from './Sidebar';
 import MessagesCard from './MessagesCard';
@@ -282,27 +282,17 @@ const Dashboard = () => {
     }, []);
 
     useEffect(() => {
-        const fetchRanking = async (regno) => {
-            const cached = localStorage.getItem('umsy_ranking_data');
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    if (parsed.regno === regno) {
-                        setRanking(parsed.data);
-                        return;
-                    }
-                } catch { localStorage.removeItem('umsy_ranking_data'); }
+        const calculateBacklogsCount = (data) => {
+            let count = 0;
+            const backlogGrades = new Set(['E', 'F', 'G', 'I']);
+            if (data && data.semesters) {
+                data.semesters.forEach(sem => {
+                    (sem.subjects || []).forEach(sub => {
+                        if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) count++;
+                    });
+                });
             }
-
-            try {
-                const res = await getRanking(regno);
-                if (res.success) {
-                    setRanking(res.data);
-                    localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno, data: res.data }));
-                }
-            } catch (e) {
-                console.error('Ranking fetch failed:', e);
-            }
+            return count;
         };
 
         const fetchData = async () => {
@@ -312,6 +302,7 @@ const Dashboard = () => {
             
             if (!cookies && !currentRegno) {
                 setLoading(false);
+                setIsInitialFetching(false);
                 return;
             }
 
@@ -345,172 +336,157 @@ const Dashboard = () => {
                 try { setMarksData(JSON.parse(cachedMarks)); } catch (e) { }
             }
 
-            // Always set loading to false immediately so the dashboard shell is rendered
-            setLoading(false);
-
-            // 2. Fetch Fresh Data in Background
-            try {
-                const studentRes = isV04 ? await getStudentDashboardV04(auth) : await getStudentInfo(auth);
-                if (studentRes.success && studentRes.data) {
-                    setStudentInfo(studentRes.data);
-                    localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
-                    window.dispatchEvent(new Event('student-info-updated'));
-                    if (studentRes.data.Registrationnumber) fetchRanking(studentRes.data.Registrationnumber);
-                }
-            } catch (err) {
-                console.warn('Dashboard info fetch failed:', err.message);
-                if (!hasCache) {
-                    setError(err.message || 'Failed to load dashboard data.');
-                }
-            } finally {
-                setIsInitialFetching(false);
+            const cachedTimetable = localStorage.getItem('umsy_timetable_data');
+            if (cachedTimetable) {
+                try { setTimetable(JSON.parse(cachedTimetable)); } catch (e) { }
             }
 
-            try {
-                const attRes = await getAttendanceDetails(auth);
-                if (attRes.success && attRes.data) {
-                    setAttendanceData(attRes.data);
-                    localStorage.setItem('umsy_attendance_data', JSON.stringify(attRes.data));
-                }
-            } catch (err) { console.warn('Attendance fetch failed:', err.message); }
+            const cachedResult = localStorage.getItem('umsy_result_data');
+            if (cachedResult) {
+                try { setBacklogCount(calculateBacklogsCount(JSON.parse(cachedResult))); } catch (e) { }
+            }
 
-            try {
-                const coursesRes = await getCourses(auth);
-                if (coursesRes.success && coursesRes.data) {
-                    setCoursesData(coursesRes.data);
-                    localStorage.setItem('umsy_courses_data', JSON.stringify(coursesRes.data));
-                }
-            } catch (err) { console.warn('Courses fetch failed:', err.message); }
+            const cachedRanking = localStorage.getItem('umsy_ranking_data');
+            if (cachedRanking) {
+                try {
+                    const parsed = JSON.parse(cachedRanking);
+                    if (parsed.regno === currentRegno) setRanking(parsed.data);
+                } catch (e) { }
+            }
 
-            try {
-                const marksRes = isV04 ? await getMarksV04(auth) : await getMarks(auth);
-                if (marksRes.success && marksRes.data) {
-                    setMarksData(marksRes.data);
-                    localStorage.setItem('umsy_marks_data', JSON.stringify(marksRes.data));
-                }
-            } catch (err) { console.warn('Marks fetch failed:', err.message); }
+            // If we have cache, show dashboard immediately to remain snappy, otherwise stay in skeleton
+            if (hasCache) {
+                setLoading(false);
+            }
 
-            // Seating plan fetch
-            fetchSeatingPlanData(auth);
-        };
-
-                // Helper function to fetch seating plan
-        const fetchSeatingPlanData = async (auth) => {
+            // 2. Fetch Fresh Data Concurrently
             try {
-                console.log('🪑 Fetching seating plan...');
-                const seatingPlanResult = await getSeatingPlan(auth);
-                console.log('📋 Seating Plan Response:', seatingPlanResult);
-                console.log('📋 Seating Plan Data:', seatingPlanResult.data);
-                setSeatingPlan(seatingPlanResult.data);
-            } catch (seatingError) {
-                console.warn('⚠️ Could not fetch seating plan:', seatingError.message);
-                console.error('Full seating error:', seatingError);
-                // Don't fail the entire dashboard if seating plan fails
-                setSeatingPlan([]);
+                const promises = [
+                    (async () => {
+                        try {
+                            const studentRes = isV04 ? await getStudentDashboardV04(auth) : await getStudentInfo(auth);
+                            if (studentRes.success && studentRes.data) {
+                                setStudentInfo(studentRes.data);
+                                localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
+                                window.dispatchEvent(new Event('student-info-updated'));
+                                
+                                // Fetch ranking immediately after getting registration number
+                                const regno = studentRes.data.Registrationnumber;
+                                if (regno) {
+                                    try {
+                                        const res = await getRanking(regno);
+                                        if (res.success) {
+                                            setRanking(res.data);
+                                            localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno, data: res.data }));
+                                        }
+                                    } catch (e) { console.error('Ranking failed:', e); }
+                                }
+                            }
+                        } catch (err) {
+                            console.warn('Dashboard info fetch failed:', err.message);
+                            if (!hasCache) setError(err.message || 'Failed to load dashboard data.');
+                        }
+                    })(),
+                    (async () => {
+                        try {
+                            const attRes = await getAttendanceDetails(auth);
+                            if (attRes.success && attRes.data) {
+                                setAttendanceData(attRes.data);
+                                localStorage.setItem('umsy_attendance_data', JSON.stringify(attRes.data));
+                            }
+                        } catch (err) { console.warn('Attendance fetch failed:', err.message); }
+                    })(),
+                    (async () => {
+                        try {
+                            const coursesRes = await getCourses(auth);
+                            if (coursesRes.success && coursesRes.data) {
+                                setCoursesData(coursesRes.data);
+                                localStorage.setItem('umsy_courses_data', JSON.stringify(coursesRes.data));
+                            }
+                        } catch (err) { console.warn('Courses fetch failed:', err.message); }
+                    })(),
+                    (async () => {
+                        try {
+                            const marksRes = isV04 ? await getMarksV04(auth) : await getMarks(auth);
+                            if (marksRes.success && marksRes.data) {
+                                setMarksData(marksRes.data);
+                                localStorage.setItem('umsy_marks_data', JSON.stringify(marksRes.data));
+                            }
+                        } catch (err) { console.warn('Marks fetch failed:', err.message); }
+                    })(),
+                    (async () => {
+                        try {
+                            setTimetableLoading(true);
+                            const result = await getTimeTable(auth);
+                            if (result.data && Object.keys(result.data).length > 0) {
+                                setTimetable(result.data);
+                                localStorage.setItem('umsy_timetable_data', JSON.stringify(result.data));
+                            }
+                        } catch (e) {
+                            console.warn('Timetable load failed:', e.message);
+                        } finally {
+                            setTimetableLoading(false);
+                        }
+                    })(),
+                    (async () => {
+                        try {
+                            const seatingPlanResult = await getSeatingPlan(auth);
+                            setSeatingPlan(seatingPlanResult.data);
+                        } catch (seatingError) {
+                            console.warn('Seating plan fetch failed:', seatingError.message);
+                            setSeatingPlan([]);
+                        }
+                    })(),
+                    (async () => {
+                        try {
+                            setAssignmentsLoading(true);
+                            const result = await getPendingAssignments(auth);
+                            setPendingAssignments(result.data || []);
+                        } catch (e) {
+                            console.warn('Assignments fetch failed:', e.message);
+                        } finally {
+                            setAssignmentsLoading(false);
+                        }
+                    })(),
+                    (async () => {
+                        try {
+                            const result = isV04 ? await getResultV04(auth) : await getResult(auth);
+                            if (result.success && result.data) {
+                                localStorage.setItem('umsy_result_data', JSON.stringify(result.data));
+                                setBacklogCount(calculateBacklogsCount(result.data));
+                            }
+                        } catch (e) {
+                            console.warn('Backlogs load failed:', e.message);
+                        }
+                    })()
+                ];
+
+                await Promise.allSettled(promises);
+            } catch (globalErr) {
+                console.error('Concurrently fetch error:', globalErr);
+            } finally {
+                setLoading(false);
+                setIsInitialFetching(false);
             }
         };
 
         fetchData();
-
-        // Load timetable — cache first, then always try fresh fetch
-        const loadTimetable = async () => {
-            const cached = localStorage.getItem('umsy_timetable_data');
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    console.log('📅 Using cached timetable:', Object.keys(parsed));
-                    setTimetable(parsed);
-                } catch (e) { localStorage.removeItem('umsy_timetable_data'); }
-            }
-            // Always try fetching fresh data
-            const cookies = localStorage.getItem('umsy_cookies');
-            const regno = localStorage.getItem('umsy_regno');
-            
-            if (!cookies && !regno) {
-                console.warn('⚠️ No cookies or regno for timetable fetch');
-                return;
-            }
-            
-            const auth = cookies ? cookies : { regno };
-
-            try {
-                setTimetableLoading(true);
-                const result = await getTimeTable(auth);
-                if (result.data && Object.keys(result.data).length > 0) {
-                    console.log('📅 Fresh timetable loaded:', Object.keys(result.data));
-                    setTimetable(result.data);
-                    localStorage.setItem('umsy_timetable_data', JSON.stringify(result.data));
-                }
-            } catch (e) {
-                console.warn('⚠️ Could not load timetable:', e.message);
-            } finally {
-                setTimetableLoading(false);
-            }
-        };
-        loadTimetable();
-
-        // Load Pending Assignments
-        const loadAssignments = async () => {
-            const cookies = localStorage.getItem('umsy_cookies');
-            const regno = localStorage.getItem('umsy_regno');
-            if (!cookies && !regno) return;
-            const auth = cookies ? cookies : { regno };
-
-            try {
-                setAssignmentsLoading(true);
-                const result = await getPendingAssignments(auth);
-                setPendingAssignments(result.data || []);
-            } catch (e) {
-                console.warn('⚠️ Could not load assignments:', e.message);
-            } finally {
-                setAssignmentsLoading(false);
-            }
-        };
-        loadAssignments();
-
-        // Load backlogs/results separately so reappear count can update dynamically
-        const loadBacklogs = async () => {
-            const calculateCount = (data) => {
-                let count = 0;
-                const backlogGrades = new Set(['E', 'F', 'G', 'I']);
-                if (data && data.semesters) {
-                    data.semesters.forEach(sem => {
-                        (sem.subjects || []).forEach(sub => {
-                            if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) count++;
-                        });
-                    });
-                }
-                return count;
-            };
-
-            const cached = localStorage.getItem('umsy_result_data');
-            if (cached) {
-                try {
-                    setBacklogCount(calculateCount(JSON.parse(cached)));
-                } catch (e) {
-                    localStorage.removeItem('umsy_result_data');
-                }
-            }
-
-            const cookies = localStorage.getItem('umsy_cookies');
-            const regno = localStorage.getItem('umsy_regno');
-            const isV04 = localStorage.getItem('umsy_is_v04') === 'true';
-
-            if (!cookies && !regno) return;
-            const auth = cookies ? cookies : { regno };
-
-            try {
-                const result = isV04 ? await getResultV04(auth) : await getResult(auth);
-                if (result.success && result.data) {
-                    localStorage.setItem('umsy_result_data', JSON.stringify(result.data));
-                    setBacklogCount(calculateCount(result.data));
-                }
-            } catch (e) {
-                console.warn('⚠️ Could not load grades/backlogs:', e.message);
-            }
-        };
-        loadBacklogs();
     }, [navigate]);
+
+    const isCurrentTimeSlot = (timeSlot) => {
+        if (!timeSlot) return false;
+        try {
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const [start, end] = timeSlot.split('-').map(t => {
+                const [hours, minutes] = t.split(':').map(Number);
+                return hours * 60 + (minutes || 0);
+            });
+            return currentTime >= start && currentTime < end;
+        } catch (e) {
+            return false;
+        }
+    };
 
     const dayName = ['Sun','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
     const todayClasses = (timetable[dayName] || []).sort((a, b) => a.time.localeCompare(b.time));
@@ -534,9 +510,7 @@ const Dashboard = () => {
         ];
     };
 
-
-
-    if (loading || (!studentInfo && isInitialFetching)) {
+    if (loading || isInitialFetching) {
         return (
             <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden animate-pulse">
                 <Sidebar />
@@ -549,7 +523,6 @@ const Dashboard = () => {
                                 <div className="h-8 w-56 bg-gray-200 dark:bg-zinc-800 rounded-lg animate-pulse" />
                                 <div className="h-3 w-40 bg-gray-200 dark:bg-zinc-800 rounded-md animate-pulse" />
                             </div>
-                            <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-zinc-800 animate-pulse" />
                         </div>
 
                         {/* 3 Stats Cards Skeleton */}
@@ -655,20 +628,21 @@ const Dashboard = () => {
 
             <main className="flex flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10 bg-[#f6f8fa] dark:bg-zinc-950">
                 {(() => {
-                    // 1. Prepare Stacked Bar Chart Data
+                    // 1. Prepare Grouped Bar Chart Data
                     const chartData = attendanceData && attendanceData.length > 0
                         ? attendanceData.map(item => {
                             const present = parseInt(item.presentCount) || 0;
                             const total = parseInt(item.totalRecords) || 0;
-                            const absent = total > present ? total - present : 0;
+                            const od = parseInt(item.od) || 0;
                             return {
                                 month: item.courseCode || item.courseName?.substring(0, 5) || 'SUB',
-                                present: present,
-                                absent: absent
+                                Attended: present,
+                                Total: total,
+                                DL: od
                             };
                         })
                         : [
-                            { month: 'No Data', present: 0, absent: 0 }
+                            { month: 'No Data', Attended: 0, Total: 0, DL: 0 }
                         ];
 
                     // 2. Prepare Enrolled Courses List
@@ -721,23 +695,17 @@ const Dashboard = () => {
                                     <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mt-0.5">
                                         {studentInfo?.StudentName || 'Student'} 👋
                                     </h1>
-                                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Here's your academic overview</p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    {studentInfo?.StudentPicture && (
-                                        <img
-                                            src={`data:image/png;base64,${studentInfo.StudentPicture}`}
-                                            alt="Profile"
-                                            className="w-12 h-12 rounded-2xl object-cover ring-2 ring-zinc-200 dark:ring-zinc-800"
-                                        />
-                                    )}
+                                    <p className="text-xs text-zinc-450 dark:text-zinc-500 mt-1">Here's your academic overview</p>
                                 </div>
                             </div>
 
-                            {/* 3 Stats Cards (FXcom style) */}
+                            {/* 3 Stats Cards (Tappable & Responsive) */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {/* CGPA Stats Card */}
-                                <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                                <div 
+                                    onClick={() => navigate('/cgpa')}
+                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                                >
                                     <div>
                                         <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">CGPA</p>
                                         <h3 className="text-3xl font-black text-zinc-900 dark:text-white mt-2">
@@ -753,7 +721,10 @@ const Dashboard = () => {
                                 </div>
 
                                 {/* Attendance Stats Card */}
-                                <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                                <div 
+                                    onClick={() => navigate('/attendance')}
+                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                                >
                                     <div>
                                         <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Attendance</p>
                                         <h3 className="text-3xl font-black text-zinc-900 dark:text-white mt-2">
@@ -769,7 +740,10 @@ const Dashboard = () => {
                                 </div>
 
                                 {/* Backlogs Stats Card */}
-                                <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                                <div 
+                                    onClick={() => navigate(window.innerWidth < 1024 ? '/backlogs' : '/grades')}
+                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                                >
                                     <div>
                                         <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Active Backlogs</p>
                                         <h3 className="text-3xl font-black text-zinc-900 dark:text-white mt-2">
@@ -787,40 +761,69 @@ const Dashboard = () => {
 
                             {/* Middle Dashboard Content Grid */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                {/* Left Column (Bar Chart & Active Courses Table) */}
+                                {/* Left Column (Area Chart & Responsive Enrolled Courses) */}
                                 <div className="lg:col-span-2 space-y-6">
-                                    {/* Stacked Attendance & Absent Chart */}
+                                    {/* Present vs Total Classes Chart */}
                                     <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 lg:p-8 shadow-sm border border-zinc-100 dark:border-zinc-800">
                                         <div className="flex items-center justify-between mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Classes History</h3>
-                                                <p className="text-xs text-zinc-400 mt-1">Present vs Absent distributions</p>
+                                                <p className="text-xs text-zinc-400 mt-1">Attended classes vs total scheduled sessions</p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="w-2.5 h-2.5 rounded-full bg-[#b5f542]" />
-                                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">Present</span>
+                                            <div className="flex items-center gap-3 text-xs font-bold">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-[#bef227]" />
+                                                    <span className="text-zinc-650 dark:text-zinc-400">Attended</span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="w-2.5 h-2.5 rounded-full bg-[#1e293b]" />
-                                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">Absent</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                                                    <span className="text-zinc-650 dark:text-zinc-400">Total</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="h-[250px] w-full">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                                                    <XAxis dataKey="month" stroke="#a1a1aa" fontSize={11} tickLine={false} axisLine={false} />
-                                                    <YAxis stroke="#a1a1aa" fontSize={11} tickLine={false} axisLine={false} />
-                                                    <Tooltip cursor={{ fill: 'rgba(240, 240, 240, 0.4)' }} />
-                                                    <Bar dataKey="present" stackId="a" fill="#b5f542" radius={[0, 0, 8, 8]} barSize={28} />
-                                                    <Bar dataKey="absent" stackId="a" fill="#1e293b" radius={[8, 8, 0, 0]} barSize={28} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            {(() => {
+                                                const CustomTooltip = ({ active, payload, label }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const data = payload[0].payload;
+                                                        return (
+                                                            <div className="bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 p-3.5 rounded-2xl shadow-xl text-xs font-bold space-y-1.5">
+                                                                <p className="text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <span className="text-zinc-400 font-semibold">Total Classes:</span>
+                                                                    <span className="text-blue-500">{data.Total}</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <span className="text-zinc-400 font-semibold">Attended:</span>
+                                                                    <span className="text-emerald-500">{data.Attended}</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <span className="text-zinc-400 font-semibold">Duty Leaves (DL):</span>
+                                                                    <span className="text-amber-500">{data.DL}</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                };
+
+                                                return (
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={6}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" className="dark:stroke-zinc-800/40" />
+                                                            <XAxis dataKey="month" stroke="#a1a1aa" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} />
+                                                            <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} />
+                                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(200, 200, 200, 0.1)' }} />
+                                                            <Bar dataKey="Total" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={16} />
+                                                            <Bar dataKey="Attended" fill="#bef227" radius={[6, 6, 0, 0]} barSize={16} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
 
-                                    {/* Enrolled Courses Table */}
+                                    {/* Responsive Enrolled Courses Section */}
                                     <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 lg:p-8 shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
                                         <div className="flex items-center justify-between mb-6">
                                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Recent Enrolled Courses</h3>
@@ -828,7 +831,41 @@ const Dashboard = () => {
                                                 View all
                                             </button>
                                         </div>
-                                        <div className="overflow-x-auto">
+
+                                        {/* Mobile view: List of cards */}
+                                        <div className="block md:hidden space-y-3.5">
+                                            {activeCoursesList.map((course, idx) => {
+                                                const attPercent = course.attendance != null ? course.attendance : (course.presentCount != null && course.totalRecords > 0 ? Math.round((course.presentCount / course.totalRecords) * 100) : 0);
+                                                return (
+                                                    <div key={idx} className="bg-zinc-50/50 dark:bg-zinc-850 border border-zinc-150/40 dark:border-zinc-800/80 rounded-2xl p-4 flex flex-col gap-2.5">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="min-w-0 flex-1 pr-2">
+                                                                <h4 className="text-xs font-black text-zinc-900 dark:text-white truncate">{course.courseCode || '—'}</h4>
+                                                                <p className="text-[10px] text-zinc-400 font-bold truncate mt-0.5">{course.courseName || '—'}</p>
+                                                            </div>
+                                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${
+                                                                attPercent >= 75 
+                                                                    ? 'bg-emerald-50 text-[#558b00] border-[#e3ffb7] dark:bg-emerald-950/10' 
+                                                                    : 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/10'
+                                                            }`}>
+                                                                {attPercent >= 75 ? 'On Track' : 'Short'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-baseline text-xs font-bold mt-1 pt-2 border-t border-zinc-150/10">
+                                                            <span className="text-[#558b00] dark:text-[#a3ff2e]">
+                                                                {course.presentCount != null ? `${course.presentCount}/${course.totalRecords} classes` : `${attPercent}%`}
+                                                            </span>
+                                                            <span className="text-zinc-500">
+                                                                Marks: {getSubjectMarks(course.courseCode)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Desktop view: Table */}
+                                        <div className="hidden md:block overflow-x-auto">
                                             <table className="w-full text-left border-collapse">
                                                 <thead>
                                                     <tr className="border-b border-zinc-100 dark:border-zinc-800 text-zinc-400 text-xs font-semibold">
@@ -862,84 +899,133 @@ const Dashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* Right Column (Weekly Heatmap & 3 Details Circles) */}
+                                {/* Right Column (Today's Schedule & Key Metrics) */}
                                 <div className="space-y-6">
-                                    {/* Weekly Attendance Heatmap / Attendance Bars Fallback */}
-                                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 lg:p-8 shadow-sm border border-zinc-100 dark:border-zinc-800">
-                                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">Weekly Activity</h3>
-                                        <p className="text-xs text-zinc-400 mb-6">{hasTimetableData ? 'Attendance intensity track' : 'Course attendance overview'}</p>
-                                        {hasTimetableData ? (
-                                            <React.Fragment>
-                                                <div className="grid grid-cols-7 gap-2.5">
-                                                    {realHeatmap.map((row, rIdx) => 
-                                                        row.map((val, cIdx) => {
-                                                            const dayNameHeat = daysOfWeek[rIdx];
-                                                            const dayClasses = timetable?.[dayNameHeat] || [];
-                                                            const classInfo = dayClasses[cIdx];
-                                                            const bgColors = [
-                                                                'bg-zinc-200 dark:bg-zinc-800', // 0 = free slot
-                                                                'bg-[#7cb918]', // 1
-                                                                'bg-[#9be11f]', // 2
-                                                                'bg-[#abf22c]', // 3 = lab
-                                                                'bg-[#b5f542]'  // 4 = lecture
-                                                            ];
-                                                            const tooltipText = classInfo 
-                                                                ? `${classInfo.courseCode || 'Class'} (${classInfo.type || 'Lecture'})\nRoom: ${classInfo.room || 'N/A'}\nTime: ${classInfo.time || 'N/A'}` 
-                                                                : 'Free Slot';
-                                                            return (
-                                                                <div 
-                                                                    key={`${rIdx}-${cIdx}`} 
-                                                                    className={`w-full aspect-square rounded-lg ${bgColors[val]} transition-all duration-200 hover:scale-125 hover:shadow-md cursor-pointer`}
-                                                                    title={tooltipText}
-                                                                />
-                                                            );
-                                                        })
-                                                    )}
-                                                </div>
-                                                <div className="grid grid-cols-7 gap-2.5 mt-2.5 text-[9px] font-bold text-zinc-400 text-center">
-                                                    <span>Mon</span>
-                                                    <span>Tue</span>
-                                                    <span>Wed</span>
-                                                    <span>Thu</span>
-                                                    <span>Fri</span>
-                                                    <span>Sat</span>
-                                                    <span>Sun</span>
-                                                </div>
-                                            </React.Fragment>
-                                        ) : attendanceData && attendanceData.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {attendanceData.slice(0, 6).map((course, idx) => {
-                                                    const present = parseInt(course.presentCount) || 0;
-                                                    const total = parseInt(course.totalRecords) || 1;
-                                                    const pct = Math.round((present / total) * 100);
-                                                    const barColor = pct >= 75 ? 'bg-[#7cb918]' : pct >= 50 ? 'bg-amber-400' : 'bg-rose-400';
+                                    {/* Today's Schedule Card */}
+                                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 lg:p-8 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Schedule Focus</h3>
+                                                <button 
+                                                    onClick={() => navigate('/time-table')}
+                                                    className="text-xs font-bold text-[#7cb918] hover:text-[#9be11f] transition-colors"
+                                                >
+                                                    Full Timetable
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-zinc-400 mb-6">
+                                                {dayName}, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {(() => {
+                                                const parseTimeSlot = (timeSlot) => {
+                                                    if (!timeSlot) return { start: 0, end: 0 };
+                                                    const [startStr, endStr] = timeSlot.split('-');
+                                                    const parseTime = (str) => {
+                                                        const [h, m] = str.split(':').map(Number);
+                                                        return h * 60 + (m || 0);
+                                                    };
+                                                    return { start: parseTime(startStr), end: parseTime(endStr) };
+                                                };
+
+                                                const now = new Date();
+                                                const currentTime = now.getHours() * 60 + now.getMinutes();
+
+                                                let live = null;
+                                                let upcoming = null;
+
+                                                const sortedClasses = [...todayClasses].sort((a, b) => {
+                                                    return parseTimeSlot(a.time).start - parseTimeSlot(b.time).start;
+                                                });
+
+                                                for (const cls of sortedClasses) {
+                                                    const { start, end } = parseTimeSlot(cls.time);
+                                                    if (currentTime >= start && currentTime < end) {
+                                                        live = cls;
+                                                    } else if (start > currentTime && !upcoming) {
+                                                        upcoming = cls;
+                                                    }
+                                                }
+
+                                                if (!live && !upcoming) {
                                                     return (
-                                                        <div key={idx} className="group">
-                                                            <div className="flex items-center justify-between mb-1.5">
-                                                                <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 truncate max-w-[140px]" title={course.courseName}>
-                                                                    {course.courseCode || course.courseName?.substring(0, 10)}
-                                                                </span>
-                                                                <span className={`text-[11px] font-black ${pct >= 75 ? 'text-[#558b00]' : pct >= 50 ? 'text-amber-600' : 'text-rose-500'}`}>
-                                                                    {pct}%
-                                                                </span>
-                                                            </div>
-                                                            <div className="w-full h-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full ${barColor} rounded-full transition-all duration-700 group-hover:shadow-md`}
-                                                                    style={{ width: `${pct}%` }}
-                                                                />
-                                                            </div>
-                                                            <p className="text-[9px] text-zinc-400 mt-0.5">{present}/{total} classes attended</p>
+                                                        <div className="text-center py-10">
+                                                            <span className="text-3xl">🌴</span>
+                                                            <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200 mt-2">All Done for Today</h4>
+                                                            <p className="text-xs text-zinc-450 dark:text-zinc-505 mt-1">No more upcoming classes</p>
                                                         </div>
                                                     );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <Calendar className="h-10 w-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-                                                <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500">No activity data available</p>
-                                            </div>
-                                        )}
+                                                }
+
+                                                return (
+                                                    <div className="space-y-4">
+                                                        {/* LIVE CLASS */}
+                                                        {live && (
+                                                            <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border-l-4 border-emerald-500 rounded-2xl p-4 transition-all">
+                                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-0.5 rounded">
+                                                                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                                                                        Live Now
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-450">{live.time}</span>
+                                                                </div>
+                                                                <h4 className="text-sm font-black text-slate-800 dark:text-white tracking-tight">{live.courseCode}</h4>
+                                                                
+                                                                {/* Progress Bar */}
+                                                                {(() => {
+                                                                    const { start, end } = parseTimeSlot(live.time);
+                                                                    const total = end - start;
+                                                                    const elapsed = currentTime - start;
+                                                                    const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+                                                                    return (
+                                                                        <div className="mt-3">
+                                                                            <div className="w-full h-1 bg-emerald-200/40 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                                                                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                                                            </div>
+                                                                            <p className="text-[8px] text-zinc-400 font-bold mt-1 text-right">{Math.round(pct)}% elapsed</p>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+
+                                                                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 mt-2 pt-2 border-t border-emerald-100/30">
+                                                                    <span>Room: {live.room || 'N/A'}</span>
+                                                                    <span>Section: {live.section || 'N/A'}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* UPCOMING CLASS */}
+                                                        {upcoming && (
+                                                            <div className="bg-zinc-50/60 dark:bg-zinc-850 border-l-4 border-zinc-300 dark:border-zinc-700 rounded-2xl p-4 transition-all">
+                                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded">
+                                                                        Next Class
+                                                                    </span>
+                                                                    {(() => {
+                                                                        const { start } = parseTimeSlot(upcoming.time);
+                                                                        const diff = start - currentTime;
+                                                                        const countdown = diff < 60 ? `${diff}m` : `${Math.floor(diff/60)}h ${diff%60}m`;
+                                                                        return (
+                                                                            <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+                                                                                Starts in {countdown}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                                <h4 className="text-sm font-black text-slate-800 dark:text-white tracking-tight">{upcoming.courseCode}</h4>
+                                                                
+                                                                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 mt-2 pt-2 border-t border-zinc-150/20">
+                                                                    <span>Room: {upcoming.room || 'N/A'}</span>
+                                                                    <span>Time: {upcoming.time}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
                                     </div>
 
                                     {/* Overlapping Key Metrics Circles */}
@@ -949,15 +1035,24 @@ const Dashboard = () => {
                                             <p className="text-xs text-zinc-400 mb-6">CGPA, Attendance & Fee overview</p>
                                         </div>
                                         <div className="relative h-[200px] flex items-center justify-center">
-                                            <div className="absolute w-36 h-36 rounded-full bg-[#1e293b] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-white -translate-x-8 -translate-y-4 shadow-lg z-10 transition-all duration-300 hover:scale-125 hover:z-30 cursor-pointer">
+                                            <div 
+                                                onClick={() => navigate('/cgpa')}
+                                                className="absolute w-36 h-36 rounded-full bg-[#1e293b] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-white -translate-x-8 -translate-y-4 shadow-lg z-10 transition-all duration-300 hover:scale-110 hover:z-30 cursor-pointer active:scale-95"
+                                            >
                                                 <span className="text-2xl font-black">{studentInfo?.CGPA || '0.00'}</span>
                                                 <span className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-wider">CGPA</span>
                                             </div>
-                                            <div className="absolute w-28 h-28 rounded-full bg-[#b5f542] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-[#1e293b] translate-x-12 translate-y-6 shadow-lg z-20 transition-all duration-300 hover:scale-125 hover:z-30 cursor-pointer">
+                                            <div 
+                                                onClick={() => navigate('/attendance')}
+                                                className="absolute w-28 h-28 rounded-full bg-[#b5f542] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-[#1e293b] translate-x-12 translate-y-6 shadow-lg z-20 transition-all duration-300 hover:scale-110 hover:z-30 cursor-pointer active:scale-95"
+                                            >
                                                 <span className="text-xl font-black">{studentInfo?.AggAttendance || '0.0'}%</span>
                                                 <span className="text-[9px] text-[#1e293b]/70 uppercase font-bold tracking-wider">Attendance</span>
                                             </div>
-                                            <div className="absolute w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-850 border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-zinc-800 dark:text-white translate-x-6 -translate-y-16 shadow-lg z-0 transition-all duration-300 hover:scale-125 hover:z-30 cursor-pointer">
+                                            <div 
+                                                onClick={() => navigate('/hostel-info')}
+                                                className="absolute w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-850 border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-zinc-800 dark:text-white translate-x-6 -translate-y-16 shadow-lg z-0 transition-all duration-300 hover:scale-110 hover:z-30 cursor-pointer active:scale-95"
+                                            >
                                                 <span className="text-xs font-black truncate max-w-[80px]">₹{studentInfo?.PendingFee || '0'}</span>
                                                 <span className="text-[8px] text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mt-0.5">Pending Fee</span>
                                             </div>

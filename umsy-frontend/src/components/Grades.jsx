@@ -528,13 +528,12 @@ const Grades = () => {
 
     useEffect(() => {
         if (semList.length > 0) {
-            const latestSem = semList[0];
-            if (latestSem !== prevLatestSemRef.current || !activeSem || !semList.includes(activeSem)) {
-                setActiveSem(latestSem);
-                prevLatestSemRef.current = latestSem;
+            const cached = localStorage.getItem('umsy_grades_active_sem');
+            if (cached && semList.includes(cached)) {
+                setActiveSem(cached);
             }
         }
-    }, [semList, activeSem]);
+    }, [semList]);
 
     useEffect(() => {
         if (activeSem && tabRefs.current[activeSem]) {
@@ -648,89 +647,9 @@ const Grades = () => {
             <div className="lg:hidden flex flex-col min-h-full">
                 {/* Body */}
                 <div className="flex-1 pb-24">
-                    {/* View Switcher & Search */}
-                    <div className="px-4 pt-4 pb-2 space-y-3">
-                        {/* Segmented Control */}
-                        <div className="flex p-1 bg-slate-100 dark:bg-zinc-850 rounded-2xl">
-                            <button 
-                                onClick={() => setViewMode('grades')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${viewMode === 'grades' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                            >
-                                <LayoutGrid className="h-3.5 w-3.5" />
-                                Grades
-                            </button>
-                            <button 
-                                onClick={() => setViewMode('marks')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${viewMode === 'marks' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                            >
-                                <FileText className="h-3.5 w-3.5" />
-                                Marks
-                            </button>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <div className="relative">
-                                <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-2xl px-3 py-2.5 shadow-sm focus-within:border-[#bef227] transition-all">
-                                    <Search className="h-4 w-4 text-slate-400" />
-                                    <input
-                                        type="text"
-                                        placeholder={`Search ${viewMode === 'grades' ? 'grades' : 'marks'}…`}
-                                        value={search}
-                                        onChange={e => setSearch(e.target.value)}
-                                        className="flex-1 text-xs font-bold bg-transparent text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none"
-                                    />
-                                    {search && (
-                                        <button onClick={() => setSearch('')} className="p-0.5 rounded-full hover:bg-slate-50 dark:hover:bg-zinc-850">
-                                            <X className="h-3.5 w-3.5 text-slate-400" />
-                                        </button>
-                                    )}
-                                    {viewMode === 'grades' && (
-                                        <button 
-                                            onClick={() => setShowGradePicker(!showGradePicker)}
-                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showGradePicker || selectedGrades.length > 0 ? 'bg-[#bef227] text-[#1c312e]' : 'bg-slate-50 dark:bg-zinc-850 text-slate-400'}`}
-                                        >
-                                            <SlidersHorizontal className="h-3.5 w-3.5" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Grade Picker Dropdown */}
-                            {viewMode === 'grades' && showGradePicker && (
-                                <div className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-2xl p-3 shadow-md animate-in slide-in-from-top-2">
-                                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-zinc-800/80">
-                                        <span className="text-[10px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Filter by Grade</span>
-                                        {selectedGrades.length > 0 && (
-                                            <button onClick={() => setSelectedGrades([])} className="text-[9px] font-black uppercase tracking-widest text-red-500">Clear</button>
-                                        )}
-                                    </div>
-                                    <div className="grid grid-cols-5 gap-1.5">
-                                        {grades.map(g => {
-                                            const isSel = selectedGrades.includes(g);
-                                            const cfg = gradeConfig(g);
-                                            return (
-                                                <button
-                                                    key={g}
-                                                    onClick={() => toggleGrade(g)}
-                                                    className={`py-1.5 rounded-xl text-xs font-black transition-all ${
-                                                        isSel 
-                                                            ? `${cfg.bg} ${cfg.text} border ${cfg.border} ring-2 ring-emerald-500/10` 
-                                                            : 'bg-slate-50 dark:bg-zinc-850 text-slate-500 border border-transparent'
-                                                    }`}
-                                                >
-                                                    {g}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
                     {/* Semester Navigation Tabs */}
-                    {semList.length > 0 && !search && selectedGrades.length === 0 && (
-                        <div className="px-4 py-2 overflow-x-auto no-scrollbar">
+                    {semList.length > 0 && (
+                        <div className="px-4 py-3 overflow-x-auto no-scrollbar border-b border-zinc-100/50 dark:border-zinc-800/50 bg-white dark:bg-zinc-900">
                             <div className="flex gap-1.5 min-w-max">
                                 {semList.map(title => (
                                     <button
@@ -752,19 +671,107 @@ const Grades = () => {
                         </div>
                     )}
 
-                    {/* Content Area */}
-                    <div className="px-4 space-y-6 mt-3">
-                        {groupedFiltered.length === 0 ? (
-                            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/60 dark:border-zinc-800 p-12 text-center shadow-sm">
-                                <BookOpen className="h-8 w-8 text-slate-350 mx-auto mb-2" />
-                                <p className="text-xs font-bold text-slate-450 uppercase tracking-widest">No matching records found</p>
+                    {!activeSem ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-150/45 dark:border-zinc-800/80 rounded-3xl m-4">
+                            <SlidersHorizontal className="h-8 w-8 text-[#bef227] mb-3" />
+                            <h3 className="text-xs font-black text-zinc-800 dark:text-white uppercase tracking-wider">Select Semester</h3>
+                            <p className="text-[11px] text-zinc-450 mt-1.5 leading-relaxed">Please select a semester at the top to unlock search filters and view your grades/marks.</p>
+                        </div>
+                    ) : (
+                        <React.Fragment>
+                            {/* View Switcher & Search */}
+                            <div className="px-4 pt-4 pb-2 space-y-3">
+                                {/* Segmented Control */}
+                                <div className="flex p-1 bg-slate-100 dark:bg-zinc-850 rounded-2xl">
+                                    <button 
+                                        onClick={() => setViewMode('grades')}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${viewMode === 'grades' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                                    >
+                                        <LayoutGrid className="h-3.5 w-3.5" />
+                                        Grades
+                                    </button>
+                                    <button 
+                                        onClick={() => setViewMode('marks')}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${viewMode === 'marks' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                                    >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        Marks
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <div className="relative">
+                                        <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-2xl px-3 py-2.5 shadow-sm focus-within:border-[#bef227] transition-all">
+                                            <Search className="h-4 w-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                placeholder={`Search ${viewMode === 'grades' ? 'grades' : 'marks'}…`}
+                                                value={search}
+                                                onChange={e => setSearch(e.target.value)}
+                                                className="flex-1 text-xs font-bold bg-transparent text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none"
+                                            />
+                                            {search && (
+                                                <button onClick={() => setSearch('')} className="p-0.5 rounded-full hover:bg-slate-50 dark:hover:bg-zinc-850">
+                                                    <X className="h-3.5 w-3.5 text-slate-400" />
+                                                </button>
+                                            )}
+                                            {viewMode === 'grades' && (
+                                                <button 
+                                                    onClick={() => setShowGradePicker(!showGradePicker)}
+                                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showGradePicker || selectedGrades.length > 0 ? 'bg-[#bef227] text-[#1c312e]' : 'bg-slate-50 dark:bg-zinc-850 text-slate-400'}`}
+                                                >
+                                                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Grade Picker Dropdown */}
+                                    {viewMode === 'grades' && showGradePicker && (
+                                        <div className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-2xl p-3 shadow-md animate-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                                                <span className="text-[10px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Filter by Grade</span>
+                                                {selectedGrades.length > 0 && (
+                                                    <button onClick={() => setSelectedGrades([])} className="text-[9px] font-black uppercase tracking-widest text-red-500">Clear</button>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-5 gap-1.5">
+                                                {grades.map(g => {
+                                                    const isSel = selectedGrades.includes(g);
+                                                    const cfg = gradeConfig(g);
+                                                    return (
+                                                        <button
+                                                            key={g}
+                                                            onClick={() => toggleGrade(g)}
+                                                            className={`py-1.5 rounded-xl text-xs font-black transition-all ${
+                                                                isSel 
+                                                                    ? `${cfg.bg} ${cfg.text} border ${cfg.border} ring-2 ring-emerald-500/10` 
+                                                                    : 'bg-slate-50 dark:bg-zinc-850 text-slate-500 border border-transparent'
+                                                            }`}
+                                                        >
+                                                            {g}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        ) : (
-                            groupedFiltered.map((group, gIdx) => {
-                                const totalCredits = group.subjects.reduce((sum, s) => sum + (s.credit || 0), 0);
-                                return (
-                                    <div key={group.title} className="space-y-4 animate-in fade-in duration-300">
-                                        {/* Stats Card */}
+
+                            {/* Content Area */}
+                            <div className="px-4 space-y-6 mt-3">
+                                {groupedFiltered.length === 0 ? (
+                                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/60 dark:border-zinc-800 p-12 text-center shadow-sm">
+                                        <BookOpen className="h-8 w-8 text-slate-350 mx-auto mb-2" />
+                                        <p className="text-xs font-bold text-slate-450 uppercase tracking-widest">No matching records found</p>
+                                    </div>
+                                ) : (
+                                    groupedFiltered.map((group, gIdx) => {
+                                        const totalCredits = group.subjects.reduce((sum, s) => sum + (s.credit || 0), 0);
+                                        return (
+                                            <div key={group.title} className="space-y-4 animate-in fade-in duration-300">
+                                                {/* Stats Card */}
                                         {viewMode === 'grades' && group.type !== 'rpl' && group.tgpa && selectedGrades.length === 0 && (
                                             <div className="bg-[#1c312e] rounded-3xl p-5 text-white shadow-md relative overflow-hidden border border-white/5">
                                                 <div className="absolute -top-12 -right-12 w-36 h-36 bg-[#bef227]/5 rounded-full blur-2xl pointer-events-none" />
@@ -875,78 +882,22 @@ const Grades = () => {
                                 );
                             })
                         )}
-                    </div>
+                            </div>
+                        </React.Fragment>
+                    )}
                 </div>
             </div>
 
             {/* DESKTOP VIEW */}
             <div className="hidden lg:flex flex-col gap-6">
-                <div className="flex items-center justify-between pt-2">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Academic Records</h1>
-                        <p className="text-xs text-slate-450 dark:text-zinc-500 mt-0.5">Performance tracking and grades overview</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                        {/* Selector */}
-                        <div className="flex p-1 bg-slate-100 dark:bg-zinc-850 rounded-2xl w-48">
-                            <button 
-                                onClick={() => setViewMode('grades')}
-                                className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'grades' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500'}`}
-                            >
-                                Grades
-                            </button>
-                            <button 
-                                onClick={() => setViewMode('marks')}
-                                className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'marks' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500'}`}
-                            >
-                                Marks
-                            </button>
-                        </div>
-
-                        {/* Search bar */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                            <input
-                                type="text"
-                                placeholder={`Search ${viewMode === 'grades' ? 'grades' : 'marks'}…`}
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="pl-10 pr-4 h-11 text-xs font-bold bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-2xl focus:outline-none focus:border-[#bef227] focus:ring-4 focus:ring-[#bef227]/10 text-slate-800 dark:text-white placeholder-slate-400 w-56 transition-all"
-                            />
-                        </div>
-                    </div>
+                <div>
+                    <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Academic Records</h1>
+                    <p className="text-xs text-slate-450 dark:text-zinc-500 mt-0.5">Performance tracking and grades overview</p>
                 </div>
 
-                {/* Grade picker on desktop */}
-                {viewMode === 'grades' && (
-                    <div className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-[22px] p-4 shadow-sm flex items-center gap-4">
-                        <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Filter Grades</span>
-                        <div className="flex flex-wrap gap-1.5">
-                            {grades.map(g => {
-                                const isSel = selectedGrades.includes(g);
-                                const cfg = gradeConfig(g);
-                                return (
-                                    <button
-                                        key={g}
-                                        onClick={() => toggleGrade(g)}
-                                        className={`px-3 py-1 rounded-xl text-xs font-black transition-all ${
-                                            isSel 
-                                                ? `${cfg.bg} ${cfg.text} border ${cfg.border} ring-2 ring-emerald-500/10` 
-                                                : 'bg-slate-50 dark:bg-zinc-850 text-slate-500 border border-transparent'
-                                        }`}
-                                    >
-                                        {g}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
                 {/* Desktop Semester Tabs */}
-                {semList.length > 0 && !search && selectedGrades.length === 0 && (
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {semList.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 border-b border-zinc-150/40 dark:border-zinc-800/40">
                         {semList.map(title => (
                             <button
                                 key={title}
@@ -963,8 +914,77 @@ const Grades = () => {
                     </div>
                 )}
 
+                {!activeSem ? (
+                    <div className="bg-white dark:bg-zinc-900 rounded-[28px] border border-slate-200/60 dark:border-zinc-800 p-16 text-center shadow-sm">
+                        <SlidersHorizontal className="w-8 h-8 text-[#bef227] mx-auto mb-3" />
+                        <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Select Semester</h3>
+                        <p className="text-xs text-slate-450 mt-1">Please select a semester at the top to unlock search filters and view your grades/marks.</p>
+                    </div>
+                ) : (
+                    <React.Fragment>
+                        <div className="flex items-center justify-between pt-2">
+                            <div className="flex items-center gap-3">
+                                {/* Selector */}
+                                <div className="flex p-1 bg-slate-100 dark:bg-zinc-850 rounded-2xl w-48">
+                                    <button 
+                                        onClick={() => setViewMode('grades')}
+                                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'grades' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Grades
+                                    </button>
+                                    <button 
+                                        onClick={() => setViewMode('marks')}
+                                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'marks' ? 'bg-[#bef227] text-[#1c312e] shadow-sm' : 'text-slate-500'}`}
+                                    >
+                                        Marks
+                                    </button>
+                                </div>
+
+                                {/* Search bar */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                    <input
+                                        type="text"
+                                        placeholder={`Search ${viewMode === 'grades' ? 'grades' : 'marks'}…`}
+                                        value={search}
+                                        onChange={e => setSearch(e.target.value)}
+                                        className="pl-10 pr-4 h-11 text-xs font-bold bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-2xl focus:outline-none focus:border-[#bef227] focus:ring-4 focus:ring-[#bef227]/10 text-slate-800 dark:text-white placeholder-slate-400 w-56 transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Grade picker on desktop */}
+                        {viewMode === 'grades' && (
+                            <div className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-[22px] p-4 shadow-sm flex items-center gap-4 animate-in slide-in-from-top-2">
+                                <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Filter Grades</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {grades.map(g => {
+                                        const isSel = selectedGrades.includes(g);
+                                        const cfg = gradeConfig(g);
+                                        return (
+                                            <button
+                                                key={g}
+                                                onClick={() => toggleGrade(g)}
+                                                className={`px-3 py-1 rounded-xl text-xs font-black transition-all ${
+                                                    isSel 
+                                                        ? `${cfg.bg} ${cfg.text} border ${cfg.border} ring-2 ring-emerald-500/10` 
+                                                        : 'bg-slate-50 dark:bg-zinc-850 text-slate-500 border border-transparent'
+                                                }`}
+                                            >
+                                                {g}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </React.Fragment>
+                )}
+
                 {/* Main dynamic card grid on desktop */}
-                <div className="space-y-6">
+                {activeSem && (
+                    <div className="space-y-6">
                     {groupedFiltered.length === 0 ? (
                         <div className="bg-white dark:bg-zinc-900 rounded-[28px] border border-slate-200/60 dark:border-zinc-800 p-16 text-center shadow-sm">
                             <BookOpen className="w-8 h-8 text-slate-350 mx-auto mb-3" />
@@ -1064,7 +1084,8 @@ const Grades = () => {
                             );
                         })
                     )}
-                </div>
+                    </div>
+                )}
             </div>
         </>
     );

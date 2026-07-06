@@ -18,7 +18,6 @@ import ByeBye from './components/ByeBye';
 import Cookie from './components/Cookie';
 import NewLogin from './components/NewLogin';
 import UmsyV04Login from './components/UmsyV04Login';
-import GlobalSearch from './components/GlobalSearch';
 import DashboardLayout from './components/DashboardLayout';
 import './App.css';
 
@@ -78,7 +77,6 @@ function AppContent() {
         <Route path="/backlogs" element={<ProtectedRoute><MobileBacklogs /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
-      <GlobalSearch />
     </>
   );
 }

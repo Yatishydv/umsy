@@ -38,13 +38,14 @@ function parseHtmlTableTo2DArray($, tableEl) {
 }
 
 /**
- * Standardizes time slots from formats like "09:00 AM - 10:00 AM" to "09:00-10:00"
+ * Standardizes time slots from formats like "09:00 AM - 10:00 AM" or "10-11 AM" to "09:00-10:00"
  * @param {string} timeStr - Raw time slot string
- * @returns {string} - Cleaned time slot
+ * @returns {string} - Cleaned time slot in 24-hour "HH:MM-HH:MM" format
  */
 function cleanTimeFormat(timeStr) {
     let clean = timeStr.replace(/\s+/g, '');
     
+    // Pattern 1: HH:MM(AM/PM) - HH:MM(AM/PM)
     const rangeMatch = clean.match(/(\d{1,2}):(\d{2})([AP]M)?-(\d{1,2}):(\d{2})([AP]M)?/i);
     if (rangeMatch) {
         let sh = parseInt(rangeMatch[1], 10);
@@ -56,15 +57,45 @@ function cleanTimeFormat(timeStr) {
         
         if (sampm) {
             if (sampm.toUpperCase() === 'PM' && sh < 12) sh += 12;
-            if (sampm.toUpperCase() === 'AM' && sh === 12) sh = 0;
+            if (sampm.toUpperCase() === 'AM' && sh === 12) sh = 12; // Keep 12 for noon
         }
         if (eampm) {
             if (eampm.toUpperCase() === 'PM' && eh < 12) eh += 12;
-            if (eampm.toUpperCase() === 'AM' && eh === 12) eh = 0;
+            if (eampm.toUpperCase() === 'AM' && eh === 12) eh = 12; // Keep 12 for noon
         }
         
         const startStr = `${String(sh).padStart(2, '0')}:${sm}`;
         const endStr = `${String(eh).padStart(2, '0')}:${em}`;
+        return `${startStr}-${endStr}`;
+    }
+
+    // Pattern 2: HH(AM/PM) - HH(AM/PM) (e.g., 10-11AM, 12-01PM, 02-03PM)
+    const simpleRangeMatch = clean.match(/(\d{1,2})([AP]M)?-(\d{1,2})([AP]M)?/i);
+    if (simpleRangeMatch) {
+        let sh = parseInt(simpleRangeMatch[1], 10);
+        let sampm = simpleRangeMatch[2];
+        let eh = parseInt(simpleRangeMatch[3], 10);
+        let eampm = simpleRangeMatch[4];
+
+        // If start time lacks AM/PM but end time has it (e.g. 10-11 AM)
+        if (!sampm && eampm) {
+            sampm = eampm;
+            if (sh > eh && eampm.toUpperCase() === 'PM') {
+                sampm = 'AM';
+            }
+        }
+
+        if (sampm) {
+            if (sampm.toUpperCase() === 'PM' && sh < 12) sh += 12;
+            if (sampm.toUpperCase() === 'AM' && sh === 12) sh = 12;
+        }
+        if (eampm) {
+            if (eampm.toUpperCase() === 'PM' && eh < 12) eh += 12;
+            if (eampm.toUpperCase() === 'AM' && eh === 12) eh = 12;
+        }
+
+        const startStr = `${String(sh).padStart(2, '0')}:00`;
+        const endStr = `${String(eh).padStart(2, '0')}:00`;
         return `${startStr}-${endStr}`;
     }
     
@@ -191,24 +222,22 @@ export async function fetchTimeTable(client, termId) {
         // Retrieve original cookies from client defaults
         const originalCookies = client.defaults.headers['Cookie'] || client.defaults.headers.common['Cookie'] || '';
 
-        // Pre-flight: Warm up the session by calling the GetStudentCourses WebMethod.
-        // Direct GET requests to StudentDashboard.aspx fail with 500 on token cookies,
-        // but POST WebMethods execute successfully and warm the ASP.NET session context
+        // Pre-flight: Warm up the session by requesting frmPlacementHome.aspx.
+        // Direct GET requests to StudentDashboard.aspx and report pages fail with 500 on token cookies,
+        // but visiting frmPlacementHome.aspx successfully initializes the ASP.NET session context
         // so that frmStudentTimeTable.aspx loads without crashing.
         let sessionCookies = originalCookies;
         try {
-            console.log('🔑 Pre-flight: Warming session via GetStudentCourses WebMethod...');
-            const warmResponse = await client.post('https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetStudentCourses', {}, {
+            console.log('🔑 Pre-flight: Warming session via frmPlacementHome.aspx...');
+            const warmResponse = await client.get('https://ums.lpu.in/lpuums/frmPlacementHome.aspx', {
                 headers: {
-                    'Content-Type': 'application/json; charset=UTF-8',
                     'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
-                    'Accept': 'application/json, text/javascript, */*; q=0.01',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
                 }
             });
             console.log(`🔑 Pre-flight session warming success: ${warmResponse.status}`);
             
-            // Extract any cookies returned during the WebMethod call
+            // Extract any cookies returned during the call
             const warmSetCookies = warmResponse.headers['set-cookie'];
             if (warmSetCookies) {
                 sessionCookies = mergeCookies(sessionCookies, warmSetCookies);
