@@ -21,12 +21,21 @@ android {
             v1SigningEnabled true
             v2SigningEnabled true
         }
+        release {
+            storeFile file("release.keystore")
+            storePassword "password"
+            keyAlias "my-key-alias"
+            keyPassword "password"
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
