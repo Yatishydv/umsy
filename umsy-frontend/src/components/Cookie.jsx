@@ -43,7 +43,16 @@ const Cookie = () => {
             <div className="max-w-md w-full relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out">
                 <div className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl shadow-black/10 space-y-6">
                     
-                    <div className="flex justify-center">
+                    <div className="flex justify-between items-start">
+                        <button 
+                            onClick={() => navigate('/login')}
+                            className="text-xs cursor-pointer text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        >
+                            <ArrowRight size={14} className="rotate-180" /> Back to Login
+                        </button>
+                    </div>
+
+                    <div className="flex justify-center -mt-4">
                         <div className="relative">
                             <div className="p-5 rounded-3xl bg-primary/10 border border-primary/20 animate-bounce-slow">
                                 <CookieIcon size={48} className="text-primary" />

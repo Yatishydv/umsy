@@ -1,0 +1,10 @@
+{
+  "appId": "com.umsy.app",
+  "appName": "umsy",
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}
