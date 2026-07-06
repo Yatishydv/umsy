@@ -46,7 +46,7 @@ const MessagesCard = ({ messages = [] }) => {
 
     if (!messages || messages.length === 0) {
         return (
-            <div className="bg-white dark:bg-[#1c312e] rounded-3xl shadow-sm border border-slate-200/60 dark:border-white/5 p-8">
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-slate-200/60 dark:border-zinc-800/80 p-8">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2.5 bg-[#bef227]/10 rounded-2xl border border-[#bef227]/20">
                         <Mail className="h-5 w-5 text-[#bef227]" />
@@ -62,9 +62,9 @@ const MessagesCard = ({ messages = [] }) => {
     }
 
     return (
-        <div className="bg-white dark:bg-[#1c312e] rounded-3xl shadow-sm border border-slate-200/60 dark:border-white/5 overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-slate-200/60 dark:border-zinc-800/80 overflow-hidden">
             {/* Header */}
-            <div className="p-5 border-b border-slate-100 dark:border-white/5">
+            <div className="p-5 border-b border-slate-100 dark:border-zinc-800/80">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-[#bef227]/10 rounded-2xl border border-[#bef227]/20">
@@ -72,7 +72,7 @@ const MessagesCard = ({ messages = [] }) => {
                         </div>
                         <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Messages</h2>
                     </div>
-                    <span className="text-[9px] font-black text-slate-400 dark:text-zinc-500 bg-slate-50 dark:bg-white/5 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100 dark:border-white/5">
+                    <span className="text-[9px] font-black text-slate-400 dark:text-zinc-500 bg-slate-50 dark:bg-zinc-850 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100 dark:border-zinc-800/80">
                         {messages.length} {messages.length === 1 ? 'message' : 'messages'}
                     </span>
                 </div>
@@ -87,7 +87,7 @@ const MessagesCard = ({ messages = [] }) => {
                     return (
                         <div
                             key={index}
-                            className="border-b border-slate-100 dark:border-white/5 last:border-b-0 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors"
+                            className="border-b border-slate-100 dark:border-zinc-800/50 last:border-b-0 hover:bg-slate-50 dark:hover:bg-zinc-800/30 transition-colors"
                         >
                             <div
                                 className={`p-5 cursor-pointer`}

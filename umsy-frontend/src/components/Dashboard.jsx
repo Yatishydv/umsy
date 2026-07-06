@@ -43,6 +43,7 @@ const Dashboard = () => {
     const [attendanceData, setAttendanceData] = useState([]);
     const [coursesData, setCoursesData] = useState([]);
     const [marksData, setMarksData] = useState([]);
+    const [activeCircle, setActiveCircle] = useState(null);
 
     const handleTestNotification = async () => {
         const title = 'UMsy Test Notification';
@@ -368,6 +369,7 @@ const Dashboard = () => {
                             if (studentRes.success && studentRes.data) {
                                 setStudentInfo(studentRes.data);
                                 localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
+                                localStorage.removeItem('umsy_is_logging_in');
                                 window.dispatchEvent(new Event('student-info-updated'));
                                 
                                 // Fetch ranking immediately after getting registration number
@@ -703,8 +705,8 @@ const Dashboard = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {/* CGPA Stats Card */}
                                 <div 
-                                    onClick={() => navigate('/cgpa')}
-                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                                    tabIndex={0}
+                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-default lg:hover:scale-105 lg:hover:-translate-y-1 lg:hover:shadow-lg focus:scale-105 focus:-translate-y-1 focus:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#bef227]/30 transition-all duration-300 z-10 focus:z-20"
                                 >
                                     <div>
                                         <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">CGPA</p>
@@ -722,8 +724,8 @@ const Dashboard = () => {
 
                                 {/* Attendance Stats Card */}
                                 <div 
-                                    onClick={() => navigate('/attendance')}
-                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                                    tabIndex={0}
+                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-default lg:hover:scale-105 lg:hover:-translate-y-1 lg:hover:shadow-lg focus:scale-105 focus:-translate-y-1 focus:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#bef227]/30 transition-all duration-300 z-10 focus:z-20"
                                 >
                                     <div>
                                         <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Attendance</p>
@@ -741,8 +743,8 @@ const Dashboard = () => {
 
                                 {/* Backlogs Stats Card */}
                                 <div 
-                                    onClick={() => navigate(window.innerWidth < 1024 ? '/backlogs' : '/grades')}
-                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] hover:shadow-md transition-all duration-200"
+                                    tabIndex={0}
+                                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between min-h-[140px] relative overflow-hidden cursor-default lg:hover:scale-105 lg:hover:-translate-y-1 lg:hover:shadow-lg focus:scale-105 focus:-translate-y-1 focus:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#bef227]/30 transition-all duration-300 z-10 focus:z-20"
                                 >
                                     <div>
                                         <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Active Backlogs</p>
@@ -1036,22 +1038,22 @@ const Dashboard = () => {
                                         </div>
                                         <div className="relative h-[200px] flex items-center justify-center">
                                             <div 
-                                                onClick={() => navigate('/cgpa')}
-                                                className="absolute w-36 h-36 rounded-full bg-[#1e293b] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-white -translate-x-8 -translate-y-4 shadow-lg z-10 transition-all duration-300 hover:scale-110 hover:z-30 cursor-pointer active:scale-95"
+                                                onClick={() => { if (window.innerWidth < 1024) setActiveCircle(activeCircle === 'cgpa' ? null : 'cgpa'); }}
+                                                className={`absolute w-36 h-36 rounded-full bg-[#1e293b] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-white -translate-x-8 -translate-y-4 shadow-lg transition-all duration-300 hover:scale-110 hover:z-30 cursor-default ${activeCircle === 'cgpa' ? 'z-30 scale-110' : 'z-10'}`}
                                             >
                                                 <span className="text-2xl font-black">{studentInfo?.CGPA || '0.00'}</span>
                                                 <span className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-wider">CGPA</span>
                                             </div>
                                             <div 
-                                                onClick={() => navigate('/attendance')}
-                                                className="absolute w-28 h-28 rounded-full bg-[#b5f542] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-[#1e293b] translate-x-12 translate-y-6 shadow-lg z-20 transition-all duration-300 hover:scale-110 hover:z-30 cursor-pointer active:scale-95"
+                                                onClick={() => { if (window.innerWidth < 1024) setActiveCircle(activeCircle === 'attendance' ? null : 'attendance'); }}
+                                                className={`absolute w-28 h-28 rounded-full bg-[#b5f542] border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-[#1e293b] translate-x-12 translate-y-6 shadow-lg transition-all duration-300 hover:scale-110 hover:z-30 cursor-default ${activeCircle === 'attendance' ? 'z-30 scale-110' : 'z-20'}`}
                                             >
                                                 <span className="text-xl font-black">{studentInfo?.AggAttendance || '0.0'}%</span>
                                                 <span className="text-[9px] text-[#1e293b]/70 uppercase font-bold tracking-wider">Attendance</span>
                                             </div>
                                             <div 
-                                                onClick={() => navigate('/hostel-info')}
-                                                className="absolute w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-850 border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-zinc-800 dark:text-white translate-x-6 -translate-y-16 shadow-lg z-0 transition-all duration-300 hover:scale-110 hover:z-30 cursor-pointer active:scale-95"
+                                                onClick={() => { if (window.innerWidth < 1024) setActiveCircle(activeCircle === 'fee' ? null : 'fee'); }}
+                                                className={`absolute w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-850 border-2 border-white dark:border-zinc-900 flex flex-col items-center justify-center text-zinc-800 dark:text-white translate-x-6 -translate-y-16 shadow-lg transition-all duration-300 hover:scale-110 hover:z-30 cursor-default ${activeCircle === 'fee' ? 'z-30 scale-110' : 'z-0'}`}
                                             >
                                                 <span className="text-xs font-black truncate max-w-[80px]">₹{studentInfo?.PendingFee || '0'}</span>
                                                 <span className="text-[8px] text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mt-0.5">Pending Fee</span>

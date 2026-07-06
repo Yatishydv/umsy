@@ -2,40 +2,38 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     Send, Sparkles, Bot, User, Trash2, RefreshCw, ChevronDown, 
     BarChart2, GraduationCap, AlertTriangle, TrendingUp, Award, FileText,
-    ChevronLeft
+    MessageSquare, Cpu
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import HeaderNav from './HeaderNav';
 import { sendAIBuddyMessage } from '../services/api';
 
 // ── Inline markdown renderer ──────────────────────────────────────────────────
 function RenderMarkdown({ text }) {
     const lines = text.split('\n');
     return (
-        <div className="space-y-1">
+        <div className="space-y-1.5 text-xs text-slate-700 dark:text-zinc-300">
             {lines.map((line, i) => {
                 if (!line.trim()) return <div key={i} className="h-1" />;
                 if (line.match(/^[\*\-•]\s+/)) {
                     return (
-                        <div key={i} className="flex gap-2 items-start">
-                            <span className="mt-2 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0" />
-                            <span className="text-sm text-gray-700">{renderInline(line.replace(/^[\*\-•]\s+/, ''))}</span>
+                        <div key={i} className="flex gap-2 items-start pl-1">
+                            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-zinc-650 flex-shrink-0" />
+                            <span className="leading-relaxed">{renderInline(line.replace(/^[\*\-•]\s+/, ''))}</span>
                         </div>
                     );
                 }
                 const numMatch = line.match(/^(\d+)\.\s+/);
                 if (numMatch) {
                     return (
-                        <div key={i} className="flex gap-2 items-start">
-                            <span className="text-xs font-semibold text-gray-400 mt-0.5 flex-shrink-0">{numMatch[1]}.</span>
-                            <span className="text-sm text-gray-700">{renderInline(line.replace(/^\d+\.\s+/, ''))}</span>
+                        <div key={i} className="flex gap-2 items-start pl-1">
+                            <span className="text-[10px] font-black text-slate-400 dark:text-zinc-550 mt-0.5 flex-shrink-0">{numMatch[1]}.</span>
+                            <span className="leading-relaxed">{renderInline(line.replace(/^\d+\.\s+/, ''))}</span>
                         </div>
                     );
                 }
-                if (line.startsWith('## ')) return <p key={i} className="text-sm font-bold text-gray-900 mt-2">{renderInline(line.slice(3))}</p>;
-                if (line.startsWith('# '))  return <p key={i} className="text-base font-bold text-gray-900 mt-2">{renderInline(line.slice(2))}</p>;
-                return <p key={i} className="text-sm text-gray-700 leading-relaxed">{renderInline(line)}</p>;
+                if (line.startsWith('## ')) return <p key={i} className="text-xs font-black text-slate-900 dark:text-white mt-3 mb-1 uppercase tracking-wider">{renderInline(line.slice(3))}</p>;
+                if (line.startsWith('# '))  return <p key={i} className="text-sm font-black text-slate-900 dark:text-white mt-4 mb-1.5 uppercase tracking-wide">{renderInline(line.slice(2))}</p>;
+                return <p key={i} className="leading-relaxed">{renderInline(line)}</p>;
             })}
         </div>
     );
@@ -44,9 +42,9 @@ function RenderMarkdown({ text }) {
 function renderInline(text) {
     return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**'))
-            return <strong key={i} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
+            return <strong key={i} className="font-extrabold text-slate-950 dark:text-[#bef227]">{part.slice(2, -2)}</strong>;
         if (part.startsWith('`') && part.endsWith('`'))
-            return <code key={i} className="px-1.5 py-0.5 rounded bg-gray-100 text-xs font-mono text-gray-800">{part.slice(1, -1)}</code>;
+            return <code key={i} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-[10px] font-mono text-slate-800 dark:text-zinc-200 border border-slate-200/30 dark:border-zinc-700/50">{part.slice(1, -1)}</code>;
         return <span key={i}>{part}</span>;
     });
 }
@@ -75,7 +73,6 @@ function gatherUMSData() {
     };
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function AiBuddy() {
     const navigate = useNavigate();
     const [messages, setMessages] = useState(() => {
@@ -85,6 +82,7 @@ export default function AiBuddy() {
     const [loading, setLoading]       = useState(false);
     const [error, setError]           = useState('');
     const [showScrollBtn, setShowScrollBtn] = useState(false);
+    const [studentPhoto, setStudentPhoto] = useState('');
 
     const bottomRef    = useRef(null);
     const containerRef = useRef(null);
@@ -104,6 +102,21 @@ export default function AiBuddy() {
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
+
+    // Load student photo
+    useEffect(() => {
+        const storedInfo = localStorage.getItem('umsy_student_info');
+        if (storedInfo) {
+            try {
+                const info = JSON.parse(storedInfo);
+                if (info.StudentPicture) {
+                    setStudentPhoto(`data:image/png;base64,${info.StudentPicture}`);
+                }
+            } catch (e) {
+                console.error('Error loading student photo in UMSY AI:', e);
+            }
+        }
+    }, []);
 
     // Scroll-to-bottom button
     useEffect(() => {
@@ -146,175 +159,190 @@ export default function AiBuddy() {
     const isEmpty = messages.length === 0;
 
     return (
-        <div className="flex flex-col gap-6 h-full">
-
-                    <div className="flex items-center justify-between pt-2">
-                        <div>
-                            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">AI Buddy</h1>
-                            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">Ask anything about your academic records</p>
+        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-zinc-950/20 font-plus-jakarta">
+            {/* Header */}
+            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#bef227] to-[#d4ff5c]/60 flex items-center justify-center shadow-lg shadow-[#bef227]/10 border border-white/20">
+                            <Cpu className="w-4 h-4 text-[#1c312e]" />
                         </div>
-                        {!isEmpty && (
-                            <button
-                                onClick={clearHistory}
-                                className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-colors"
-                                title="Clear history"
-                            >
-                                <Trash2 className="w-5 h-5" />
-                            </button>
-                        )}
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-950 animate-pulse" />
                     </div>
-
-                {/* ── Messages area ── */}
-                <div
-                    ref={containerRef}
-                    className="flex-1 overflow-y-auto px-6 lg:px-10 pb-4 space-y-4 relative"
-                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#E5E7EB transparent' }}
-                >
-                    {/* ── Welcome ── */}
-                    {isEmpty && (
-                        <div className="flex flex-col items-center justify-center min-h-[80%] gap-8 py-8 text-center px-4">
-                            <div>
-                                <div className="w-14 h-14 rounded-2xl bg-gray-900 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4 shadow-xl">
-                                    <Sparkles className="w-7 h-7 text-white" />
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5">Hey {studentName}!</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[280px] mx-auto">
-                                    Ask me anything about your academics
-                                </p>
-                            </div>
-
-                            {/* Quick prompt cards - 2 columns */}
-                            <div className="grid grid-cols-2 gap-2.5 w-full max-w-xl">
-                                {QUICK_PROMPTS.map(p => {
-                                    const Icon = p.icon;
-                                    return (
-                                        <button
-                                            key={p.label}
-                                            onClick={() => sendMessage(p.text)}
-                                            className="flex flex-col items-center gap-2 p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl text-center hover:border-blue-200 dark:hover:border-blue-900/50 transition-all group shadow-sm"
-                                        >
-                                            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
-                                                <Icon className="w-4 h-4 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
-                                            </div>
-                                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white leading-tight uppercase tracking-tight">{p.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── Message bubbles ── */}
-                    {messages.map((msg, i) => (
-                        <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                            {/* Avatar */}
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
-                                msg.role === 'user' ? 'bg-gray-900' : 'bg-white border border-gray-200'
-                            }`}>
-                                {msg.role === 'user'
-                                    ? <User className="w-4 h-4 text-white" />
-                                    : <Bot className="w-4 h-4 text-gray-600" />
-                                }
-                            </div>
-
-                            {/* Bubble */}
-                            <div className={`max-w-[72%] rounded-2xl px-4 py-3 shadow-sm ${
-                                msg.role === 'user'
-                                    ? 'bg-gray-900 text-white rounded-tr-sm'
-                                    : 'bg-white border border-gray-100 rounded-tl-sm'
-                            }`}>
-                                {msg.role === 'assistant'
-                                    ? <RenderMarkdown text={msg.text} />
-                                    : <p className="text-sm leading-relaxed">{msg.text}</p>
-                                }
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* ── Typing indicator ── */}
-                    {loading && (
-                        <div className="flex gap-3 items-start">
-                            <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                <Bot className="w-4 h-4 text-gray-600" />
-                            </div>
-                            <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                                <div className="flex gap-1.5 items-center h-4">
-                                    {[0, 1, 2].map(d => (
-                                        <div
-                                            key={d}
-                                            className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce"
-                                            style={{ animationDelay: `${d * 150}ms` }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── Error ── */}
-                    {error && (
-                        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
-                            <RefreshCw className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="flex-1">{error}</span>
-                            <button onClick={() => setError('')} className="text-xs text-red-400 hover:text-red-600 underline">Dismiss</button>
-                        </div>
-                    )}
-
-                    <div ref={bottomRef} />
+                    <div>
+                        <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                            UMSY AI
+                        </h2>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">Online Assistant</p>
+                    </div>
                 </div>
 
-                {/* Scroll-to-bottom */}
-                {showScrollBtn && (
-                    <div className="relative">
-                        <button
-                            onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                            className="absolute bottom-2 right-8 w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-50 shadow-md transition-colors z-10"
-                        >
-                            <ChevronDown className="w-4 h-4" />
-                        </button>
+                {!isEmpty && (
+                    <button
+                        onClick={clearHistory}
+                        className="cursor-pointer p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-550/10 rounded-xl transition-all active:scale-90 border border-transparent hover:border-red-100 dark:hover:border-red-500/20 mr-12"
+                        title="Clear history"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
+            {/* Messages Area */}
+            <div
+                ref={containerRef}
+                className="flex-1 overflow-y-auto px-6 py-6 space-y-5 no-scrollbar bg-slate-50/30 dark:bg-zinc-900/5 relative"
+            >
+                {/* Welcome layout */}
+                {isEmpty && (
+                    <div className="flex flex-col items-center justify-center min-h-[90%] gap-8 py-4 text-center px-4">
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="w-16 h-16 rounded-[24px] bg-gradient-to-tr from-[#bef227] to-[#d4ff5c]/50 flex items-center justify-center mx-auto mb-4.5 shadow-xl shadow-[#bef227]/10 border border-white/20 relative">
+                                <Sparkles className="w-7 h-7 text-[#1c312e]" />
+                                <div className="absolute inset-0 rounded-[24px] border border-[#bef227]/30 animate-ping opacity-25 pointer-events-none" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider mb-2">Hey {studentName}!</h3>
+                            <p className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest max-w-[280px] mx-auto leading-relaxed">
+                                I am your UMS intelligence partner. How can I help you today?
+                            </p>
+                        </div>
+
+                        {/* Quick Prompts */}
+                        <div className="grid grid-cols-2 gap-3 w-full max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-600">
+                            {QUICK_PROMPTS.map(p => {
+                                const Icon = p.icon;
+                                return (
+                                    <button
+                                        key={p.label}
+                                        onClick={() => sendMessage(p.text)}
+                                        className="cursor-pointer flex flex-col items-center gap-2.5 p-4 bg-white dark:bg-zinc-900/40 border border-slate-200/50 dark:border-zinc-800/80 rounded-[28px] text-center hover:border-[#bef227] dark:hover:border-[#bef227]/40 hover:shadow-lg hover:shadow-[#bef227]/5 hover:-translate-y-0.5 transition-all duration-300 group shadow-sm active:scale-[0.98]"
+                                    >
+                                        <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-zinc-850 flex items-center justify-center flex-shrink-0 group-hover:bg-[#bef227]/10 transition-colors border border-slate-100 dark:border-zinc-800">
+                                            <Icon className="w-4 h-4 text-slate-400 group-hover:text-slate-800 dark:group-hover:text-[#bef227]" />
+                                        </div>
+                                        <span className="text-[9px] font-black text-slate-500 dark:text-zinc-400 group-hover:text-slate-800 dark:group-hover:text-white leading-tight uppercase tracking-widest">{p.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
-                {/* ── Input bar ── */}
-                <div className="flex-shrink-0 px-4 lg:px-10 pt-4 pb-20 lg:pb-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
-                    {/* Quick chips when chat is active */}
-                    {!isEmpty && (
-                        <div className="flex gap-2 mb-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                            {QUICK_PROMPTS.slice(0, 4).map(p => (
-                                <button
-                                    key={p.label}
-                                    onClick={() => sendMessage(p.text)}
-                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900 rounded-lg text-xs font-semibold text-gray-500 hover:text-blue-600 transition-all shadow-sm"
-                                >
-                                    {p.label}
-                                </button>
-                            ))}
+                {/* Message Bubbles */}
+                {messages.map((msg, i) => (
+                    <div 
+                        key={i} 
+                        className={`flex gap-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                    >
+                        {/* Avatar */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border overflow-hidden ${
+                            msg.role === 'user' 
+                                ? 'bg-slate-900 border-slate-850 dark:bg-zinc-800 dark:border-zinc-700' 
+                                : 'bg-white border-slate-200 dark:bg-zinc-900 dark:border-zinc-800'
+                        }`}>
+                            {msg.role === 'user'
+                                ? (studentPhoto 
+                                    ? <img src={studentPhoto} alt="User" className="w-full h-full object-cover" />
+                                    : <User className="w-3.5 h-3.5 text-white" />)
+                                : <Bot className="w-3.5 h-3.5 text-slate-650 dark:text-zinc-400" />
+                            }
                         </div>
-                    )}
 
-                    <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex gap-3 items-end">
-                        <div className="flex-1">
-                            <textarea
-                                ref={inputRef}
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                                placeholder="Message your AI Buddy..."
-                                rows={1}
-                                className="w-full resize-none bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-600 rounded-2xl px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner max-h-32"
-                                style={{ scrollbarWidth: 'thin' }}
-                            />
+                        {/* Bubble */}
+                        <div className={`max-w-[76%] rounded-[20px] px-4.5 py-3.5 shadow-sm border ${
+                            msg.role === 'user'
+                                ? 'bg-slate-900 dark:bg-zinc-800 text-white border-slate-850 dark:border-zinc-700 rounded-tr-[4px] text-xs font-semibold leading-relaxed'
+                                : 'bg-white/80 dark:bg-zinc-900/60 backdrop-blur-sm border-slate-200/50 dark:border-zinc-800/80 rounded-tl-[4px]'
+                        }`}>
+                            {msg.role === 'assistant'
+                                ? <RenderMarkdown text={msg.text} />
+                                : <p className="text-xs font-semibold leading-relaxed">{msg.text}</p>
+                            }
                         </div>
-                        <button
-                            type="submit"
-                            disabled={!input.trim() || loading}
-                            className="w-12 h-12 rounded-2xl bg-gray-900 dark:bg-gray-800 hover:bg-black dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-lg transition-all active:scale-95 flex-shrink-0"
-                        >
-                            <Send className="w-5 h-5 text-white" />
-                        </button>
-                    </form>
-                    {/* <p className="text-center text-[9px] font-medium text-gray-400 mt-3 uppercase tracking-widest">Powered by Gemini AI</p> */}
-                </div>
+                    </div>
+                ))}
+
+                {/* Typing Indicator */}
+                {loading && (
+                    <div className="flex gap-3.5 items-start animate-in fade-in duration-200">
+                        <div className="w-8 h-8 rounded-full bg-white border border-slate-200 dark:bg-zinc-900 dark:border-zinc-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <Bot className="w-3.5 h-3.5 text-slate-650 dark:text-zinc-400" />
+                        </div>
+                        <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-sm border border-slate-200/50 dark:border-zinc-800/80 rounded-[20px] rounded-tl-[4px] px-5 py-4 shadow-sm">
+                            <div className="flex gap-1.5 items-center h-3">
+                                {[0, 1, 2].map(d => (
+                                    <div
+                                        key={d}
+                                        className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-zinc-600 animate-bounce"
+                                        style={{ animationDelay: `${d * 150}ms` }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Error */}
+                {error && (
+                    <div className="flex items-center gap-3 px-4 py-3.5 bg-rose-50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/30 rounded-2xl text-xs font-semibold text-rose-600 dark:text-rose-450 shadow-sm">
+                        <RefreshCw className="w-4 h-4 flex-shrink-0 animate-spin" />
+                        <span className="flex-1">{error}</span>
+                        <button onClick={() => setError('')} className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-700 underline decoration-2">Dismiss</button>
+                    </div>
+                )}
+
+                <div ref={bottomRef} />
             </div>
+
+            {/* Scroll to bottom */}
+            {showScrollBtn && (
+                <div className="relative">
+                    <button
+                        onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                        className="absolute bottom-3 right-6 w-8.5 h-8.5 bg-white dark:bg-zinc-900 border border-slate-250/20 dark:border-zinc-800 rounded-full flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-50 shadow-md transition-colors z-10 active:scale-90"
+                    >
+                        <ChevronDown className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Input Bar */}
+            <div className="flex-shrink-0 px-6 py-4.5 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-t border-slate-100 dark:border-zinc-800/80 flex flex-col gap-3">
+                {/* Suggestions chips */}
+                {!isEmpty && (
+                    <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar select-none" style={{ scrollbarWidth: 'none' }}>
+                        {QUICK_PROMPTS.slice(0, 4).map(p => (
+                            <button
+                                key={p.label}
+                                onClick={() => sendMessage(p.text)}
+                                className="cursor-pointer flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/50 dark:border-zinc-800/80 hover:border-[#bef227] dark:hover:border-[#bef227]/40 rounded-xl text-[10px] font-black text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white transition-all shadow-sm active:scale-95 uppercase tracking-wider"
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="relative flex items-center">
+                    <textarea
+                        ref={inputRef}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                        placeholder="Ask UMSY AI anything..."
+                        rows={1}
+                        className="w-full resize-none bg-slate-50 dark:bg-zinc-900/50 border border-slate-200/60 dark:border-zinc-800 rounded-[24px] pl-4 pr-14 py-3.5 text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder:text-zinc-650 focus:outline-none focus:border-[#bef227] focus:ring-4 focus:ring-[#bef227]/10 transition-all shadow-inner max-h-32 min-h-[46px] leading-relaxed"
+                        style={{ scrollbarWidth: 'thin' }}
+                    />
+                    <button
+                        type="submit"
+                        disabled={!input.trim() || loading}
+                        className="absolute right-2.5 bottom-2 w-9.5 h-9.5 rounded-2xl bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-lg transition-all active:scale-95 flex-shrink-0 border border-white/10"
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                </form>
+            </div>
+        </div>
     );
 }

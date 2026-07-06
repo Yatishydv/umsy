@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -22,8 +23,29 @@ import DashboardLayout from './components/DashboardLayout';
 import './App.css';
 
 function ProtectedRoute({ children }) {
-  const isAuthorized = localStorage.getItem('umsy_regno') || localStorage.getItem('umsy_cookies');
+  const reg = localStorage.getItem('umsy_regno');
+  const info = localStorage.getItem('umsy_student_info');
+  const isLoggingIn = localStorage.getItem('umsy_is_logging_in') === 'true';
+
+  let nameIsInvalid = false;
+  if (info) {
+    try {
+      const parsed = JSON.parse(info);
+      if (parsed?.StudentName && parsed.StudentName.toLowerCase() === 'student') {
+        nameIsInvalid = true;
+      }
+      if (parsed?.Name && parsed.Name.toLowerCase() === 'student') {
+        nameIsInvalid = true;
+      }
+    } catch (e) {}
+  }
+
+  const isAuthorized = reg && (info || isLoggingIn) && !nameIsInvalid;
   if (!isAuthorized) {
+    localStorage.removeItem('umsy_regno');
+    localStorage.removeItem('umsy_cookies');
+    localStorage.removeItem('umsy_student_info');
+    localStorage.removeItem('umsy_is_logging_in');
     return <Navigate to="/login" replace />;
   }
   return children;
@@ -33,6 +55,42 @@ function AppContent() {
   const location = useLocation();
   const loginRoutes = ['/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
   const isLoginPage = loginRoutes.includes(location.pathname);
+
+  // Monitor credentials and student info. If missing, logout and redirect.
+  useEffect(() => {
+    if (loginRoutes.includes(location.pathname)) return;
+
+    const checkAuth = () => {
+      const reg = localStorage.getItem('umsy_regno');
+      const info = localStorage.getItem('umsy_student_info');
+      const isLoggingIn = localStorage.getItem('umsy_is_logging_in') === 'true';
+
+      let nameIsInvalid = false;
+      if (info) {
+        try {
+          const parsed = JSON.parse(info);
+          if (parsed?.StudentName && parsed.StudentName.toLowerCase() === 'student') {
+            nameIsInvalid = true;
+          }
+          if (parsed?.Name && parsed.Name.toLowerCase() === 'student') {
+            nameIsInvalid = true;
+          }
+        } catch (e) {}
+      }
+
+      if (!reg || (!info && !isLoggingIn) || nameIsInvalid) {
+        localStorage.removeItem('umsy_regno');
+        localStorage.removeItem('umsy_cookies');
+        localStorage.removeItem('umsy_student_info');
+        localStorage.removeItem('umsy_is_logging_in');
+        window.location.href = '/login';
+      }
+    };
+
+    checkAuth();
+    const interval = setInterval(checkAuth, 2000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   // Get student info for the nav
   const studentInfoStr = localStorage.getItem('umsy_student_info');

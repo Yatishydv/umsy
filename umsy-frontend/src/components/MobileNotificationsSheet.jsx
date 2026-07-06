@@ -32,12 +32,12 @@ const renderWithLinks = (text) => {
 const categorize = (msg) => {
     const text = `${msg.subject || ''} ${msg.sender || ''}`.toLowerCase();
     if (text.includes('placement') || text.includes('career') || text.includes('job')) 
-        return { label: 'Placement', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', Icon: Briefcase };
+        return { label: 'Placement', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-100 dark:border-blue-500/20', Icon: Briefcase };
     if (text.includes('exam') || text.includes('result') || text.includes('marks') || text.includes('grade')) 
-        return { label: 'Academic', color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20', Icon: BookOpen };
+        return { label: 'Academic', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10', border: 'border-violet-100 dark:border-violet-500/20', Icon: BookOpen };
     if (text.includes('hostel') || text.includes('room') || text.includes('shift')) 
-        return { label: 'Hostel', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', Icon: Tag };
-    return { label: 'Notification', color: 'text-[#bef227]', bg: 'bg-[#bef227]/10', border: 'border-[#bef227]/20', Icon: Megaphone };
+        return { label: 'Hostel', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-100 dark:border-amber-500/20', Icon: Tag };
+    return { label: 'Notification', color: 'text-emerald-600 dark:text-[#bef227]', bg: 'bg-emerald-50 dark:bg-[#bef227]/10', border: 'border-emerald-100 dark:border-[#bef227]/20', Icon: Megaphone };
 };
 
 const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
@@ -80,7 +80,7 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
 
             {/* Modal */}
             <div
-                className="relative z-10 bg-[#0f1d1b] rounded-3xl overflow-hidden flex flex-col w-full max-w-lg border border-white/5 shadow-2xl"
+                className="relative z-10 bg-white dark:bg-[#121214] rounded-[28px] overflow-hidden flex flex-col w-full max-w-lg border border-slate-200/60 dark:border-zinc-800 shadow-2xl"
                 style={{
                     maxHeight: '80vh',
                     transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(20px)',
@@ -89,23 +89,23 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
                 }}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 flex-shrink-0">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-zinc-800/80 flex-shrink-0">
                     <div className="flex items-center gap-3.5">
                         <div className="w-10 h-10 rounded-2xl bg-[#bef227]/10 border border-[#bef227]/20 flex items-center justify-center">
-                            <Mail className="h-4 w-4 text-[#bef227]" />
+                            <Mail className="h-4 w-4 text-emerald-600 dark:text-[#bef227]" />
                         </div>
                         <div>
-                            <h2 className="text-sm font-black text-white uppercase tracking-wider">My Messages</h2>
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-0.5">
+                            <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">My Messages</h2>
+                            <p className="text-[8px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">
                                 {messages.length} {messages.length === 1 ? 'message' : 'messages'} from university
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-9 h-9 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 active:scale-90 transition-all flex items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-slate-100/50 hover:bg-slate-200/50 dark:bg-zinc-800 hover:text-slate-950 dark:hover:text-white border border-slate-200/30 dark:border-zinc-700/50 active:scale-90 transition-all flex items-center justify-center"
                     >
-                        <X className="h-4 w-4 text-slate-400" />
+                        <X className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
                     </button>
                 </div>
 
@@ -113,10 +113,10 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 no-scrollbar">
                     {messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 gap-4">
-                            <div className="w-16 h-16 rounded-3xl bg-[#1c312e] border border-white/5 flex items-center justify-center">
-                                <Bell className="h-7 w-7 text-slate-600" />
+                            <div className="w-16 h-16 rounded-3xl bg-slate-50 dark:bg-zinc-850 border border-slate-200/50 dark:border-zinc-800/80 flex items-center justify-center">
+                                <Bell className="h-7 w-7 text-slate-400 dark:text-zinc-650" />
                             </div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No messages yet</p>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">No messages yet</p>
                         </div>
                     ) : (
                         messages.map((msg, idx) => {
@@ -128,7 +128,7 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
                                 <div
                                     key={idx}
                                     onClick={() => setExpandedIdx(isExpanded ? null : idx)}
-                                    className={`bg-[#1c312e] rounded-2xl p-4 cursor-pointer overflow-hidden transition-all duration-200 border ${isExpanded ? 'border-[#bef227]/20' : 'border-white/5 hover:border-white/10'}`}
+                                    className={`bg-slate-50 dark:bg-zinc-900 rounded-2xl p-4 cursor-pointer overflow-hidden transition-all duration-200 border ${isExpanded ? 'border-[#bef227]/30 dark:border-[#bef227]/20 shadow-sm' : 'border-slate-100 dark:border-zinc-800/80 hover:border-slate-200 dark:hover:border-zinc-700'}`}
                                     style={{
                                         animation: isOpen ? `msg-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards ${idx * 0.06}s` : 'none',
                                         opacity: 0,
@@ -145,19 +145,19 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
                                                 <span className={`text-[7px] font-black uppercase tracking-widest ${cat.color}`}>{cat.label}</span>
                                                 {idx === 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#bef227] flex-shrink-0 animate-pulse" />}
                                             </div>
-                                            <p className="text-[11px] font-bold text-white leading-snug pr-6">
+                                            <p className="text-[11px] font-bold text-slate-800 dark:text-white leading-snug pr-6">
                                                 {msg.subject || 'No Subject'}
                                             </p>
                                         </div>
                                         <ChevronRight
-                                            className={`h-3.5 w-3.5 flex-shrink-0 mt-2.5 transition-all duration-200 ${isExpanded ? 'rotate-90 text-[#bef227]' : 'text-slate-600'}`}
+                                            className={`h-3.5 w-3.5 flex-shrink-0 mt-2.5 transition-all duration-200 ${isExpanded ? 'rotate-90 text-[#bef227]' : 'text-slate-400 dark:text-zinc-600'}`}
                                         />
                                     </div>
 
                                     {/* Content */}
                                     {msg.content && (
                                         <div className={`mt-3 pl-12 transition-all duration-300 ${isExpanded ? '' : 'max-h-10 overflow-hidden'}`}>
-                                            <p className={`text-[10px] text-slate-400 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                            <p className={`text-[10px] text-slate-500 dark:text-zinc-400 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
                                                 {renderWithLinks(msg.content)}
                                             </p>
                                         </div>
@@ -165,17 +165,17 @@ const MobileNotificationsSheet = ({ isOpen, onClose, messages = [] }) => {
 
                                     {/* Meta info when expanded */}
                                     {isExpanded && (msg.sender || msg.date) && (
-                                        <div className="flex flex-wrap items-center gap-4 mt-3 pl-12 pt-3 border-t border-white/5 animate-in fade-in duration-200">
+                                        <div className="flex flex-wrap items-center gap-4 mt-3 pl-12 pt-3 border-t border-slate-100 dark:border-zinc-800/80 animate-in fade-in duration-200">
                                             {msg.sender && (
                                                 <div className="flex items-center gap-1.5">
-                                                    <User className="h-3 w-3 text-slate-600" />
-                                                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{msg.sender}</span>
+                                                    <User className="h-3 w-3 text-slate-400 dark:text-zinc-650" />
+                                                    <span className="text-[8px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">{msg.sender}</span>
                                                 </div>
                                             )}
                                             {msg.date && (
                                                 <div className="flex items-center gap-1.5">
-                                                    <Calendar className="h-3 w-3 text-slate-600" />
-                                                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{msg.date}</span>
+                                                    <Calendar className="h-3 w-3 text-slate-400 dark:text-zinc-650" />
+                                                    <span className="text-[8px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">{msg.date}</span>
                                                 </div>
                                             )}
                                         </div>

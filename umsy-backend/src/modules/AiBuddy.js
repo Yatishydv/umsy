@@ -1,7 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-
 /**
  * Build a rich system context string from all available UMS data.
  */
@@ -69,22 +65,17 @@ function buildContext(data) {
 }
 
 /**
- * Main AI Buddy handler.
+ * Main AI Buddy handler using Groq API instead of Gemini.
  * @param {string} message - The user's message
  * @param {object} data    - All UMS data from client localStorage
  * @param {Array}  history - Prior conversation turns [{role, text}]
  */
 export async function getAIBuddyResponse(message, data, history = []) {
-    if (!GEMINI_API_KEY) {
-        throw new Error('GEMINI_API_KEY is not configured in the server environment.');
-    }
-
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+    const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 
     const contextBlock = buildContext(data);
 
-    const systemPrompt = `You are AI Buddy, a friendly and smart academic assistant for LPU UMS students.
+    const systemPrompt = `You are UMSY AI, a friendly and smart academic assistant for LPU UMS students.
 You have access to the student's complete academic data provided below.
 Use this data to answer questions accurately. Do not make up numbers.
 When asked for analysis or suggestions, be concise, specific, and helpful.
@@ -101,20 +92,42 @@ Rules:
 - If something is not in the data, say so honestly.
 - Format lists with bullet points. Keep it clean.`;
 
-    // Build the chat history for Gemini
-    const chatHistory = history.map(h => ({
-        role: h.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: h.text }],
-    }));
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...history.map(h => ({
+            role: h.role === 'assistant' ? 'assistant' : 'user',
+            content: h.text
+        })),
+        { role: 'user', content: message }
+    ];
 
-    const chat = model.startChat({
-        history: [
-            { role: 'user', parts: [{ text: systemPrompt }] },
-            { role: 'model', parts: [{ text: 'Understood! I\'m AI Buddy, ready to help you with your academic data. What would you like to know?' }] },
-            ...chatHistory,
-        ],
-    });
+    try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama-3.1-8b-instant',
+                messages: messages,
+                temperature: 0.2
+            })
+        });
 
-    const result = await chat.sendMessage(message);
-    return result.response.text();
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Groq API returned status ${response.status}: ${errorText}`);
+        }
+
+        const result = await response.json();
+        if (result?.choices?.[0]?.message?.content) {
+            return result.choices[0].message.content;
+        } else {
+            throw new Error('Invalid response structure from Groq API');
+        }
+    } catch (err) {
+        console.error('Error fetching Groq response:', err);
+        throw new Error(`Failed to contact UMSY AI: ${err.message}`);
+    }
 }

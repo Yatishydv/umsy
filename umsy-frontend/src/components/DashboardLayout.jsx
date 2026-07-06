@@ -4,10 +4,13 @@ import { Bot, Sparkles, X } from 'lucide-react';
 import Sidebar from './Sidebar';
 import HeaderNav from './HeaderNav';
 import AiBuddy from './AiBuddy';
+import MobileSidebar from './MobileSidebar';
+
 
 const DashboardLayout = () => {
     const location = useLocation();
     const [isAiOpen, setIsAiOpen] = useState(false);
+
 
     // Draggable position state
     const [position, setPosition] = useState({ x: window.innerWidth - 90, y: window.innerHeight - 90 });
@@ -64,8 +67,6 @@ const DashboardLayout = () => {
         const padding = 20;
 
         const corners = [
-            { x: padding, y: padding },
-            { x: w - btnSize - padding, y: padding },
             { x: padding, y: h - btnSize - padding },
             { x: w - btnSize - padding, y: h - btnSize - padding }
         ];
@@ -152,9 +153,9 @@ const DashboardLayout = () => {
     const activeTab = getActiveTab(location.pathname);
 
     return (
-        <div className="flex min-h-screen bg-gray-50 dark:bg-zinc-950 font-plus-jakarta relative">
+        <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 font-plus-jakarta relative">
             {/* Persistent Sidebar for mobile layout (hidden on desktop lg:hidden) */}
-            <Sidebar />
+            <MobileSidebar />
 
             <main className="flex-1 min-h-screen lg:p-0">
                 {/* DESKTOP LAYOUT */}
@@ -173,12 +174,14 @@ const DashboardLayout = () => {
                 </div>
 
                 {/* MOBILE VIEW LAYOUT */}
-                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-zinc-950 p-4 relative">
-                    {/* Sticky Mobile Nav */}
-                    <div className="sticky top-0 bg-gray-50 dark:bg-zinc-950 z-50 pt-2 pb-2">
-                        <HeaderNav activeTab={activeTab} />
+                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-zinc-950 pt-[72px] relative">
+                    {/* Fixed Mobile Nav */}
+                    <div className="fixed top-0 left-0 right-0 bg-gray-50 dark:bg-zinc-950 z-[100] px-4 py-2 border-b border-slate-200/50 dark:border-zinc-800/50 h-[72px] flex items-center">
+                        <div className="w-full">
+                            <HeaderNav activeTab={activeTab} />
+                        </div>
                     </div>
-                    <div className="flex-1 mt-4 pb-28">
+                    <div className="flex-1 px-4 mt-4">
                         <Outlet />
                     </div>
                 </div>
@@ -206,14 +209,14 @@ const DashboardLayout = () => {
 
             {/* AI BUDDY FLOATING MODAL */}
             {isAiOpen && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 rounded-3xl w-full max-w-3xl h-[650px] max-h-[85vh] shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in duration-200 p-6">
+                <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+                    <div className="bg-white/95 dark:bg-zinc-950/95 border border-slate-200/50 dark:border-zinc-800/80 rounded-[32px] w-full max-w-3xl h-[650px] max-h-[85vh] shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300 p-0">
                         {/* Close button */}
                         <button
                             onClick={() => setIsAiOpen(false)}
-                            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-650 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-xl transition-all active:scale-90 z-[10001]"
+                            className="absolute top-5 right-5 p-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 rounded-xl transition-all active:scale-90 z-[10001] border border-slate-200/40 dark:border-zinc-800/40"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                         </button>
 
                         <div className="flex-1 min-h-0 overflow-y-auto">

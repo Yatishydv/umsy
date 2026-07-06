@@ -531,6 +531,8 @@ const Grades = () => {
             const cached = localStorage.getItem('umsy_grades_active_sem');
             if (cached && semList.includes(cached)) {
                 setActiveSem(cached);
+            } else {
+                setActiveSem(semList[0]);
             }
         }
     }, [semList]);
@@ -671,14 +673,7 @@ const Grades = () => {
                         </div>
                     )}
 
-                    {!activeSem ? (
-                        <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-150/45 dark:border-zinc-800/80 rounded-3xl m-4">
-                            <SlidersHorizontal className="h-8 w-8 text-[#bef227] mb-3" />
-                            <h3 className="text-xs font-black text-zinc-800 dark:text-white uppercase tracking-wider">Select Semester</h3>
-                            <p className="text-[11px] text-zinc-450 mt-1.5 leading-relaxed">Please select a semester at the top to unlock search filters and view your grades/marks.</p>
-                        </div>
-                    ) : (
-                        <React.Fragment>
+                    <React.Fragment>
                             {/* View Switcher & Search */}
                             <div className="px-4 pt-4 pb-2 space-y-3">
                                 {/* Segmented Control */}
@@ -884,7 +879,6 @@ const Grades = () => {
                         )}
                             </div>
                         </React.Fragment>
-                    )}
                 </div>
             </div>
 
@@ -914,13 +908,6 @@ const Grades = () => {
                     </div>
                 )}
 
-                {!activeSem ? (
-                    <div className="bg-white dark:bg-zinc-900 rounded-[28px] border border-slate-200/60 dark:border-zinc-800 p-16 text-center shadow-sm">
-                        <SlidersHorizontal className="w-8 h-8 text-[#bef227] mx-auto mb-3" />
-                        <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Select Semester</h3>
-                        <p className="text-xs text-slate-450 mt-1">Please select a semester at the top to unlock search filters and view your grades/marks.</p>
-                    </div>
-                ) : (
                     <React.Fragment>
                         <div className="flex items-center justify-between pt-2">
                             <div className="flex items-center gap-3">
@@ -979,8 +966,7 @@ const Grades = () => {
                                 </div>
                             </div>
                         )}
-                    </React.Fragment>
-                )}
+                </React.Fragment>
 
                 {/* Main dynamic card grid on desktop */}
                 {activeSem && (

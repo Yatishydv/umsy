@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CalendarCheck, Award, Calendar, GraduationCap, Trophy, BookOpen, RefreshCw, Bell, LogOut } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, Award, Calendar, GraduationCap, Trophy, BookOpen, RefreshCw, Bell, LogOut, Menu } from 'lucide-react';
 import MobileNotificationsSheet from './MobileNotificationsSheet';
 
 const HeaderNav = ({ activeTab }) => {
@@ -86,8 +86,15 @@ const HeaderNav = ({ activeTab }) => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between pb-4 lg:pb-6 border-b border-slate-200/60 dark:border-zinc-800 gap-4 lg:gap-0">
             {/* Mobile Top Row / Desktop Logo Column */}
             <div className="flex items-center justify-between w-full lg:w-auto">
-                {/* Logo */}
-                <div className="flex items-center gap-1.5">
+                {/* Logo & Mobile Menu Toggle */}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('toggle-mobile-sidebar'))}
+                        className="cursor-pointer lg:hidden p-2.5 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 transition-all duration-200 active:scale-95 border border-slate-200/40 dark:border-zinc-800/40"
+                        aria-label="Toggle menu"
+                    >
+                        <Menu className="h-5 w-5" />
+                    </button>
                     <span 
                         onClick={() => navigate('/dashboard')}
                         className="text-2xl font-black font-mono tracking-widest text-[#1c312e] dark:text-slate-100 select-none uppercase cursor-pointer"
@@ -95,6 +102,7 @@ const HeaderNav = ({ activeTab }) => {
                         umsy
                     </span>
                 </div>
+
 
                 {/* Mobile-only Right Tools container (hidden on desktop) */}
                 <div className="flex lg:hidden items-center gap-2">
@@ -136,7 +144,7 @@ const HeaderNav = ({ activeTab }) => {
             </div>
 
             {/* Navigation Tabs (Scrollable on Mobile, standard on Desktop) */}
-            <div className="w-full lg:w-auto overflow-hidden">
+            <div className="hidden lg:block w-full lg:w-auto overflow-hidden">
                 <div 
                     ref={containerRef}
                     className="relative flex items-center gap-1 bg-slate-100 dark:bg-zinc-850 p-1 rounded-full overflow-x-auto lg:overflow-hidden max-w-full no-scrollbar snap-x scroll-smooth select-none"
