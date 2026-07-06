@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
     Trophy, Search, TrendingUp, Users, Award, Calendar, Globe, MapPin,
     Briefcase, Phone, Clock, FileText, CheckCircle, ShieldAlert,
-    ArrowLeft, Check, AlertCircle, GraduationCap, RefreshCw, Mail
+    ArrowLeft, Check, AlertCircle, GraduationCap, RefreshCw, Mail,
+    ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const Ranking = () => {
@@ -19,7 +20,24 @@ const Ranking = () => {
     const [loadingMyRank, setLoadingMyRank] = useState(false);
     const [loadingSearch, setLoadingSearch] = useState(false);
     const [error, setError] = useState('');
+    
+    // Desktop View Tab State
     const [activeTab, setActiveTab] = useState('performance');
+
+    // Mobile View Collapsible Accordion States
+    const [expandedSections, setExpandedSections] = useState({
+        performance: true,
+        placement: false,
+        education: false,
+        contact: false
+    });
+
+    const toggleSection = (sectionId) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionId]: !prev[sectionId]
+        }));
+    };
 
     // ── Load personal ranking on mount ──────────────────────────────────────
     useEffect(() => {
@@ -82,6 +100,12 @@ const Ranking = () => {
             if (response.data?.data) {
                 setSearchRanking(response.data.data);
                 setActiveTab('performance');
+                setExpandedSections({
+                    performance: true,
+                    placement: false,
+                    education: false,
+                    contact: false
+                });
             } else {
                 setError('No ranking details returned for this student.');
             }
@@ -98,6 +122,12 @@ const Ranking = () => {
         setSearchRanking(null);
         setError('');
         setActiveTab('performance');
+        setExpandedSections({
+            performance: true,
+            placement: false,
+            education: false,
+            contact: false
+        });
     };
 
     const tabs = [
@@ -109,6 +139,19 @@ const Ranking = () => {
 
     // Helper component to render rank details card block
     const RenderRankProfile = ({ data, titleSuffix = '' }) => {
+        // Headers summaries for collapsed headers on mobile
+        const placementSummary = data.companySelectedIn && data.companySelectedIn.toLowerCase() !== 'not selected'
+            ? data.companySelectedIn
+            : 'Not Selected';
+
+        const educationSummary = (() => {
+            const parts = [];
+            if (data.CGPA) parts.push(`CGPA: ${data.CGPA}`);
+            if (data.xiiMarks) parts.push(`XII: ${data.xiiMarks.split('(')[0].trim()}`);
+            if (data.xMarks) parts.push(`X: ${data.xMarks.split('(')[0].trim()}`);
+            return parts.join(' | ') || 'No records';
+        })();
+
         return (
             <div className="space-y-6">
                 {/* Basic Info Card */}
@@ -141,248 +184,453 @@ const Ranking = () => {
                     </div>
                 </div>
 
-                {/* Capsule Tab Navigation */}
-                <div className="bg-slate-100 dark:bg-zinc-850 p-1.5 rounded-full flex gap-1 overflow-x-auto no-scrollbar">
-                    {tabs.map((tab) => {
-                        const TabIcon = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                                    isActive
-                                        ? 'bg-[#bef227] text-[#1c312e] shadow-sm'
-                                        : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                            >
-                                <TabIcon className="w-3.5 h-3.5" />
-                                <span>{tab.label}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Tab Views */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[28px] border border-slate-200/60 dark:border-zinc-800 p-6 shadow-sm min-h-[300px]">
-                    {/* PERFORMANCE TAB */}
-                    {activeTab === 'performance' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in">
-                            {/* Overall Rank */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 relative overflow-hidden group">
-                                <div className="absolute right-0 top-0 translate-x-3 -translate-y-3 opacity-[0.03] dark:opacity-[0.06] group-hover:scale-115 transition-transform duration-300">
-                                    <Trophy className="w-24 h-24 text-[#bef227]" />
+                {/* ── MOBILE ACCORDION VIEW (Cool layout without sliding tabs) ── */}
+                <div className="block md:hidden space-y-4">
+                    {/* 1. Academic Performance */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/60 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-300">
+                        <button
+                            onClick={() => toggleSection('performance')}
+                            className="w-full flex items-center justify-between p-5 text-left border-none bg-transparent"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-[#1c312e]/10 dark:bg-[#bef227]/10 flex items-center justify-center text-[#1c312e] dark:text-[#bef227] shrink-0">
+                                    <Trophy className="w-4.5 h-4.5" />
                                 </div>
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Overall Rank</p>
-                                <p className="text-3xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    #{data.Rank}
-                                    {data.TotalStudents && (
-                                        <span className="text-xs font-bold text-slate-400 dark:text-zinc-500">/{data.TotalStudents.toLocaleString()}</span>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Academic Standing</h4>
+                                    {!expandedSections.performance && (
+                                        <p className="text-[9px] text-[#bef227] font-black uppercase tracking-widest mt-0.5">
+                                            Rank #{data.Rank} • CGPA {data.CGPA || '—'}
+                                        </p>
                                     )}
-                                </p>
-                            </div>
-
-                            {/* Percentile */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 relative overflow-hidden group">
-                                <div className="absolute right-0 top-0 translate-x-3 -translate-y-3 opacity-[0.03] dark:opacity-[0.06] group-hover:scale-115 transition-transform duration-300">
-                                    <TrendingUp className="w-24 h-24 text-[#bef227]" />
                                 </div>
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Percentage / Standings</p>
-                                <p className="text-3xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    {data.percentile || `Top ${data.Percentage}%`}
-                                </p>
                             </div>
+                            {expandedSections.performance ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                        </button>
 
-                            {/* CGPA */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 relative overflow-hidden group">
-                                <div className="absolute right-0 top-0 translate-x-3 -translate-y-3 opacity-[0.03] dark:opacity-[0.06] group-hover:scale-115 transition-transform duration-300">
-                                    <Award className="w-24 h-24 text-[#bef227]" />
+                        {expandedSections.performance && (
+                            <div className="px-5 pb-5 pt-1 border-t border-slate-100 dark:border-zinc-800/80 grid grid-cols-2 gap-3.5 animate-in fade-in duration-200">
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                    <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Overall Rank</p>
+                                    <p className="text-xl font-black text-[#1c312e] dark:text-[#bef227] mt-1.5">
+                                        #{data.Rank}
+                                        {data.TotalStudents && (
+                                            <span className="text-[9px] text-slate-400 font-bold">/{data.TotalStudents.toLocaleString()}</span>
+                                        )}
+                                    </p>
                                 </div>
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Current CGPA</p>
-                                <p className="text-3xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    {data.CGPA || '—'}
-                                </p>
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                    <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">CGPA</p>
+                                    <p className="text-xl font-black text-[#1c312e] dark:text-[#bef227] mt-1.5">{data.CGPA || '—'}</p>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50 col-span-2 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Percentile Standings</p>
+                                        <p className="text-sm font-black text-[#1c312e] dark:text-[#bef227] mt-1">{data.percentile || `Top ${data.Percentage}%`}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Active Backlogs</p>
+                                        <p className={`text-sm font-black mt-1 ${parseInt(data.reappearBacklog || '0') > 0 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>
+                                            {data.reappearBacklog || '0'}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
+                        )}
+                    </div>
 
-                            {/* Backlogs */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Active Backlogs</p>
-                                <p className={`text-3xl font-black mt-3 ${parseInt(data.reappearBacklog || '0') > 0 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>
-                                    {data.reappearBacklog || '0'}
-                                </p>
+                    {/* 2. Placements & PEP */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/60 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-300">
+                        <button
+                            onClick={() => toggleSection('placement')}
+                            className="w-full flex items-center justify-between p-5 text-left border-none bg-transparent"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-[#1c312e]/10 dark:bg-[#bef227]/10 flex items-center justify-center text-[#1c312e] dark:text-[#bef227] shrink-0">
+                                    <Briefcase className="w-4.5 h-4.5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Placement & PEP Status</h4>
+                                    {!expandedSections.placement && (
+                                        <p className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${placementSummary !== 'Not Selected' ? 'text-emerald-500' : 'text-slate-450'}`}>
+                                            {placementSummary}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
+                            {expandedSections.placement ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                        </button>
 
-                            {/* Batch Year */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Batch Year</p>
-                                <p className="text-3xl font-black text-slate-800 dark:text-white mt-3">
-                                    {data.BatchYear || '—'}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* PLACEMENT TAB */}
-                    {activeTab === 'placement' && (
-                        <div className="space-y-6 animate-in fade-in">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Selection Card */}
-                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                    <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Placement Selection</p>
+                        {expandedSections.placement && (
+                            <div className="px-5 pb-5 pt-1 border-t border-slate-100 dark:border-zinc-800/80 space-y-3 animate-in fade-in duration-200">
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                    <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Placement Selection</p>
                                     {data.companySelectedIn && data.companySelectedIn.toLowerCase() !== 'not selected' ? (
-                                        <div className="mt-4 flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600">
-                                                <CheckCircle className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-500">Selected In</p>
-                                                <p className="text-sm font-black text-slate-800 dark:text-white">{data.companySelectedIn}</p>
-                                            </div>
+                                        <div className="mt-2.5 flex items-center gap-2">
+                                            <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <p className="text-xs font-black text-slate-800 dark:text-white">{data.companySelectedIn}</p>
                                         </div>
                                     ) : (
-                                        <p className="text-xs font-bold text-slate-400 mt-4">Not Selected / Pending Placement Drives</p>
+                                        <p className="text-xs font-bold text-slate-400 mt-2">Not Selected / Pending Placement Drives</p>
                                     )}
                                 </div>
-
-                                {/* Opportunity Date / ID */}
-                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 space-y-3">
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Opportunity ID</p>
-                                        <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{data.placementId || '—'}</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                        <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Opportunity ID</p>
+                                        <p className="text-xs font-black text-slate-800 dark:text-white mt-1.5">{data.placementId || '—'}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Drive Start Date</p>
-                                        <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{data.opportunityStartDate || '—'}</p>
+                                    <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                        <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">PEP Status</p>
+                                        <p className="text-xs font-black text-[#bef227] mt-1.5">{data.pepFeeDetails || '—'}</p>
                                     </div>
                                 </div>
                             </div>
+                        )}
+                    </div>
 
-                            {/* PEP Section */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest mb-4">Professional Enhancement Programme (PEP)</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <span className="text-[10px] font-bold text-slate-400 block mb-1">PEP Fee Details</span>
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border inline-block ${
-                                            data.pepFeeDetails && data.pepFeeDetails.toLowerCase().includes('paid')
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30'
-                                                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30'
-                                        }`}>
-                                            {data.pepFeeDetails || '—'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] font-bold text-slate-400 block mb-1">PEP Payment Date</span>
-                                        <span className="text-xs font-bold text-slate-800 dark:text-white">{data.pepFeePaymentDate || '—'}</span>
-                                    </div>
+                    {/* 3. Prior Education */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/60 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-300">
+                        <button
+                            onClick={() => toggleSection('education')}
+                            className="w-full flex items-center justify-between p-5 text-left border-none bg-transparent"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-[#1c312e]/10 dark:bg-[#bef227]/10 flex items-center justify-center text-[#1c312e] dark:text-[#bef227] shrink-0">
+                                    <GraduationCap className="w-4.5 h-4.5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Academic Background</h4>
+                                    {!expandedSections.education && (
+                                        <p className="text-[9px] text-slate-450 font-black uppercase tracking-widest mt-0.5 truncate">
+                                            {educationSummary}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
-                        </div>
-                    )}
+                            {expandedSections.education ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                        </button>
 
-                    {/* PRIOR EDUCATION TAB */}
-                    {activeTab === 'education' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in">
-                            {/* 10th Marks */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Class X (Matriculation)</p>
-                                <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    {data.xMarks ? data.xMarks.split('(')[0].trim() : 'N/A'}
-                                </p>
-                                <p className="text-[10px] font-bold text-slate-450 mt-1">
-                                    Year: {data.xMarks && data.xMarks.includes('(') ? data.xMarks.split('(')[1].replace(')', '').trim() : '—'}
-                                </p>
-                            </div>
-
-                            {/* 12th Marks */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Class XII (Intermediate)</p>
-                                <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    {data.xiiMarks ? data.xiiMarks.split('(')[0].trim() : 'N/A'}
-                                </p>
-                                <p className="text-[10px] font-bold text-slate-450 mt-1">
-                                    Year: {data.xiiMarks && data.xiiMarks.includes('(') ? data.xiiMarks.split('(')[1].replace(')', '').trim() : '—'}
-                                </p>
-                            </div>
-
-                            {/* Graduation */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Graduation Records</p>
-                                <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    {data.graduationMarks ? data.graduationMarks.split('(')[0].trim() : 'N/A'}
-                                </p>
-                                <p className="text-[10px] font-bold text-slate-450 mt-1">
-                                    Year: {data.graduationMarks && data.graduationMarks.includes('(') ? data.graduationMarks.split('(')[1].replace(')', '').trim() : '—'}
-                                </p>
-                            </div>
-
-                            {/* Diploma */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
-                                <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Diploma Records</p>
-                                <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
-                                    {data.diplomaMarks ? data.diplomaMarks.split('(')[0].trim() : 'N/A'}
-                                </p>
-                                <p className="text-[10px] font-bold text-slate-450 mt-1">
-                                    Year: {data.diplomaMarks && data.diplomaMarks.includes('(') ? data.diplomaMarks.split('(')[1].replace(')', '').trim() : '—'}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* CONTACT DETAILS TAB */}
-                    {activeTab === 'contact' && (
-                        <div className="space-y-4 animate-in fade-in">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* Email */}
-                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-805 flex items-center justify-center text-slate-500">
-                                        <Mail className="w-4.5 h-4.5" />
+                        {expandedSections.education && (
+                            <div className="px-5 pb-5 pt-1 border-t border-slate-100 dark:border-zinc-800/80 grid grid-cols-2 gap-3.5 animate-in fade-in duration-200">
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                    <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest font-bold">Class XII</p>
+                                    <p className="text-base font-black text-[#1c312e] dark:text-[#bef227] mt-1">
+                                        {data.xiiMarks ? data.xiiMarks.split('(')[0].trim() : 'N/A'}
+                                    </p>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                    <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest font-bold">Class X</p>
+                                    <p className="text-base font-black text-[#1c312e] dark:text-[#bef227] mt-1">
+                                        {data.xMarks ? data.xMarks.split('(')[0].trim() : 'N/A'}
+                                    </p>
+                                </div>
+                                {data.graduationMarks && (
+                                    <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50 col-span-2">
+                                        <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest font-bold">Graduation / Prior Degree</p>
+                                        <p className="text-xs font-black text-slate-800 dark:text-white mt-1">{data.graduationMarks}</p>
                                     </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email Address</p>
-                                        {data.email ? (
-                                            <a href={`mailto:${data.email}`} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block mt-1">
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 4. Contact Details */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/60 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-300">
+                        <button
+                            onClick={() => toggleSection('contact')}
+                            className="w-full flex items-center justify-between p-5 text-left border-none bg-transparent"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-[#1c312e]/10 dark:bg-[#bef227]/10 flex items-center justify-center text-[#1c312e] dark:text-[#bef227] shrink-0">
+                                    <Phone className="w-4.5 h-4.5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Contact & System Info</h4>
+                                    {!expandedSections.contact && (
+                                        <p className="text-[9px] text-slate-450 font-black uppercase tracking-widest mt-0.5 truncate">
+                                            {data.email || data.contactNo || '—'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            {expandedSections.contact ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                        </button>
+
+                        {expandedSections.contact && (
+                            <div className="px-5 pb-5 pt-1 border-t border-slate-100 dark:border-zinc-800/80 space-y-3.5 animate-in fade-in duration-200">
+                                <div className="flex flex-col gap-2">
+                                    {data.email && (
+                                        <div className="flex items-center gap-2.5">
+                                            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                                            <a href={`mailto:${data.email}`} className="text-xs font-black text-blue-500 hover:underline truncate">
                                                 {data.email}
                                             </a>
-                                        ) : (
-                                            <p className="text-xs font-bold text-slate-400 mt-1">—</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Phone */}
-                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-805 flex items-center justify-center text-slate-500">
-                                        <Phone className="w-4.5 h-4.5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile Number</p>
-                                        {data.contactNo ? (
-                                            <a href={`tel:${data.contactNo}`} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline block mt-1">
+                                        </div>
+                                    )}
+                                    {data.contactNo && (
+                                        <div className="flex items-center gap-2.5 mt-1">
+                                            <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                                            <a href={`tel:${data.contactNo}`} className="text-xs font-black text-blue-500 hover:underline">
                                                 {data.contactNo}
                                             </a>
-                                        ) : (
-                                            <p className="text-xs font-bold text-slate-400 mt-1">—</p>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="bg-slate-50 dark:bg-zinc-850 p-4 rounded-2xl border border-slate-100 dark:border-zinc-800/50">
+                                    <p className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Details</p>
+                                    <p className="text-[10px] font-bold text-slate-700 dark:text-zinc-350 mt-1 leading-relaxed">{data.basicDetails || '—'}</p>
                                 </div>
                             </div>
+                        )}
+                    </div>
+                </div>
 
-                            {/* Basic Details Info */}
-                            <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 space-y-3">
-                                <div>
-                                    <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Basic Details</p>
-                                    <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{data.basicDetails || '—'}</p>
+                {/* ── DESKTOP TABS VIEW (Maintained for layout density on larger screens) ── */}
+                <div className="hidden md:block space-y-6">
+                    {/* Capsule Tab Navigation */}
+                    <div className="bg-slate-100 dark:bg-zinc-850 p-1.5 rounded-full flex gap-1 overflow-x-auto no-scrollbar">
+                        {tabs.map((tab) => {
+                            const TabIcon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                                        isActive
+                                            ? 'bg-[#bef227] text-[#1c312e] shadow-sm'
+                                            : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                                    }`}
+                                >
+                                    <TabIcon className="w-3.5 h-3.5" />
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Tab Views Container */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-[28px] border border-slate-200/60 dark:border-zinc-800 p-6 shadow-sm min-h-[300px]">
+                        {/* PERFORMANCE TAB */}
+                        {activeTab === 'performance' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in">
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 translate-x-3 -translate-y-3 opacity-[0.03] dark:opacity-[0.06] group-hover:scale-115 transition-transform duration-300">
+                                        <Trophy className="w-24 h-24 text-[#bef227]" />
+                                    </div>
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Overall Rank</p>
+                                    <p className="text-3xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        #{data.Rank}
+                                        {data.TotalStudents && (
+                                            <span className="text-xs font-bold text-slate-400 dark:text-zinc-500">/{data.TotalStudents.toLocaleString()}</span>
+                                        )}
+                                    </p>
                                 </div>
-                                <div>
-                                    <p className="text-[9px] font-black text-slate-450 dark:text-zinc-500 uppercase tracking-widest">Scraped Sync Timestamp</p>
-                                    <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">
-                                        {data.scrapedAt ? new Date(data.scrapedAt).toLocaleString() : '—'}
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 translate-x-3 -translate-y-3 opacity-[0.03] dark:opacity-[0.06] group-hover:scale-115 transition-transform duration-300">
+                                        <TrendingUp className="w-24 h-24 text-[#bef227]" />
+                                    </div>
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Percentage / Standings</p>
+                                    <p className="text-3xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        {data.percentile || `Top ${data.Percentage}%`}
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 translate-x-3 -translate-y-3 opacity-[0.03] dark:opacity-[0.06] group-hover:scale-115 transition-transform duration-300">
+                                        <Award className="w-24 h-24 text-[#bef227]" />
+                                    </div>
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Current CGPA</p>
+                                    <p className="text-3xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        {data.CGPA || '—'}
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Active Backlogs</p>
+                                    <p className={`text-3xl font-black mt-3 ${parseInt(data.reappearBacklog || '0') > 0 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>
+                                        {data.reappearBacklog || '0'}
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Batch Year</p>
+                                    <p className="text-3xl font-black text-slate-800 dark:text-white mt-3">
+                                        {data.BatchYear || '—'}
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {/* PLACEMENT TAB */}
+                        {activeTab === 'placement' && (
+                            <div className="space-y-6 animate-in fade-in">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                        <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Placement Selection</p>
+                                        {data.companySelectedIn && data.companySelectedIn.toLowerCase() !== 'not selected' ? (
+                                            <div className="mt-4 flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600">
+                                                    <CheckCircle className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-505">Selected In</p>
+                                                    <p className="text-sm font-black text-slate-800 dark:text-white">{data.companySelectedIn}</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs font-bold text-slate-400 mt-4">Not Selected / Pending Placement Drives</p>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 space-y-3">
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Opportunity ID</p>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{data.placementId || '—'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Drive Start Date</p>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{data.opportunityStartDate || '—'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest mb-4">Professional Enhancement Programme (PEP)</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-slate-400 block mb-1">PEP Fee Details</span>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border inline-block ${
+                                                data.pepFeeDetails && data.pepFeeDetails.toLowerCase().includes('paid')
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30'
+                                                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30'
+                                            }`}>
+                                                {data.pepFeeDetails || '—'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] font-bold text-slate-400 block mb-1">PEP Payment Date</span>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-white">{data.pepFeePaymentDate || '—'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PRIOR EDUCATION TAB */}
+                        {activeTab === 'education' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in">
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Class X (Matriculation)</p>
+                                    <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        {data.xMarks ? data.xMarks.split('(')[0].trim() : 'N/A'}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-slate-450 mt-1">
+                                        Year: {data.xMarks && data.xMarks.includes('(') ? data.xMarks.split('(')[1].replace(')', '').trim() : '—'}
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Class XII (Intermediate)</p>
+                                    <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        {data.xiiMarks ? data.xiiMarks.split('(')[0].trim() : 'N/A'}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-slate-450 mt-1">
+                                        Year: {data.xiiMarks && data.xiiMarks.includes('(') ? data.xiiMarks.split('(')[1].replace(')', '').trim() : '—'}
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Graduation Records</p>
+                                    <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        {data.graduationMarks ? data.graduationMarks.split('(')[0].trim() : 'N/A'}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-slate-450 mt-1">
+                                        Year: {data.graduationMarks && data.graduationMarks.includes('(') ? data.graduationMarks.split('(')[1].replace(')', '').trim() : '—'}
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5">
+                                    <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Diploma Records</p>
+                                    <p className="text-2xl font-black text-[#1c312e] dark:text-[#bef227] mt-3">
+                                        {data.diplomaMarks ? data.diplomaMarks.split('(')[0].trim() : 'N/A'}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-slate-450 mt-1">
+                                        Year: {data.diplomaMarks && data.diplomaMarks.includes('(') ? data.diplomaMarks.split('(')[1].replace(')', '').trim() : '—'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CONTACT DETAILS TAB */}
+                        {activeTab === 'contact' && (
+                            <div className="space-y-4 animate-in fade-in">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-805 flex items-center justify-center text-slate-500 font-bold">
+                                            <Mail className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email Address</p>
+                                            {data.email ? (
+                                                <a href={`mailto:${data.email}`} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block mt-1">
+                                                    {data.email}
+                                                </a>
+                                            ) : (
+                                                <p className="text-xs font-bold text-slate-400 mt-1">—</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-805 flex items-center justify-center text-slate-500 font-bold">
+                                            <Phone className="w-4.5 h-4.5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile Number</p>
+                                            {data.contactNo ? (
+                                                <a href={`tel:${data.contactNo}`} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline block mt-1">
+                                                    {data.contactNo}
+                                                </a>
+                                            ) : (
+                                                <p className="text-xs font-bold text-slate-400 mt-1">—</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-zinc-850 rounded-2xl border border-slate-100 dark:border-zinc-800/80 p-5 space-y-3">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Basic Details</p>
+                                        <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">{data.basicDetails || '—'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-455 dark:text-zinc-500 uppercase tracking-widest">Scraped Sync Timestamp</p>
+                                        <p className="text-xs font-bold text-slate-800 dark:text-white mt-1">
+                                            {data.scrapedAt ? new Date(data.scrapedAt).toLocaleString() : '—'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         );
