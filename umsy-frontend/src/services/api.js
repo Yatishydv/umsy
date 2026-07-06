@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
     (window.location.hostname === 'localhost' || window.location.hostname.match(/^\d+\./) 
         ? `http://${window.location.hostname}:3001/api` 
-        : 'https://umsy-backend-ot1y.onrender.com/api');
+        : 'https://umsy-backend.onrender.com/api');
 
 /**
  * Helper to construct the request body based on provided auth info
