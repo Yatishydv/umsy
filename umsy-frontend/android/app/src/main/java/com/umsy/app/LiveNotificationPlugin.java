@@ -6,10 +6,19 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
 
 import android.content.SharedPreferences;
 
-@CapacitorPlugin(name = "LiveNotification")
+@CapacitorPlugin(
+    name = "LiveNotification",
+    permissions = {
+        @Permission(
+            strings = { android.Manifest.permission.POST_NOTIFICATIONS },
+            alias = "notifications"
+        )
+    }
+)
 public class LiveNotificationPlugin extends Plugin {
 
     @PluginMethod

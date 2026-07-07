@@ -29,6 +29,7 @@ public class LiveNotificationService extends Service {
     private NotificationManager notificationManager;
     private Handler handler;
     private Runnable runnable;
+    private String lastAlertedClassKey = "";
 
     @Override
     public void onCreate() {
@@ -103,6 +104,8 @@ public class LiveNotificationService extends Service {
                 JSONObject cls = schedule.getJSONObject(i);
                 String timeRange = cls.optString("time", "");
                 String className = cls.optString("courseCode", "Class");
+                String room = cls.optString("room", "");
+                String roomSuffix = room.isEmpty() ? "" : " (Rm: " + room + ")";
                 
                 if (timeRange.contains("-")) {
                     String[] parts = timeRange.split("-");
@@ -113,10 +116,21 @@ public class LiveNotificationService extends Service {
                     int endMins = parseTimeToMinutes(endTimeStr);
 
                     if (currentMinutes >= startMins && currentMinutes < endMins) {
-                        currentClass = className;
+                        currentClass = className + roomSuffix;
                         minutesLeft = endMins - currentMinutes;
-                    } else if (currentMinutes < startMins && nextClass == null) {
-                        nextClass = className + " at " + startTimeStr;
+                    } else if (currentMinutes < startMins) {
+                        if (nextClass == null) {
+                            nextClass = className + roomSuffix + " at " + startTimeStr;
+                        }
+                        // Check if this next class starts in 5 minutes
+                        int timeDiff = startMins - currentMinutes;
+                        if (timeDiff > 0 && timeDiff <= 5) {
+                            String alertKey = className + "_" + startTimeStr;
+                            if (!alertKey.equals(lastAlertedClassKey)) {
+                                lastAlertedClassKey = alertKey;
+                                triggerNextClassAlert(className, room, startTimeStr, timeDiff);
+                            }
+                        }
                     }
                 }
             }
@@ -136,6 +150,46 @@ public class LiveNotificationService extends Service {
         } catch (Exception e) {
             Log.e("LiveNotification", "Error parsing timetable", e);
             return "Failed to parse timetable data.";
+        }
+    }
+
+    private void triggerNextClassAlert(String courseCode, String room, String startTime, int minutes) {
+        String channelId = "NextClassAlertChannel";
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    "Next Class Alert Channel",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Alerts you 5 minutes before your next class starts");
+            channel.enableVibration(true);
+            channel.setVibrationPattern(new long[]{0, 500, 250, 500});
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
+        }
+        
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent pi = PendingIntent.getActivity(this, 1, intent, PendingIntent.FLAG_IMMUTABLE);
+        
+        String roomText = room.isEmpty() ? "" : " in Room " + room;
+        String content = "Your next class " + courseCode + " starts in " + minutes + " minutes" + roomText + " at " + startTime + "!";
+        
+        Notification alert = new NotificationCompat.Builder(this, channelId)
+                .setContentTitle("Next Class Starting Soon!")
+                .setContentText(content)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(content))
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .build();
+                
+        if (nm != null) {
+            nm.notify(102, alert);
         }
     }
     

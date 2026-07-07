@@ -86,6 +86,18 @@ const TimeTable = () => {
                 alert('Live Notification is only available on the Android app.');
                 return;
             }
+
+            // Check and request notification permissions
+            if (Capacitor.Plugins.LiveNotification) {
+                const perm = await Capacitor.Plugins.LiveNotification.checkPermissions();
+                if (perm.notifications !== 'granted') {
+                    const req = await Capacitor.Plugins.LiveNotification.requestPermissions();
+                    if (req.notifications !== 'granted') {
+                        alert('Notification permissions are required for the live timetable widget.');
+                        return;
+                    }
+                }
+            }
             
             const newState = !liveNotificationActive;
             setLiveNotificationActive(newState);
