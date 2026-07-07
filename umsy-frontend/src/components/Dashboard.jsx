@@ -10,6 +10,7 @@ import { Building2,Bed,Table } from 'lucide-react';
 import { getStudentInfo, getStudentDashboardV04, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl, getResult, getResultV04, getMessagesV04, getAttendanceDetails, getCourses, getMarks, getMarksV04 } from '../services/api';
 import { sendNotification } from '../utils/notificationHelper';
 import LeaveSlipModal from './LeaveSlipModal';
+import { Capacitor } from '@capacitor/core';
 
 const getGreeting = () => {
     const h = new Date().getHours();
@@ -699,16 +700,18 @@ const Dashboard = () => {
                                     </h1>
                                     <p className="text-xs text-zinc-450 dark:text-zinc-500 mt-1">Here's your academic overview</p>
                                 </div>
-                                <div className="hidden md:block">
-                                    <a
-                                        href="/umsy.apk"
-                                        download="umsy.apk"
-                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm"
-                                    >
-                                        <Download className="w-4.5 h-4.5" />
-                                        <span>Download Android App</span>
-                                    </a>
-                                </div>
+                                {!Capacitor.isNativePlatform() && (
+                                    <div className="hidden md:block">
+                                        <a
+                                            href="/umsy.apk"
+                                            download="umsy.apk"
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm"
+                                        >
+                                            <Download className="w-4.5 h-4.5" />
+                                            <span>Download Android App</span>
+                                        </a>
+                                    </div>
+                                )}
                             </div>
 
                             {/* 3 Stats Cards (Tappable & Responsive) */}

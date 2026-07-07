@@ -13,6 +13,7 @@ import android.os.IBinder;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.graphics.Color;
 
 import androidx.core.app.NotificationCompat;
 
@@ -88,7 +89,7 @@ public class LiveNotificationService extends Service {
 
             JSONArray schedule = fullTimetable.optJSONArray(todayStr);
             if (schedule == null || schedule.length() == 0) {
-                return "No classes scheduled for today.";
+                return "🏖️ Holiday! No classes scheduled for today.";
             }
 
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -136,15 +137,15 @@ public class LiveNotificationService extends Service {
             }
 
             if (currentClass != null) {
-                String text = "Ongoing: " + currentClass + " (" + minutesLeft + "m left)";
+                String text = "🟢 Ongoing: " + currentClass + " (" + minutesLeft + "m left)";
                 if (nextClass != null) {
-                    text += " | Next: " + nextClass;
+                    text += " | ⏭️ Next: " + nextClass;
                 }
                 return text;
             } else if (nextClass != null) {
-                return "Next: " + nextClass;
+                return "⏳ Next: " + nextClass;
             } else {
-                return "No more classes today.";
+                return "🎉 Day Completed! No more classes today.";
             }
 
         } catch (Exception e) {
@@ -174,14 +175,15 @@ public class LiveNotificationService extends Service {
         Intent intent = new Intent(this, MainActivity.class);
         PendingIntent pi = PendingIntent.getActivity(this, 1, intent, PendingIntent.FLAG_IMMUTABLE);
         
-        String roomText = room.isEmpty() ? "" : " in Room " + room;
-        String content = "Your next class " + courseCode + " starts in " + minutes + " minutes" + roomText + " at " + startTime + "!";
+        String roomText = room.isEmpty() ? "" : " | 📍 Room " + room;
+        String content = "🎓 Course: " + courseCode + roomText + "\n⏳ Starts in " + minutes + " minutes (at " + startTime + ")";
         
         Notification alert = new NotificationCompat.Builder(this, channelId)
-                .setContentTitle("Next Class Starting Soon!")
+                .setContentTitle("🚨 Next Class Starting Soon!")
                 .setContentText(content)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(content))
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setColor(Color.parseColor("#BEF227"))
                 .setContentIntent(pi)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -207,10 +209,19 @@ public class LiveNotificationService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this,
                 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
+        String title = "⏰ UMSY Live Status";
+        if (text.contains("Holiday")) {
+            title = "🏖️ Day Off - UMSY";
+        } else if (text.contains("Completed")) {
+            title = "🎉 Day Completed - UMSY";
+        }
+
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("UMSY Class Status")
+                .setContentTitle(title)
                 .setContentText(text)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
                 .setSmallIcon(android.R.drawable.ic_menu_today)
+                .setColor(Color.parseColor("#BEF227"))
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

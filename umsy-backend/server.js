@@ -223,8 +223,8 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/app-version', (req, res) => {
     res.json({
-        latestVersionCode: 6,
-        versionName: "1.5",
+        latestVersionCode: 7,
+        versionName: "1.6",
         forceUpdate: true
     });
 });
@@ -539,10 +539,9 @@ app.post('/api/newlogin', async (req, res) => {
             }
         }, username);
 
-        // ── Stage 3: Wait 3.5s for DOM to update (password field appears) ─────
-        console.log('[newlogin] Waiting 3.5s for ASP.NET DOM update...');
+        // ── Stage 3: Wait for DOM to update (password field appears) ─────
+        console.log('[newlogin] Waiting for password field to appear...');
         loginStatus.set(username, { status: 'Waiting for password gateway...', percent: 45, timestamp: Date.now() });
-        await delay(3500);
 
         // ── Stage 3: Type password ────────────────────────────────────────────
         const passSelector = 'input[type="password"], input[placeholder*="Pass"]';
