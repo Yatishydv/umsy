@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
+import { fetchPlacementData } from './src/modules/GetPlacementData.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,7 +111,7 @@ async function run() {
                 
                 const details = await fetchStudentDetails(cookieString);
                 
-                // Fetch the old snapshot record from Vercel API to preserve placements and education details
+                // Fetch the old snapshot record from Vercel API or local rankingsMap to preserve other details
                 let oldRecord = null;
                 try {
                     const oldResponse = await axios.post(`${process.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/ranking`, { registrationNumber: student.regno }, { timeout: 6000 });
@@ -123,7 +124,43 @@ async function run() {
                         if (oldResponseDirect.data) {
                             oldRecord = oldResponseDirect.data;
                         }
-                    } catch (err) {}
+                    } catch (err) {
+                        if (rankingsMap.has(student.regno)) {
+                            oldRecord = rankingsMap.get(student.regno);
+                        }
+                    }
+                }
+
+                // Fetch live placement details from UMS
+                let companySelectedIn = 'Not Selected';
+                let placementId = '—';
+                let pepFeeDetails = '—';
+                try {
+                    const client = axios.create({
+                        headers: {
+                            'Cookie': cookieString,
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+                    const placementData = await fetchPlacementData(client);
+                    if (placementData?.profile) {
+                        placementId = placementData.profile.placementId || '—';
+                        pepFeeDetails = placementData.profile.pepFee || '—';
+                    }
+                    if (placementData?.placementRecord) {
+                        const keys = Object.keys(placementData.placementRecord);
+                        const companyKey = keys.find(k => k.toLowerCase().includes('company') || k.toLowerCase().includes('selected'));
+                        if (companyKey) {
+                            companySelectedIn = placementData.placementRecord[companyKey];
+                        } else if (placementData.profile?.status) {
+                            companySelectedIn = placementData.profile.status;
+                        }
+                    }
+                } catch (e) {
+                    // Fall back to old record if UMS fetch failed
+                    companySelectedIn = oldRecord?.companySelectedIn || 'Not Selected';
+                    placementId = oldRecord?.placementId || '—';
+                    pepFeeDetails = oldRecord?.pepFeeDetails || '—';
                 }
                 
                 const record = {
@@ -136,11 +173,11 @@ async function run() {
                     BatchYear: student.regno.substring(0, 3) || oldRecord?.BatchYear || '—',
                     scrapedAt: new Date().toISOString(),
                     
-                    // Preserve old placement, education, and contact details
-                    companySelectedIn: oldRecord?.companySelectedIn || 'Not Selected',
-                    placementId: oldRecord?.placementId || '—',
+                    // Preserve old and merged live placement, education, and contact details
+                    companySelectedIn: companySelectedIn,
+                    placementId: placementId,
                     opportunityStartDate: oldRecord?.opportunityStartDate || '—',
-                    pepFeeDetails: oldRecord?.pepFeeDetails || '—',
+                    pepFeeDetails: pepFeeDetails,
                     pepFeePaymentDate: oldRecord?.pepFeePaymentDate || '—',
                     xMarks: oldRecord?.xMarks || 'N/A',
                     xiiMarks: oldRecord?.xiiMarks || 'N/A',
