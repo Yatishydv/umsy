@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
@@ -109,15 +110,45 @@ async function run() {
                 
                 const details = await fetchStudentDetails(cookieString);
                 
+                // Fetch the old snapshot record from Vercel API to preserve placements and education details
+                let oldRecord = null;
+                try {
+                    const oldResponse = await axios.post(`${process.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/ranking`, { registrationNumber: student.regno }, { timeout: 6000 });
+                    if (oldResponse.data?.data) {
+                        oldRecord = oldResponse.data.data;
+                    }
+                } catch (e) {
+                    try {
+                        const oldResponseDirect = await axios.get(`https://ranking2-0.vercel.app/api/search?regNo=${student.regno}`, { timeout: 6000 });
+                        if (oldResponseDirect.data) {
+                            oldRecord = oldResponseDirect.data;
+                        }
+                    } catch (err) {}
+                }
+                
                 const record = {
-                    Name: details.StudentName || student.name,
+                    Name: details.StudentName || oldRecord?.Name || oldRecord?.name || student.name,
                     RegistrationNumber: student.regno,
-                    Course: details.Program || 'N/A',
-                    CGPA: details.CGPA || '0.00',
-                    reappearBacklog: details.ActiveBacklogs || '0',
-                    status: 'Active',
-                    BatchYear: student.regno.substring(0, 3) || '—',
-                    scrapedAt: new Date().toISOString()
+                    Course: details.Program || oldRecord?.Course || oldRecord?.program || 'N/A',
+                    CGPA: details.CGPA || oldRecord?.CGPA || oldRecord?.cgpa || '0.00',
+                    reappearBacklog: details.ActiveBacklogs || oldRecord?.reappearBacklog || '0',
+                    status: details.StudentStatus || oldRecord?.status || 'Active',
+                    BatchYear: student.regno.substring(0, 3) || oldRecord?.BatchYear || '—',
+                    scrapedAt: new Date().toISOString(),
+                    
+                    // Preserve old placement, education, and contact details
+                    companySelectedIn: oldRecord?.companySelectedIn || 'Not Selected',
+                    placementId: oldRecord?.placementId || '—',
+                    opportunityStartDate: oldRecord?.opportunityStartDate || '—',
+                    pepFeeDetails: oldRecord?.pepFeeDetails || '—',
+                    pepFeePaymentDate: oldRecord?.pepFeePaymentDate || '—',
+                    xMarks: oldRecord?.xMarks || 'N/A',
+                    xiiMarks: oldRecord?.xiiMarks || 'N/A',
+                    graduationMarks: oldRecord?.graduationMarks || 'N/A',
+                    diplomaMarks: oldRecord?.diplomaMarks || 'N/A',
+                    email: oldRecord?.email || '',
+                    contactNo: oldRecord?.contactNo || '',
+                    basicDetails: oldRecord?.basicDetails || ''
                 };
                 
                 rankingsMap.set(student.regno, record);
