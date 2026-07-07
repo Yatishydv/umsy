@@ -502,8 +502,7 @@ app.post('/api/newlogin', async (req, res) => {
                 '--disable-setuid-sandbox',
                 '--window-size=1920,1080',
                 '--disable-blink-features=AutomationControlled',
-                '--remote-debugging-port=0',
-                `--user-data-dir=${path.resolve(__dirname, './tmp_chrome_profile')}`
+                '--remote-debugging-port=0'
             ]
         });
 
