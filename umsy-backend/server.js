@@ -116,6 +116,26 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '5mb' }));
 
+// Version enforcer middleware to block outdated native Android apps
+app.use((req, res, next) => {
+    const userAgent = req.headers['user-agent'] || '';
+    const isApp = userAgent.includes('; wv') || userAgent.includes('WebView');
+
+    // Only run check for API paths, ignoring app-version check itself
+    if (isApp && req.path.startsWith('/api/') && req.path !== '/api/app-version') {
+        const clientVersion = req.headers['x-umsy-version'];
+        if (!clientVersion || parseInt(clientVersion) < 8) {
+            console.log(`[security] Blocked outdated app request. UA: ${userAgent}, Version: ${clientVersion}`);
+            return res.status(426).json({
+                success: false,
+                error: 'UPDATE_REQUIRED',
+                message: 'You are using an outdated version of UMSY. Please download the latest update.'
+            });
+        }
+    }
+    next();
+});
+
 // In-memory session storage
 // Structure: Map<sessionId, { browser, page, regno, password, timestamp }>
 const sessions = new Map();
@@ -223,8 +243,8 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/app-version', (req, res) => {
     res.json({
-        latestVersionCode: 7,
-        versionName: "1.6",
+        latestVersionCode: 8,
+        versionName: "1.7",
         forceUpdate: true
     });
 });

@@ -136,6 +136,19 @@ public class LiveNotificationService extends Service {
                 }
             }
 
+            int firstClassStartMins = Integer.MAX_VALUE;
+            for (int i = 0; i < schedule.length(); i++) {
+                JSONObject cls = schedule.getJSONObject(i);
+                String timeRange = cls.optString("time", "");
+                if (timeRange.contains("-")) {
+                    String[] parts = timeRange.split("-");
+                    int startMins = parseTimeToMinutes(parts[0].trim());
+                    if (startMins < firstClassStartMins) {
+                        firstClassStartMins = startMins;
+                    }
+                }
+            }
+
             if (currentClass != null) {
                 String text = "🟢 Ongoing: " + currentClass + " (" + minutesLeft + "m left)";
                 if (nextClass != null) {
@@ -143,7 +156,11 @@ public class LiveNotificationService extends Service {
                 }
                 return text;
             } else if (nextClass != null) {
-                return "⏳ Next: " + nextClass;
+                if (currentMinutes >= firstClassStartMins) {
+                    return "🍽️ Break! Grab lunch & drink water! 💧 | ⏭️ Next: " + nextClass;
+                } else {
+                    return "⏳ Next: " + nextClass;
+                }
             } else {
                 return "🎉 Day Completed! No more classes today.";
             }

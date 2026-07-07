@@ -372,6 +372,24 @@ const Dashboard = () => {
                                 localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
                                 localStorage.removeItem('umsy_is_logging_in');
                                 window.dispatchEvent(new Event('student-info-updated'));
+
+                                // Notify about new messages exactly once
+                                if (studentRes.data.Messages && Array.isArray(studentRes.data.Messages)) {
+                                    studentRes.data.Messages.forEach(msg => {
+                                        const cleanSubject = (msg.subject || 'LPU UMS').trim();
+                                        const cleanSender = (msg.sender || 'Sender').trim();
+                                        const cleanDate = (msg.date || '').trim();
+                                        const msgId = `msg_notif_${cleanSender}_${cleanDate}_${cleanSubject}`.replace(/\s+/g, '_');
+                                        
+                                        if (!localStorage.getItem(msgId)) {
+                                            sendNotification(
+                                                `✉️ New Message: ${cleanSubject}`,
+                                                `From: ${cleanSender}\n${msg.content || ''}`
+                                            );
+                                            localStorage.setItem(msgId, 'notified');
+                                        }
+                                    });
+                                }
                                 
                                 // Fetch ranking immediately after getting registration number
                                 const regno = studentRes.data.Registrationnumber;

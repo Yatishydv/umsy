@@ -43,7 +43,7 @@ function ProtectedRoute({ children }) {
     } catch (e) {}
   }
 
-  const isAuthorized = reg && (info || isLoggingIn) && !nameIsInvalid;
+  const isAuthorized = !!reg;
   if (!isAuthorized) {
     localStorage.removeItem('umsy_regno');
     localStorage.removeItem('umsy_cookies');
@@ -104,7 +104,7 @@ function AppContent() {
         } catch (e) {}
       }
 
-      if (!reg || (!info && !isLoggingIn) || nameIsInvalid) {
+      if (!reg) {
         localStorage.removeItem('umsy_regno');
         localStorage.removeItem('umsy_cookies');
         localStorage.removeItem('umsy_student_info');
