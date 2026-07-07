@@ -2178,6 +2178,23 @@ app.post('/api/ranking', async (req, res) => {
         });
     }
 
+    const localRankingsPath = path.resolve(__dirname, './current_rankings.json');
+    if (fs.existsSync(localRankingsPath)) {
+        try {
+            const list = JSON.parse(fs.readFileSync(localRankingsPath, 'utf8'));
+            const studentRecord = list.find(s => String(s.RegistrationNumber) === String(registrationNumber));
+            if (studentRecord) {
+                console.log(`🏆 Found ranking for: ${registrationNumber} in local rankings cache.`);
+                return res.json({
+                    success: true,
+                    data: studentRecord
+                });
+            }
+        } catch (e) {
+            console.warn('⚠️ Error reading local rankings file:', e.message);
+        }
+    }
+
     try {
         console.log(`🏆 Fetching ranking for: ${registrationNumber} from new API`);
 
