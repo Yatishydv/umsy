@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/((?!assets/|umsy-frontend/public/umsy.apk).*)",
-      "destination": "/umsy-frontend/dist/index.html"
+      "destination": "/index.html"
     }
   ]
 }
