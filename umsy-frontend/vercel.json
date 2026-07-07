@@ -17,7 +17,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|umsy.apk).*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
