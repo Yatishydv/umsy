@@ -217,6 +217,18 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+/**
+ * GET /api/app-version
+ * Get latest application version for force update checking
+ */
+app.get('/api/app-version', (req, res) => {
+    res.json({
+        latestVersionCode: 6,
+        versionName: "1.5",
+        forceUpdate: true
+    });
+});
+
 
 /**
  * POST /api/start-login

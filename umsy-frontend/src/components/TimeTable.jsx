@@ -35,7 +35,9 @@ const TimeTable = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [downloadLoading, setDownloadLoading] = useState(false);
-    const [liveNotificationActive, setLiveNotificationActive] = useState(false);
+    const [liveNotificationActive, setLiveNotificationActive] = useState(() => {
+        return localStorage.getItem('live_notification_active') === 'true';
+    });
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -101,6 +103,7 @@ const TimeTable = () => {
             
             const newState = !liveNotificationActive;
             setLiveNotificationActive(newState);
+            localStorage.setItem('live_notification_active', newState.toString());
             
             if (newState) {
                 // Ensure data is in Preferences before starting
@@ -113,7 +116,9 @@ const TimeTable = () => {
             }
         } catch (e) {
             console.error('Failed to toggle live notification', e);
-            setLiveNotificationActive(!liveNotificationActive); // Revert on failure
+            const revertedState = !liveNotificationActive;
+            setLiveNotificationActive(revertedState);
+            localStorage.setItem('live_notification_active', revertedState.toString());
         }
     };
 

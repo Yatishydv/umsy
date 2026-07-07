@@ -60,4 +60,21 @@ public class LiveNotificationPlugin extends Plugin {
             call.reject("Failed to stop service: " + e.getMessage());
         }
     }
+
+    @PluginMethod
+    public void getVersionCode(PluginCall call) {
+        try {
+            int versionCode;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                versionCode = (int) getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).getLongVersionCode();
+            } else {
+                versionCode = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).versionCode;
+            }
+            com.getcapacitor.JSObject ret = new com.getcapacitor.JSObject();
+            ret.put("versionCode", versionCode);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to get version code: " + e.getMessage());
+        }
+    }
 }
