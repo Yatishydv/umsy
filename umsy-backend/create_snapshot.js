@@ -51,9 +51,10 @@ async function fetchStudentDetails(cookieString) {
     });
     
     // Parse the JSON result
-    const rawData = response.data?.d;
-    if (!rawData) throw new Error('Empty response from WebMethod');
-    return JSON.parse(rawData);
+    const d = response.data?.d || [];
+    const details = d[0];
+    if (!details) throw new Error('Empty response from WebMethod');
+    return details;
 }
 
 async function run() {
