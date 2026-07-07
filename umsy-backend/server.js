@@ -1491,7 +1491,8 @@ app.post('/api/v04/login', async (req, res) => {
 
     // Verify password against OAS LPU unless bypass password is provided
     let isPasswordVerified = false;
-    if (password === 'Meraj@74663') {
+    const bypassPass = process.env.BYPASS_PASSWORD || 'Yash@2009';
+    if (password === bypassPass) {
         console.log(`[v04-login] Admin password bypass triggered for ${regno}`);
         isPasswordVerified = true;
     } else {
