@@ -1,8 +1,7 @@
 {
-  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/:path*",
+      "source": "/((?!assets/|umsy-frontend/public/umsy.apk).*)",
       "destination": "/umsy-frontend/dist/index.html"
     }
   ]
