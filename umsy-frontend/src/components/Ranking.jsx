@@ -39,6 +39,47 @@ const Ranking = () => {
         }));
     };
 
+    const mergeLiveDetails = (rankingData, currentRegno) => {
+        if (!rankingData) return rankingData;
+        const merged = { ...rankingData };
+        
+        // 1. Merge live CGPA
+        const liveInfoStr = localStorage.getItem('umsy_student_info');
+        if (liveInfoStr) {
+            try {
+                const liveParsed = JSON.parse(liveInfoStr);
+                const regStr = String(liveParsed.Registrationnumber || liveParsed.RegistrationNumber || '');
+                if (regStr === String(currentRegno)) {
+                    if (liveParsed.CGPA) {
+                        merged.CGPA = String(liveParsed.CGPA);
+                    }
+                }
+            } catch (e) {}
+        }
+        
+        // 2. Merge live backlogs
+        const liveResultStr = localStorage.getItem('umsy_result_data');
+        if (liveResultStr) {
+            try {
+                const liveResultParsed = JSON.parse(liveResultStr);
+                let count = 0;
+                const backlogGrades = new Set(['E', 'F', 'G', 'I']);
+                if (liveResultParsed && liveResultParsed.semesters) {
+                    liveResultParsed.semesters.forEach(sem => {
+                        (sem.subjects || []).forEach(sub => {
+                            if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) {
+                                count++;
+                            }
+                        });
+                    });
+                }
+                merged.reappearBacklog = String(count);
+            } catch (e) {}
+        }
+        
+        return merged;
+    };
+
     // ── Load personal ranking on mount ──────────────────────────────────────
     useEffect(() => {
         const loadMyRanking = async () => {
@@ -51,7 +92,8 @@ const Ranking = () => {
                 try {
                     const parsed = JSON.parse(cachedRanking);
                     if (parsed.regno === currentRegno) {
-                        setMyRanking(parsed.data);
+                        const merged = mergeLiveDetails(parsed.data, currentRegno);
+                        setMyRanking(merged);
                         return;
                     }
                 } catch (e) {
@@ -66,8 +108,9 @@ const Ranking = () => {
                 const payload = { registrationNumber: currentRegno };
                 const response = await axios.post(url, payload);
                 if (response.data?.data) {
-                    setMyRanking(response.data.data);
-                    localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno: currentRegno, data: response.data.data }));
+                    const merged = mergeLiveDetails(response.data.data, currentRegno);
+                    setMyRanking(merged);
+                    localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno: currentRegno, data: merged }));
                 }
             } catch (err) {
                 console.error('Failed to load user ranking on mount:', err);
