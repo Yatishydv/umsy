@@ -229,17 +229,6 @@ const TimeTable = () => {
                 {hasData && (
                     <div className="flex gap-2">
                         <button
-                            onClick={toggleLiveNotification}
-                            className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all active:scale-95 shadow-sm border ${
-                                liveNotificationActive 
-                                ? 'bg-[#bef227] text-[#1c312e] border-[#bef227]' 
-                                : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-slate-200/60 dark:border-zinc-700/80'
-                            }`}
-                            title="Toggle Live Android Notification"
-                        >
-                            {liveNotificationActive ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-                        </button>
-                        <button
                             onClick={handleDownloadPDF}
                             disabled={downloadLoading}
                             className="flex items-center justify-center w-10 h-10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700/80 rounded-xl transition-all active:scale-95 shadow-sm"

@@ -1,31 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:background="#121214"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:gravity="center_vertical">
 
     <!-- Left Brand Accent Line -->
     <View
         android:id="@+id/accent_bar"
         android:layout_width="4dp"
-        android:layout_height="match_parent"
-        android:layout_alignParentStart="true"
-        android:layout_centerVertical="true"
+        android:layout_height="36dp"
         android:background="#BEF227" />
 
     <!-- Center content container -->
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_toEndOf="@id/accent_bar"
-        android:layout_toStartOf="@+id/info_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
         android:layout_marginStart="12dp"
-        android:orientation="vertical"
-        android:gravity="center_vertical">
+        android:layout_marginEnd="12dp"
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/notif_title"
@@ -54,10 +49,9 @@
     <LinearLayout
         android:id="@+id/info_container"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_alignParentEnd="true"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center_vertical|end">
+        android:gravity="end">
 
         <TextView
             android:id="@+id/notif_room"
@@ -77,4 +71,4 @@
             android:textSize="10sp"
             android:layout_marginTop="2dp" />
     </LinearLayout>
-</RelativeLayout>
+</LinearLayout>

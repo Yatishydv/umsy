@@ -91,6 +91,30 @@ function AppContent() {
     return () => window.removeEventListener('umsy-force-update', handleForceUpdate);
   }, []);
 
+  // Auto-start live notification service if enabled by default or by setting
+  useEffect(() => {
+    const initLiveNotification = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      try {
+        const activeSetting = localStorage.getItem('live_notification_active');
+        const isActive = activeSetting === null ? true : activeSetting === 'true';
+        
+        if (isActive && Capacitor.Plugins.LiveNotification) {
+          const cachedTimetable = localStorage.getItem('umsy_timetable_data');
+          if (cachedTimetable) {
+            await Capacitor.Plugins.LiveNotification.saveTimetable({
+              data: cachedTimetable
+            });
+            await Capacitor.Plugins.LiveNotification.startService();
+          }
+        }
+      } catch (e) {
+        console.error('Failed to auto-start live notification service', e);
+      }
+    };
+    initLiveNotification();
+  }, []);
+
   const handleUpdate = async () => {
     if (!Capacitor.isNativePlatform() || !Capacitor.Plugins.LiveNotification) {
       window.open('https://umsy.vercel.app/umsy.apk?v=9', '_system');

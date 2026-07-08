@@ -37,6 +37,35 @@ const MobileSidebar = () => {
     const settingsRef = useRef(null);
     const [alertMessage, setAlertMessage] = useState(null);
 
+    const [liveNotificationActive, setLiveNotificationActive] = useState(() => {
+        const val = localStorage.getItem('live_notification_active');
+        return val === null ? true : val === 'true';
+    });
+
+    const toggleLiveNotification = async () => {
+        const newState = !liveNotificationActive;
+        setLiveNotificationActive(newState);
+        localStorage.setItem('live_notification_active', newState.toString());
+
+        if (Capacitor.isNativePlatform() && Capacitor.Plugins.LiveNotification) {
+            try {
+                if (newState) {
+                    const cachedTimetable = localStorage.getItem('umsy_timetable_data');
+                    if (cachedTimetable) {
+                        await Capacitor.Plugins.LiveNotification.saveTimetable({
+                            data: cachedTimetable
+                        });
+                        await Capacitor.Plugins.LiveNotification.startService();
+                    }
+                } else {
+                    await Capacitor.Plugins.LiveNotification.stopService();
+                }
+            } catch (e) {
+                console.error('Failed to toggle live notification', e);
+            }
+        }
+    };
+
     // Captcha modal state
     const [showCaptchaModal, setShowCaptchaModal] = useState(false);
     const [captchaImage, setCaptchaImage] = useState('');
@@ -310,6 +339,27 @@ const MobileSidebar = () => {
                                         </button>
                                     </div>
                                 </div>
+
+                                {Capacitor.isNativePlatform() && (
+                                    <div className="px-4 py-3 border-b border-slate-100 dark:border-zinc-800/40 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs font-semibold text-slate-800 dark:text-white">Live Notification</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-zinc-500">Show schedule status in tray</p>
+                                        </div>
+                                        <button
+                                            onClick={toggleLiveNotification}
+                                            className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 ${
+                                                liveNotificationActive ? 'bg-[#bef227]' : 'bg-slate-300 dark:bg-zinc-700'
+                                            }`}
+                                        >
+                                            <div
+                                                className={`bg-white dark:bg-zinc-900 w-4 h-4 rounded-full shadow-md transform transition-all duration-300 ${
+                                                    liveNotificationActive ? 'translate-x-4' : 'translate-x-0'
+                                                }`}
+                                            />
+                                        </button>
+                                    </div>
+                                )}
 
                                 <button
                                     onClick={() => {
