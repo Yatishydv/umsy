@@ -343,7 +343,7 @@ const UmsyV04Login = () => {
                                             id="v04-regno"
                                             type="text"
                                             inputMode="numeric"
-                                            placeholder="e.g. 12301342"
+                                            placeholder="e.g. 12301927"
                                             value={regno}
                                             onChange={(e) => setRegno(e.target.value)}
                                             required

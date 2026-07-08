@@ -85,6 +85,9 @@ async function run() {
         }
     }
     
+    // Track processed registration numbers in this specific script run
+    const processedRegNos = new Set();
+
     const browser = await chromium.launch({ headless: true });
     
     let processed = 0;
@@ -96,9 +99,9 @@ async function run() {
         console.log(`\n🔄 Processing batch ${Math.floor(i / CONCURRENCY_LIMIT) + 1} (${i + 1} to ${Math.min(i + CONCURRENCY_LIMIT, studentsWithTokens.length)})...`);
         
         await Promise.all(batch.map(async (student) => {
-            // Skip if already processed and has CGPA
-            if (rankingsMap.has(student.regno) && rankingsMap.get(student.regno).CGPA) {
-                console.log(`⏭️ Skipping ${student.regno} (${student.name}) - already in database.`);
+            // Skip if already processed in this run
+            if (processedRegNos.has(student.regno)) {
+                console.log(`⏭️ Skipping ${student.regno} (${student.name}) - already done in this execution.`);
                 processed++;
                 return;
             }
@@ -189,6 +192,7 @@ async function run() {
                 };
                 
                 rankingsMap.set(student.regno, record);
+                processedRegNos.add(student.regno);
                 succeeded++;
                 console.log(`✅ Fetched: ${record.RegistrationNumber} - ${record.Name} (CGPA: ${record.CGPA})`);
             } catch (err) {

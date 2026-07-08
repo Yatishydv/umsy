@@ -34,6 +34,7 @@ import { fetchPendingAssignments } from './src/modules/GetPendingAssignments.js'
 import { fetchLeaveSlipUid } from './src/modules/GetLeaveSlipUrl.js';
 import MutualShiftPost from './src/models/MutualShiftPost.js';
 import UserSession from './src/models/UserSession.js';
+import StudentRanking from './src/models/StudentRanking.js';
 
 // ── Load results.json into in-memory Map for O(1) token lookups ───────────
 const __filename = fileURLToPath(import.meta.url);
@@ -2176,6 +2177,19 @@ app.post('/api/ranking', async (req, res) => {
             success: false,
             error: 'Registration number is required'
         });
+    }
+
+    try {
+        const studentRecord = await StudentRanking.findOne({ RegistrationNumber: String(registrationNumber) }).lean();
+        if (studentRecord) {
+            console.log(`🏆 Found ranking for: ${registrationNumber} in MongoDB database.`);
+            return res.json({
+                success: true,
+                data: studentRecord
+            });
+        }
+    } catch (e) {
+        console.warn('⚠️ Error querying MongoDB for rankings:', e.message);
     }
 
     const localRankingsPath = path.resolve(__dirname, './current_rankings.json');
