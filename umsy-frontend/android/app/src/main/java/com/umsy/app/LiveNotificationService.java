@@ -156,8 +156,8 @@ public class LiveNotificationService extends Service {
 
             JSONArray schedule = fullTimetable.optJSONArray(todayStr);
             if (schedule == null || schedule.length() == 0) {
-                currentStatusTitle = "Day Off";
-                currentStatusSubtitle = "No classes scheduled today";
+                stopForeground(true);
+                stopSelf();
                 return;
             }
 
@@ -179,14 +179,10 @@ public class LiveNotificationService extends Service {
                 }
             }
 
-            // Show status from 1 hour before first class up to 1 hour after last class
-            if (currentMinutes < (firstClassStartMins - 60) || currentMinutes > (lastClassEndMins + 60)) {
-                if (currentMinutes > (lastClassEndMins + 60)) {
-                    currentStatusTitle = "Day Completed";
-                    currentStatusSubtitle = "All classes done for today";
-                } else {
-                    currentStatusSubtitle = "Classes start later today";
-                }
+            // Show status from 1 hour before first class up to 30 mins after last class
+            if (currentMinutes < (firstClassStartMins - 60) || currentMinutes > (lastClassEndMins + 30)) {
+                stopForeground(true);
+                stopSelf();
                 return;
             }
 
@@ -279,17 +275,6 @@ public class LiveNotificationService extends Service {
             java.util.Calendar calendar = java.util.Calendar.getInstance();
             int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
             int currentMinutes = currentHour * 60 + calendar.get(java.util.Calendar.MINUTE);
-            String todayDateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-            // Goodnight Alert (Exactly at 9 PM / 21:00)
-            if (currentHour == 21 && currentMinutes >= 1260 && currentMinutes < 1275) {
-                String lastGoodnight = prefs.getString("last_goodnight_date", "");
-                if (!lastGoodnight.equals(todayDateStr)) {
-                    prefs.edit().putString("last_goodnight_date", todayDateStr).apply();
-                    triggerSarcasticAlert("Goodnight 😴", getRandomQuote(GOODNIGHT_QUOTES));
-                }
-                return;
-            }
 
             // Fetch timetable to calculate class hours
             String timetableStr = prefs.getString("timetable_data", null);
@@ -324,6 +309,10 @@ public class LiveNotificationService extends Service {
                 }
             }
 
+            if (!hasClasses) {
+                return;
+            }
+
             // Enforce minimum gap of 20 minutes between consecutive notification alerts
             long lastAlertTime = prefs.getLong("last_sarcastic_alert_time", 0);
             long nowMs = System.currentTimeMillis();
@@ -336,59 +325,9 @@ public class LiveNotificationService extends Service {
                 return;
             }
 
-            // Morning Alerts (4:00 AM to 1 hour before first class)
-            if (currentMinutes >= 240 && currentMinutes < (firstClassStartMins - 60)) {
-                triggerSarcasticAlert("Wakey Wakey ☕", getRandomQuote(MORNING_QUOTES));
-                prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
-            }
-            // Class Time Roasts (Within class phase hours)
-            else if (hasClasses && currentMinutes >= (firstClassStartMins - 60) && currentMinutes <= (lastClassEndMins + 60)) {
+            // Class Time Roasts (strictly within active class timings, no before or after)
+            if (currentMinutes >= firstClassStartMins && currentMinutes <= lastClassEndMins) {
                 triggerSarcasticAlert("Class Roast", getRandomQuote(CLASS_TIME_ROASTS));
-                prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
-            }
-            // After-Class Alerts (1 hour after classes end up to 8:00 PM)
-            else if (currentMinutes > (lastClassEndMins + 60) && currentMinutes < 1200) {
-                ArrayList<String> candidateQuotes = new ArrayList<>();
-                for (String q : AFTER_CLASS_ROASTS) candidateQuotes.add(q);
-
-                try {
-                    String infoStr = prefs.getString("umsy_student_info", null);
-                    if (infoStr != null) {
-                        JSONObject info = new JSONObject(infoStr);
-                        double cgpa = info.optDouble("CGPA", 10.0);
-                        if (cgpa < 7.5) {
-                            for (String q : LOW_CGPA_ROASTS) candidateQuotes.add(q);
-                        }
-                    }
-
-                    String resultStr = prefs.getString("umsy_result_data", null);
-                    if (resultStr != null) {
-                        JSONObject res = new JSONObject(resultStr);
-                        int backlogs = 0;
-                        JSONArray semesters = res.optJSONArray("semesters");
-                        if (semesters != null) {
-                            for (int s = 0; s < semesters.length(); s++) {
-                                JSONArray subjects = semesters.getJSONObject(s).optJSONArray("subjects");
-                                if (subjects != null) {
-                                    for (int sb = 0; sb < subjects.length(); sb++) {
-                                        String grade = subjects.getJSONObject(sb).optString("grade", "").trim().toUpperCase();
-                                        if (grade.equals("E") || grade.equals("F") || grade.equals("G") || grade.equals("I")) {
-                                            backlogs++;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (backlogs > 0) {
-                            for (String q : BACKLOGS_ROASTS) candidateQuotes.add(q);
-                        }
-                    }
-                } catch (Exception parseEx) {
-                    Log.w("LiveNotification", "Failed to personalize roasts", parseEx);
-                }
-
-                String finalQuote = candidateQuotes.get(new Random().nextInt(candidateQuotes.size()));
-                triggerSarcasticAlert("Evening Roast", finalQuote);
                 prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
             }
 
