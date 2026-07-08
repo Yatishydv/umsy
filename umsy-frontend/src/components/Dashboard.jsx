@@ -407,6 +407,22 @@ const Dashboard = () => {
 
                 localStorage.setItem('umsy_last_sync_date', new Date().toDateString());
                 setShowSyncPrompt(false);
+
+                if (Capacitor.isNativePlatform() && Capacitor.Plugins.LiveNotification) {
+                    const hasWelcomed = localStorage.getItem('umsy_welcomed');
+                    if (!hasWelcomed) {
+                        localStorage.setItem('umsy_welcomed', 'true');
+                        try {
+                            const cachedTimetable = localStorage.getItem('umsy_timetable_data');
+                            if (cachedTimetable) {
+                                await Capacitor.Plugins.LiveNotification.saveTimetable({ data: cachedTimetable });
+                            }
+                            await Capacitor.Plugins.LiveNotification.triggerWelcomeNotification();
+                        } catch (e) {
+                            console.error('Failed to trigger welcome notification:', e);
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.error('Background sync failed:', e);

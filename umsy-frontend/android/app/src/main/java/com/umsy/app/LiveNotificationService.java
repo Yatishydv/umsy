@@ -105,14 +105,16 @@ public class LiveNotificationService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         updateTimetableState();
         
+        // Unconditionally call startForeground to satisfy Android 8.0+ requirements and prevent crashes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification());
+        }
+
         boolean insideActiveWindow = isInsideActiveWindow();
         
         if (insideActiveWindow) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-            } else {
-                startForeground(NOTIFICATION_ID, buildNotification());
-            }
             startTimer();
         } else {
             // Trigger roasts if it's the right time slot

@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.content.SharedPreferences;
+import android.app.PendingIntent;
 import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSObject;
@@ -166,5 +167,115 @@ public class LiveNotificationPlugin extends Plugin {
                 }
             }
         }).start();
+    }
+
+    @PluginMethod
+    public void triggerWelcomeNotification(PluginCall call) {
+        try {
+            SharedPreferences prefs = getContext().getSharedPreferences("CapacitorStorage", android.content.Context.MODE_PRIVATE);
+            String infoStr = prefs.getString("umsy_student_info", null);
+            String firstName = "";
+            double cgpa = 8.0;
+            if (infoStr != null) {
+                try {
+                    org.json.JSONObject info = new org.json.JSONObject(infoStr);
+                    String fullName = info.optString("Name", "");
+                    if (!fullName.isEmpty()) {
+                        firstName = fullName.split(" ")[0];
+                    }
+                    cgpa = info.optDouble("CGPA", 8.0);
+                } catch (Exception e) {}
+            }
+
+            final String finalName = firstName.isEmpty() ? "Legend" : firstName;
+            final double finalCgpa = cgpa;
+
+            // Fetch dynamic welcome roast asynchronously
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String fallback = "Hey " + finalName + "! Welcome to UMSY. Ready to check your " + finalCgpa + " CGPA?";
+                    try {
+                        URL url = new URL("https://umsy-backend.onrender.com/api/generate-roast");
+                        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                        conn.setRequestMethod("POST");
+                        conn.setRequestProperty("Content-Type", "application/json; utf-8");
+                        conn.setRequestProperty("Accept", "application/json");
+                        conn.setDoOutput(true);
+                        conn.setConnectTimeout(4000);
+                        conn.setReadTimeout(4000);
+
+                        org.json.JSONObject jsonParam = new org.json.JSONObject();
+                        jsonParam.put("name", finalName);
+                        jsonParam.put("cgpa", finalCgpa);
+                        jsonParam.put("timeOfDay", "welcome");
+
+                        try (java.io.OutputStream os = conn.getOutputStream()) {
+                            byte[] input = jsonParam.toString().getBytes("utf-8");
+                            os.write(input, 0, input.length);
+                        }
+
+                        int code = conn.getResponseCode();
+                        if (code == 200) {
+                            try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "utf-8"))) {
+                                StringBuilder response = new StringBuilder();
+                                String responseLine = null;
+                                while ((responseLine = br.readLine()) != null) {
+                                    response.append(responseLine.trim());
+                                }
+                                org.json.JSONObject res = new org.json.JSONObject(response.toString());
+                                if (res.optBoolean("success", false)) {
+                                    String roast = res.optString("roast", "");
+                                    if (!roast.isEmpty()) {
+                                        showSystemNotification("UMsy Welcome", roast);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("LiveNotification", "Failed to fetch AI welcome", e);
+                    }
+                    showSystemNotification("UMsy Welcome", fallback);
+                }
+            }).start();
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
+    }
+
+    private void showSystemNotification(String title, String content) {
+        android.app.NotificationManager nm = (android.app.NotificationManager) getContext().getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+        String channelId = "WelcomeChannel";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.app.NotificationChannel channel = new android.app.NotificationChannel(
+                    channelId,
+                    "Welcome Alerts",
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT
+            );
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
+        }
+
+        Intent intent = new Intent(getContext(), MainActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pi = PendingIntent.getActivity(getContext(), 10, intent, PendingIntent.FLAG_IMMUTABLE);
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(getContext(), channelId)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(content))
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setColor(android.graphics.Color.parseColor("#BEF227"))
+                .setContentIntent(pi)
+                .setAutoCancel(true);
+
+        if (nm != null) {
+            nm.notify(105, builder.build());
+        }
     }
 }
