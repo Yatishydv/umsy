@@ -223,6 +223,21 @@ function AppContent() {
             </button>
           )}
 
+          <a
+            href="https://umsy.vercel.app/umsy.apk?v=9"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              if (Capacitor.isNativePlatform()) {
+                e.preventDefault();
+                window.open('https://umsy.vercel.app/umsy.apk?v=9', '_system');
+              }
+            }}
+            className="mt-5 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 underline cursor-pointer transition-colors"
+          >
+            Or download directly from website
+          </a>
+
           {downloadError && (
             <p className="text-red-500 text-xs mt-3 font-semibold">{downloadError}</p>
           )}
