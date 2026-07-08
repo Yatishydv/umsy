@@ -46,15 +46,20 @@ const UmsyV04Login = () => {
 
     // ── Theme init ─────────────────────────────────────────────────────────
     useEffect(() => {
+        const savedRegno = localStorage.getItem('umsy_regno');
+        const savedPassword = localStorage.getItem('umsy_password');
+        if (savedRegno) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
+
         const saved = localStorage.getItem('theme') || 'light';
         setTheme(saved);
         document.documentElement.classList.toggle('dark', saved === 'dark');
 
-        const savedRegno = localStorage.getItem('umsy_regno');
-        const savedPassword = localStorage.getItem('umsy_password');
         if (savedRegno) setRegno(savedRegno);
         if (savedPassword) setPassword(savedPassword);
-    }, []);
+    }, [navigate]);
 
     // ── Slide auto-rotate ──────────────────────────────────────────────────
     useEffect(() => {
