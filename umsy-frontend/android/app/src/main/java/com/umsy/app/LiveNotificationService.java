@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.graphics.Color;
+import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
 
@@ -35,6 +36,14 @@ public class LiveNotificationService extends Service {
     private Handler handler;
     private Runnable runnable;
     private String lastAlertedClassKey = "";
+
+    // Notification State variables
+    private String currentStatusTitle = "Today's Schedule";
+    private String currentStatusSubtitle = "No active class";
+    private String currentRoom = "--";
+    private String currentTimeLeft = "--";
+    private String nextClassText = "None";
+    private int currentProgress = 0;
 
     // ── Sarcastic and funny quote pools ──────────────────────────────────────
     private static final String[] MORNING_QUOTES = {
@@ -89,7 +98,8 @@ public class LiveNotificationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIFICATION_ID, buildNotification("Fetching class data..."));
+        updateTimetableState();
+        startForeground(NOTIFICATION_ID, buildNotification());
         startTimer();
         return START_STICKY;
     }
@@ -112,18 +122,26 @@ public class LiveNotificationService extends Service {
     }
 
     private void updateNotificationText() {
-        String text = getTimetableText();
-        Notification notification = buildNotification(text);
+        updateTimetableState();
+        Notification notification = buildNotification();
         notificationManager.notify(NOTIFICATION_ID, notification);
     }
 
-    private String getTimetableText() {
+    private void updateTimetableState() {
+        currentStatusTitle = "Today's Schedule";
+        currentStatusSubtitle = "No active class";
+        currentRoom = "--";
+        currentTimeLeft = "--";
+        nextClassText = "None";
+        currentProgress = 0;
+
         try {
             SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
             String timetableStr = prefs.getString("timetable_data", null);
 
             if (timetableStr == null) {
-                return "No classes scheduled or timetable not synced.";
+                currentStatusSubtitle = "Timetable not synced";
+                return;
             }
 
             JSONObject fullTimetable = new JSONObject(timetableStr);
@@ -134,7 +152,9 @@ public class LiveNotificationService extends Service {
 
             JSONArray schedule = fullTimetable.optJSONArray(todayStr);
             if (schedule == null || schedule.length() == 0) {
-                return "🏖️ Holiday! No classes scheduled for today.";
+                currentStatusTitle = "Day Off";
+                currentStatusSubtitle = "No classes scheduled today";
+                return;
             }
 
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -155,26 +175,28 @@ public class LiveNotificationService extends Service {
                 }
             }
 
-            // Class status visibility enforcer: only show stats starting from 1 hour before first class
-            // up to 1 hour after the last class ends. Outside this phase, display day completed/holiday status.
+            // Show status from 1 hour before first class up to 1 hour after last class
             if (currentMinutes < (firstClassStartMins - 60) || currentMinutes > (lastClassEndMins + 60)) {
                 if (currentMinutes > (lastClassEndMins + 60)) {
-                    return "🎉 Day Completed! Classes silent notifications closed.";
+                    currentStatusTitle = "Day Completed";
+                    currentStatusSubtitle = "All classes done for today";
                 } else {
-                    return "⏳ Classes starting later today.";
+                    currentStatusSubtitle = "Classes start later today";
                 }
+                return;
             }
 
             String currentClass = null;
             String nextClass = null;
             int minutesLeft = -1;
+            int currentClassDuration = 0;
+            int currentClassElapsed = 0;
 
             for (int i = 0; i < schedule.length(); i++) {
                 JSONObject cls = schedule.getJSONObject(i);
                 String timeRange = cls.optString("time", "");
                 String className = cls.optString("courseCode", "Class");
                 String room = cls.optString("room", "");
-                String roomSuffix = room.isEmpty() ? "" : " (Rm: " + room + ")";
                 
                 if (timeRange.contains("-")) {
                     String[] parts = timeRange.split("-");
@@ -185,11 +207,14 @@ public class LiveNotificationService extends Service {
                     int endMins = parseTimeToMinutes(endTimeStr);
 
                     if (currentMinutes >= startMins && currentMinutes < endMins) {
-                        currentClass = className + roomSuffix;
+                        currentClass = className;
+                        currentRoom = room.isEmpty() ? "--" : room;
                         minutesLeft = endMins - currentMinutes;
+                        currentClassDuration = endMins - startMins;
+                        currentClassElapsed = currentMinutes - startMins;
                     } else if (currentMinutes < startMins) {
                         if (nextClass == null) {
-                            nextClass = className + roomSuffix + " at " + startTimeStr;
+                            nextClass = className + (room.isEmpty() ? "" : " (Rm: " + room + ")") + " at " + startTimeStr;
                         }
                         // Check if next class starts in 5 minutes
                         int timeDiff = startMins - currentMinutes;
@@ -205,24 +230,34 @@ public class LiveNotificationService extends Service {
             }
 
             if (currentClass != null) {
-                String text = "🟢 Ongoing: " + currentClass + " (" + minutesLeft + "m left)";
+                currentStatusTitle = "Ongoing: " + currentClass;
+                currentStatusSubtitle = "In progress";
+                currentTimeLeft = minutesLeft + "m left";
+                if (currentClassDuration > 0) {
+                    currentProgress = (currentClassElapsed * 100) / currentClassDuration;
+                }
                 if (nextClass != null) {
-                    text += " | ⏭️ Next: " + nextClass;
-                }
-                return text;
-            } else if (nextClass != null) {
-                if (currentMinutes >= firstClassStartMins) {
-                    return "🍽️ Break! Grab lunch & drink water! 💧 | ⏭️ Next: " + nextClass;
+                    nextClassText = nextClass;
                 } else {
-                    return "⏳ Next: " + nextClass;
+                    nextClassText = "None";
                 }
+            } else if (nextClass != null) {
+                currentStatusTitle = "Up Next";
+                if (currentMinutes >= firstClassStartMins) {
+                    currentStatusSubtitle = "Break time";
+                } else {
+                    currentStatusSubtitle = "Waiting for first class";
+                }
+                nextClassText = nextClass;
+                currentTimeLeft = "--";
             } else {
-                return "🎉 Day Completed! No more classes today.";
+                currentStatusTitle = "Day Completed";
+                currentStatusSubtitle = "No more classes today";
             }
 
         } catch (Exception e) {
             Log.e("LiveNotification", "Error parsing timetable", e);
-            return "Failed to parse timetable data.";
+            currentStatusSubtitle = "Error loading schedule";
         }
     }
 
@@ -236,14 +271,14 @@ public class LiveNotificationService extends Service {
             int currentMinutes = currentHour * 60 + calendar.get(java.util.Calendar.MINUTE);
             String todayDateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-            // ── Phase 1: Goodnight Alert (Exactly at 9 PM / 21:00) ─────────────────
+            // Goodnight Alert (Exactly at 9 PM / 21:00)
             if (currentHour == 21 && currentMinutes >= 1260 && currentMinutes < 1275) {
                 String lastGoodnight = prefs.getString("last_goodnight_date", "");
                 if (!lastGoodnight.equals(todayDateStr)) {
                     prefs.edit().putString("last_goodnight_date", todayDateStr).apply();
-                    triggerSarcasticAlert("Goodnight! 😴", getRandomQuote(GOODNIGHT_QUOTES));
+                    triggerSarcasticAlert("Goodnight 😴", getRandomQuote(GOODNIGHT_QUOTES));
                 }
-                return; // Stop checking further alerts for this tick
+                return;
             }
 
             // Fetch timetable to calculate class hours
@@ -283,7 +318,7 @@ public class LiveNotificationService extends Service {
             long lastAlertTime = prefs.getLong("last_sarcastic_alert_time", 0);
             long nowMs = System.currentTimeMillis();
             if (nowMs - lastAlertTime < 20 * 60 * 1000) {
-                return; // Enforce minimum interval
+                return;
             }
 
             // Roll random probability (5% chance of triggering notification during this tick)
@@ -291,19 +326,18 @@ public class LiveNotificationService extends Service {
                 return;
             }
 
-            // ── Phase 2: Morning Alerts (4:00 AM to 1 hour before first class) ──
+            // Morning Alerts (4:00 AM to 1 hour before first class)
             if (currentMinutes >= 240 && currentMinutes < (firstClassStartMins - 60)) {
-                triggerSarcasticAlert("Wakey Wakey! ☕", getRandomQuote(MORNING_QUOTES));
+                triggerSarcasticAlert("Wakey Wakey ☕", getRandomQuote(MORNING_QUOTES));
                 prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
             }
-            // ── Phase 3: Class Time Roasts (Within class phase hours) ─────────────────
+            // Class Time Roasts (Within class phase hours)
             else if (hasClasses && currentMinutes >= (firstClassStartMins - 60) && currentMinutes <= (lastClassEndMins + 60)) {
-                triggerSarcasticAlert("Class Roaster 🔥", getRandomQuote(CLASS_TIME_ROASTS));
+                triggerSarcasticAlert("Class Roast", getRandomQuote(CLASS_TIME_ROASTS));
                 prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
             }
-            // ── Phase 4: After-Class Alerts (1 hour after classes end up to 8:00 PM) ──
+            // After-Class Alerts (1 hour after classes end up to 8:00 PM)
             else if (currentMinutes > (lastClassEndMins + 60) && currentMinutes < 1200) {
-                // Personalize roasts based on CGPA and backlogs
                 ArrayList<String> candidateQuotes = new ArrayList<>();
                 for (String q : AFTER_CLASS_ROASTS) candidateQuotes.add(q);
 
@@ -344,7 +378,7 @@ public class LiveNotificationService extends Service {
                 }
 
                 String finalQuote = candidateQuotes.get(new Random().nextInt(candidateQuotes.size()));
-                triggerSarcasticAlert("Evening Roast 💀", finalQuote);
+                triggerSarcasticAlert("Evening Roast", finalQuote);
                 prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
             }
 
@@ -362,10 +396,10 @@ public class LiveNotificationService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     ALERT_CHANNEL_ID,
-                    "Sarcastic Notification Alerts",
+                    "Alerts",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
-            channel.setDescription("Delivers funny and sarcastic roasts and reminders");
+            channel.setDescription("Reminders and alerts");
             if (nm != null) {
                 nm.createNotificationChannel(channel);
             }
@@ -397,10 +431,10 @@ public class LiveNotificationService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     channelId,
-                    "Next Class Alert Channel",
+                    "Class Alerts",
                     NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Alerts you 5 minutes before your next class starts");
+            channel.setDescription("Alerts before class starts");
             channel.enableVibration(true);
             channel.setVibrationPattern(new long[]{0, 500, 250, 500});
             if (nm != null) {
@@ -411,11 +445,11 @@ public class LiveNotificationService extends Service {
         Intent intent = new Intent(this, MainActivity.class);
         PendingIntent pi = PendingIntent.getActivity(this, 1, intent, PendingIntent.FLAG_IMMUTABLE);
         
-        String roomText = room.isEmpty() ? "" : " | 📍 Room " + room;
-        String content = "🎓 Course: " + courseCode + roomText + "\n⏳ Starts in " + minutes + " minutes (at " + startTime + ")";
+        String roomText = room.isEmpty() ? "" : " | Room " + room;
+        String content = "Course: " + courseCode + roomText + "\nStarts in " + minutes + " minutes (at " + startTime + ")";
         
         Notification alert = new NotificationCompat.Builder(this, channelId)
-                .setContentTitle("🚨 Next Class Starting Soon!")
+                .setContentTitle("Next class starting soon ⏳")
                 .setContentText(content)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(content))
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -440,38 +474,52 @@ public class LiveNotificationService extends Service {
         }
     }
 
-    private Notification buildNotification(String text) {
+    private Notification buildNotification() {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this,
                 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
-        String title = "⏰ UMSY Live Status";
-        if (text.contains("Holiday")) {
-            title = "🏖️ Day Off - UMSY";
-        } else if (text.contains("Completed")) {
-            title = "🎉 Day Completed - UMSY";
-        }
+        RemoteViews collapsedView = new RemoteViews(getPackageName(), R.layout.notification_custom_collapsed);
+        RemoteViews expandedView = new RemoteViews(getPackageName(), R.layout.notification_custom_expanded);
 
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+        // Populate Collapsed Custom View
+        collapsedView.setTextViewText(R.id.notif_title, currentStatusTitle);
+        collapsedView.setTextViewText(R.id.notif_subtitle, currentStatusSubtitle);
+        collapsedView.setTextViewText(R.id.notif_room, "Rm: " + currentRoom);
+        collapsedView.setTextViewText(R.id.notif_time, currentTimeLeft);
+
+        // Populate Expanded Custom View
+        expandedView.setTextViewText(R.id.notif_expanded_title, currentStatusTitle);
+        expandedView.setTextViewText(R.id.notif_expanded_subtitle, currentStatusSubtitle);
+        expandedView.setTextViewText(R.id.notif_expanded_room, currentRoom);
+        expandedView.setTextViewText(R.id.notif_expanded_duration, currentTimeLeft);
+        expandedView.setTextViewText(R.id.notif_expanded_next, nextClassText);
+        expandedView.setProgressBar(R.id.notif_progress, 100, currentProgress, false);
+
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        expandedView.setTextViewText(R.id.notif_expanded_time_stamp, timeFormat.format(new Date()));
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_menu_today)
                 .setColor(Color.parseColor("#BEF227"))
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .build();
+                .setCustomContentView(collapsedView)
+                .setCustomBigContentView(expandedView)
+                .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+
+        return builder.build();
     }
 
     private void createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Live Class Notification Channel",
+                    "Schedule Monitor",
                     NotificationManager.IMPORTANCE_LOW
                 );
-                serviceChannel.setDescription("Shows current class status");
+                serviceChannel.setDescription("Monitors current class status");
                 if (notificationManager != null) {
                     notificationManager.createNotificationChannel(serviceChannel);
                 }

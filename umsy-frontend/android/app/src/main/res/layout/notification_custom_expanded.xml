@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#121214"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header Area -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="UMSY SCHEDULE"
+            android:textColor="#BEF227"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:layout_alignParentStart="true" />
+
+        <TextView
+            android:id="@+id/notif_expanded_time_stamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Now"
+            android:textColor="#606065"
+            android:textSize="10sp"
+            android:layout_alignParentEnd="true" />
+    </RelativeLayout>
+
+    <!-- Main Title (e.g. CSE101) -->
+    <TextView
+        android:id="@+id/notif_expanded_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ongoing Class"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp" />
+
+    <!-- Subtitle (Details) -->
+    <TextView
+        android:id="@+id/notif_expanded_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="CSE101"
+        android:textColor="#A0A0A5"
+        android:textSize="13sp"
+        android:layout_marginTop="2dp" />
+
+    <!-- Progress bar showing class completion -->
+    <ProgressBar
+        android:id="@+id/notif_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="16dp"
+        android:progress="0"
+        android:progressDrawable="@android:drawable/progress_horizontal"
+        android:progressBackgroundTint="#303035"
+        android:progressTint="#BEF227" />
+
+    <!-- Info Cards Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        android:weightSum="3">
+
+        <!-- Room info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ROOM"
+                android:textColor="#606065"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/notif_expanded_room"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Time remaining -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="REMAINING"
+                android:textColor="#606065"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/notif_expanded_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- left"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Next Class -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="UP NEXT"
+                android:textColor="#606065"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/notif_expanded_next"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#BEF227"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

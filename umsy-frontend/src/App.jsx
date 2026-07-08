@@ -59,6 +59,8 @@ function AppContent() {
   const loginRoutes = ['/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
   const isLoginPage = loginRoutes.includes(location.pathname);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(null);
+  const [downloadError, setDownloadError] = useState(null);
 
   // Check version on startup
   useEffect(() => {
@@ -88,6 +90,33 @@ function AppContent() {
 
     return () => window.removeEventListener('umsy-force-update', handleForceUpdate);
   }, []);
+
+  const handleUpdate = async () => {
+    if (!Capacitor.isNativePlatform() || !Capacitor.Plugins.LiveNotification) {
+      window.open('https://umsy.vercel.app/umsy.apk?v=9', '_system');
+      return;
+    }
+
+    try {
+      setDownloadProgress(0);
+      setDownloadError(null);
+
+      // Listen for download progress
+      const listener = await Capacitor.Plugins.LiveNotification.addListener('downloadProgress', (data) => {
+        setDownloadProgress(data.progress);
+      });
+
+      await Capacitor.Plugins.LiveNotification.downloadAndInstallApk({
+        url: 'https://umsy.vercel.app/umsy.apk?v=9'
+      });
+
+      listener.remove();
+    } catch (err) {
+      console.error('Update failed', err);
+      setDownloadError('Download failed. Please try again.');
+      setDownloadProgress(null);
+    }
+  };
 
   // Monitor credentials and student info. If missing, logout and redirect.
   useEffect(() => {
@@ -151,14 +180,28 @@ function AppContent() {
           </div>
           <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">App Update Required</h2>
           <p className="text-slate-500 dark:text-zinc-400 text-sm leading-relaxed mb-6 font-bold">
-            You are using an older version of UMSY. Please update to continue using the application.
+            {downloadProgress !== null ? `Downloading update: ${downloadProgress}%` : "You are using an older version of UMSY. Please update to continue."}
           </p>
-          <button
-            onClick={() => window.open('https://umsy.vercel.app/umsy.apk?v=9', '_system')}
-            className="w-full bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black py-3.5 px-6 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#bef227]/20 cursor-pointer"
-          >
-            Download Now
-          </button>
+
+          {downloadProgress !== null ? (
+            <div className="w-full bg-slate-200 dark:bg-zinc-800 rounded-full h-2.5 mb-6">
+              <div 
+                className="bg-[#bef227] h-2.5 rounded-full transition-all duration-300" 
+                style={{ width: `${downloadProgress}%` }}
+              ></div>
+            </div>
+          ) : (
+            <button
+              onClick={handleUpdate}
+              className="w-full bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black py-3.5 px-6 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#bef227]/20 cursor-pointer"
+            >
+              Update Now
+            </button>
+          )}
+
+          {downloadError && (
+            <p className="text-red-500 text-xs mt-3 font-semibold">{downloadError}</p>
+          )}
         </div>
       </div>
     );
