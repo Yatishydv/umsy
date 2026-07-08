@@ -1189,8 +1189,22 @@ const Dashboard = () => {
 
             {/* Daily Sync Prompt Modal */}
             {showSyncPrompt && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="bg-white/95 dark:bg-zinc-950/95 border border-slate-200/50 dark:border-zinc-800/80 rounded-[32px] w-full max-w-sm p-6 shadow-2xl flex flex-col items-center text-center relative overflow-hidden select-none">
+                <div 
+                    onClick={() => setShowSyncPrompt(false)}
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xl animate-in fade-in duration-300 cursor-pointer"
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white/95 dark:bg-zinc-950/95 border border-slate-200/50 dark:border-zinc-800/80 rounded-[32px] w-full max-w-sm p-6 shadow-2xl flex flex-col items-center text-center relative overflow-hidden select-none cursor-default"
+                    >
+                        {/* Close button */}
+                        <button 
+                            onClick={() => setShowSyncPrompt(false)}
+                            className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                        >
+                            <X className="h-4.5 w-4.5" />
+                        </button>
+
                         <div className="w-16 h-16 bg-[#bef227] text-[#1c312e] rounded-2xl flex items-center justify-center mb-5 shadow-md shadow-[#bef227]/25">
                             <RefreshCw className={`h-8 w-8 text-[#1c312e] ${isSyncing ? 'animate-spin' : ''}`} />
                         </div>
@@ -1211,6 +1225,12 @@ const Dashboard = () => {
                                 <p className="text-[11px] font-bold text-[#bef227] tracking-wide uppercase animate-pulse">
                                     {syncStatus}
                                 </p>
+                                <button
+                                    onClick={() => setShowSyncPrompt(false)}
+                                    className="w-full hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-550 dark:text-zinc-400 font-bold py-2 px-6 rounded-2xl transition-all cursor-pointer text-xs"
+                                >
+                                    Run in Background
+                                </button>
                             </div>
                         ) : (
                             <div className="w-full flex flex-col gap-2.5">
