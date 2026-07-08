@@ -244,10 +244,63 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/app-version', (req, res) => {
     res.json({
-        latestVersionCode: 17,
-        versionName: "2.8",
+        latestVersionCode: 18,
+        versionName: "2.9",
         forceUpdate: true
     });
+});
+
+
+/**
+ * POST /api/generate-roast
+ * Generates a highly personalized, sarcastic academic roast/quote using Groq API
+ */
+app.post('/api/generate-roast', async (req, res) => {
+    try {
+        const { name, cgpa, attendance, timeOfDay, backlogs } = req.body;
+        const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+        
+        if (!GROQ_API_KEY) {
+            return res.json({ success: false, error: 'Groq API Key not configured' });
+        }
+
+        const prompt = `Write a single, short, highly sarcastic, funny, one-liner academic roast or motivation.
+Student Details:
+- First Name: ${name || 'Student'}
+- CGPA: ${cgpa || 'N/A'}
+- Attendance: ${attendance || 'N/A'}%
+- Backlogs count: ${backlogs || 0}
+- Time of Day: ${timeOfDay || 'day'}
+
+Rules:
+- Keep it under 15 words.
+- Be very witty, slightly sarcastic but friendly.
+- Directly refer to their name.
+- Do NOT include any greeting or introduction.
+- Return ONLY the roast string, nothing else.`;
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama-3.1-8b-instant',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.8,
+                max_tokens: 50
+            })
+        });
+
+        const result = await response.json();
+        const roast = result?.choices?.[0]?.message?.content?.trim().replace(/"/g, '') || '';
+        
+        return res.json({ success: true, roast });
+    } catch (e) {
+        console.error('Failed to generate roast:', e.message);
+        return res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 
