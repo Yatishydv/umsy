@@ -192,6 +192,8 @@ public class LiveNotificationService extends Service {
 
             String currentClass = null;
             String nextClass = null;
+            String nextClassCollapsed = null;
+            String nextClassExpanded = "None";
             int minutesLeft = -1;
             int currentClassDuration = 0;
             int currentClassElapsed = 0;
@@ -219,6 +221,8 @@ public class LiveNotificationService extends Service {
                     } else if (currentMinutes < startMins) {
                         if (nextClass == null) {
                             nextClass = className + (room.isEmpty() ? "" : " (Rm: " + room + ")") + " at " + startTimeStr;
+                            nextClassCollapsed = className + (room.isEmpty() ? "" : " (Rm: " + room + ")");
+                            nextClassExpanded = className + "\n" + (room.isEmpty() ? "" : "Rm: " + room + "\n") + "at " + startTimeStr;
                         }
                         // Check if next class starts in 5 minutes
                         int timeDiff = startMins - currentMinutes;
@@ -235,24 +239,26 @@ public class LiveNotificationService extends Service {
 
             if (currentClass != null) {
                 currentStatusTitle = "Ongoing: " + currentClass;
-                currentStatusSubtitle = "In progress";
+                if (nextClassCollapsed != null) {
+                    currentStatusSubtitle = "Next: " + nextClassCollapsed;
+                } else {
+                    currentStatusSubtitle = "No more classes today";
+                }
                 currentTimeLeft = minutesLeft + "m left";
                 if (currentClassDuration > 0) {
                     currentProgress = (currentClassElapsed * 100) / currentClassDuration;
                 }
-                if (nextClass != null) {
-                    nextClassText = nextClass;
-                } else {
-                    nextClassText = "None";
-                }
+                nextClassText = nextClassExpanded;
             } else if (nextClass != null) {
                 currentStatusTitle = "Up Next";
-                if (currentMinutes >= firstClassStartMins) {
+                if (nextClassCollapsed != null) {
+                    currentStatusSubtitle = "Next: " + nextClassCollapsed;
+                } else if (currentMinutes >= firstClassStartMins) {
                     currentStatusSubtitle = "Break time";
                 } else {
                     currentStatusSubtitle = "Waiting for first class";
                 }
-                nextClassText = nextClass;
+                nextClassText = nextClassExpanded;
                 currentTimeLeft = "--";
             } else {
                 currentStatusTitle = "Day Completed";
