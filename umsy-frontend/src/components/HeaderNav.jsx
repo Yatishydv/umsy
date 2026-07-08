@@ -7,6 +7,17 @@ const HeaderNav = ({ activeTab }) => {
     const navigate = useNavigate();
     const [studentInfo, setStudentInfo] = useState(null);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    useEffect(() => {
+        const handleSyncState = (e) => {
+            if (e.detail) {
+                setIsSyncing(!!e.detail.syncing);
+            }
+        };
+        window.addEventListener('sync-state-changed', handleSyncState);
+        return () => window.removeEventListener('sync-state-changed', handleSyncState);
+    }, []);
     
     // Sliding indicator state
     const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0, opacity: 0 });
@@ -111,7 +122,7 @@ const HeaderNav = ({ activeTab }) => {
                         className="cursor-pointer p-2 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-850 text-slate-555 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-250 active:scale-95"
                         title="Resync Data"
                     >
-                        <RefreshCw className="h-4.5 w-4.5" />
+                        <RefreshCw className={`h-4.5 w-4.5 ${isSyncing ? 'animate-spin' : ''}`} />
                     </button>
 
                     <button
@@ -191,7 +202,7 @@ const HeaderNav = ({ activeTab }) => {
                     className="cursor-pointer p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-850 text-slate-555 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-250 active:scale-95"
                     title="Resync Data"
                 >
-                    <RefreshCw className="h-4.5 w-4.5" />
+                    <RefreshCw className={`h-4.5 w-4.5 ${isSyncing ? 'animate-spin' : ''}`} />
                 </button>
 
                 <button

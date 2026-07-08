@@ -7,7 +7,7 @@ import MessagesCard from './MessagesCard';
 import SeatingPlanCardCompact from './SeatingPlanCardCompact';
 import MobileNotificationsSheet from './MobileNotificationsSheet';
 import { Building2,Bed,Table } from 'lucide-react';
-import { getStudentInfo, getStudentDashboardV04, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl, getResult, getResultV04, getMessagesV04, getAttendanceDetails, getCourses, getMarks, getMarksV04 } from '../services/api';
+import { getStudentInfo, getStudentDashboardV04, getSeatingPlan, getTimeTable, getRanking, getPendingAssignments, getLeaveSlipUrl, getLeaveSlipHtmlFromUrl, getResult, getResultV04, getMessagesV04, getAttendanceDetails, getCourses, getMarks, getMarksV04, tokenLoginV04, saveSession } from '../services/api';
 import { sendNotification } from '../utils/notificationHelper';
 import LeaveSlipModal from './LeaveSlipModal';
 import { Capacitor } from '@capacitor/core';
@@ -21,6 +21,19 @@ const getGreeting = () => {
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const calculateBacklogsCount = (data) => {
+        let count = 0;
+        const backlogGrades = new Set(['E', 'F', 'G', 'I']);
+        if (data && data.semesters) {
+            data.semesters.forEach(sem => {
+                (sem.subjects || []).forEach(sub => {
+                    if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) count++;
+                });
+            });
+        }
+        return count;
+    };
+
     const [studentInfo, setStudentInfo] = useState(null);
     const [seatingPlan, setSeatingPlan] = useState(null);
     const [timetable, setTimetable] = useState({});
@@ -45,6 +58,10 @@ const Dashboard = () => {
     const [coursesData, setCoursesData] = useState([]);
     const [marksData, setMarksData] = useState([]);
     const [activeCircle, setActiveCircle] = useState(null);
+    const [showSyncPrompt, setShowSyncPrompt] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncProgress, setSyncProgress] = useState(0);
+    const [syncStatus, setSyncStatus] = useState('');
 
     const handleTestNotification = async () => {
         const title = 'UMsy Test Notification';
@@ -283,32 +300,141 @@ const Dashboard = () => {
         };
     }, []);
 
-    useEffect(() => {
-        const calculateBacklogsCount = (data) => {
-            let count = 0;
-            const backlogGrades = new Set(['E', 'F', 'G', 'I']);
-            if (data && data.semesters) {
-                data.semesters.forEach(sem => {
-                    (sem.subjects || []).forEach(sub => {
-                        if (sub.grade && backlogGrades.has(sub.grade.trim().toUpperCase())) count++;
-                    });
-                });
-            }
-            return count;
-        };
+    const handleStartSync = async () => {
+        const cleanRegno = localStorage.getItem('umsy_regno')?.trim();
+        const cleanPassword = localStorage.getItem('umsy_password')?.trim();
+        if (!cleanRegno || !cleanPassword) return;
 
+        setIsSyncing(true);
+        setSyncProgress(5);
+        setSyncStatus('Re-authenticating...');
+        window.dispatchEvent(new CustomEvent('sync-state-changed', { detail: { syncing: true } }));
+
+        try {
+            const result = await tokenLoginV04(cleanRegno, cleanPassword);
+            if (result.success && result.cookies) {
+                localStorage.setItem('umsy_cookies', result.cookies);
+                try {
+                    await saveSession(cleanRegno, result.cookies);
+                } catch (saveErr) {}
+
+                setSyncStatus('Fetching basic details...');
+                setSyncProgress(20);
+
+                const auth = result.cookies;
+
+                // Concurrent fetches
+                const promises = [
+                    (async () => {
+                        try {
+                            const studentRes = await getStudentDashboardV04(auth);
+                            if (studentRes.success && studentRes.data) {
+                                setStudentInfo(studentRes.data);
+                                localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
+                                window.dispatchEvent(new Event('student-info-updated'));
+                            }
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const attRes = await getAttendanceDetails(auth);
+                            if (attRes.success && attRes.data) {
+                                setAttendanceData(attRes.data);
+                                localStorage.setItem('umsy_attendance_data', JSON.stringify(attRes.data));
+                            }
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const coursesRes = await getCourses(auth);
+                            if (coursesRes.success && coursesRes.data) {
+                                setCoursesData(coursesRes.data);
+                                localStorage.setItem('umsy_courses_data', JSON.stringify(coursesRes.data));
+                            }
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const marksRes = await getMarksV04(auth);
+                            if (marksRes.success && marksRes.data) {
+                                setMarksData(marksRes.data);
+                                localStorage.setItem('umsy_marks_data', JSON.stringify(marksRes.data));
+                            }
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const result = await getTimeTable(auth);
+                            if (result.data && Object.keys(result.data).length > 0) {
+                                setTimetable(result.data);
+                                localStorage.setItem('umsy_timetable_data', JSON.stringify(result.data));
+                            }
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const seatingPlanResult = await getSeatingPlan(auth);
+                            setSeatingPlan(seatingPlanResult.data);
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const result = await getPendingAssignments(auth);
+                            setPendingAssignments(result.data || []);
+                        } catch (e) {}
+                    })(),
+                    (async () => {
+                        try {
+                            const result = await getResultV04(auth);
+                            if (result.success && result.data) {
+                                localStorage.setItem('umsy_result_data', JSON.stringify(result.data));
+                                setBacklogCount(calculateBacklogsCount(result.data));
+                            }
+                        } catch (e) {}
+                    })()
+                ];
+
+                await Promise.allSettled(promises);
+                
+                // Fetch rankings too
+                try {
+                    const res = await getRanking(cleanRegno);
+                    if (res.success) {
+                        setRanking(res.data);
+                        localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno: cleanRegno, data: res.data }));
+                    }
+                } catch (e) {}
+
+                localStorage.setItem('umsy_last_sync_date', new Date().toDateString());
+                setShowSyncPrompt(false);
+            }
+        } catch (e) {
+            console.error('Background sync failed:', e);
+        } finally {
+            setIsSyncing(false);
+            setSyncProgress(100);
+            window.dispatchEvent(new CustomEvent('sync-state-changed', { detail: { syncing: false } }));
+        }
+    };
+
+    useEffect(() => {
+        const handleTriggerResync = () => {
+            handleStartSync();
+        };
+        window.addEventListener('trigger-resync', handleTriggerResync);
+        return () => window.removeEventListener('trigger-resync', handleTriggerResync);
+    }, []);
+
+    useEffect(() => {
         const fetchData = async () => {
             const currentRegno = localStorage.getItem('umsy_regno');
             const cookies = localStorage.getItem('umsy_cookies');
-            const isV04 = localStorage.getItem('umsy_is_v04') === 'true';
             
             if (!cookies && !currentRegno) {
                 setLoading(false);
                 setIsInitialFetching(false);
                 return;
             }
-
-            const auth = cookies ? cookies : { regno: currentRegno };
 
             // 1. Load Caches Immediately
             const cachedInfo = localStorage.getItem('umsy_student_info');
@@ -356,138 +482,22 @@ const Dashboard = () => {
                 } catch (e) { }
             }
 
-            // If we have cache, show dashboard immediately to remain snappy, otherwise stay in skeleton
+            // If we have cache, show dashboard immediately to remain snappy
             if (hasCache) {
                 setLoading(false);
+                setIsInitialFetching(false);
             }
 
-            // 2. Fetch Fresh Data Concurrently
-            try {
-                const promises = [
-                    (async () => {
-                        try {
-                            const studentRes = isV04 ? await getStudentDashboardV04(auth) : await getStudentInfo(auth);
-                            if (studentRes.success && studentRes.data) {
-                                setStudentInfo(studentRes.data);
-                                localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
-                                localStorage.removeItem('umsy_is_logging_in');
-                                window.dispatchEvent(new Event('student-info-updated'));
-
-                                // Notify about new messages exactly once
-                                if (studentRes.data.Messages && Array.isArray(studentRes.data.Messages)) {
-                                    studentRes.data.Messages.forEach(msg => {
-                                        const cleanSubject = (msg.subject || 'LPU UMS').trim();
-                                        const cleanSender = (msg.sender || 'Sender').trim();
-                                        const cleanDate = (msg.date || '').trim();
-                                        const msgId = `msg_notif_${cleanSender}_${cleanDate}_${cleanSubject}`.replace(/\s+/g, '_');
-                                        
-                                        if (!localStorage.getItem(msgId)) {
-                                            sendNotification(
-                                                `✉️ New Message: ${cleanSubject}`,
-                                                `From: ${cleanSender}\n${msg.content || ''}`
-                                            );
-                                            localStorage.setItem(msgId, 'notified');
-                                        }
-                                    });
-                                }
-                                
-                                // Fetch ranking immediately after getting registration number
-                                const regno = studentRes.data.Registrationnumber;
-                                if (regno) {
-                                    try {
-                                        const res = await getRanking(regno);
-                                        if (res.success) {
-                                            setRanking(res.data);
-                                            localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno, data: res.data }));
-                                        }
-                                    } catch (e) { console.error('Ranking failed:', e); }
-                                }
-                            }
-                        } catch (err) {
-                            console.warn('Dashboard info fetch failed:', err.message);
-                            if (!hasCache) setError(err.message || 'Failed to load dashboard data.');
-                        }
-                    })(),
-                    (async () => {
-                        try {
-                            const attRes = await getAttendanceDetails(auth);
-                            if (attRes.success && attRes.data) {
-                                setAttendanceData(attRes.data);
-                                localStorage.setItem('umsy_attendance_data', JSON.stringify(attRes.data));
-                            }
-                        } catch (err) { console.warn('Attendance fetch failed:', err.message); }
-                    })(),
-                    (async () => {
-                        try {
-                            const coursesRes = await getCourses(auth);
-                            if (coursesRes.success && coursesRes.data) {
-                                setCoursesData(coursesRes.data);
-                                localStorage.setItem('umsy_courses_data', JSON.stringify(coursesRes.data));
-                            }
-                        } catch (err) { console.warn('Courses fetch failed:', err.message); }
-                    })(),
-                    (async () => {
-                        try {
-                            const marksRes = isV04 ? await getMarksV04(auth) : await getMarks(auth);
-                            if (marksRes.success && marksRes.data) {
-                                setMarksData(marksRes.data);
-                                localStorage.setItem('umsy_marks_data', JSON.stringify(marksRes.data));
-                            }
-                        } catch (err) { console.warn('Marks fetch failed:', err.message); }
-                    })(),
-                    (async () => {
-                        try {
-                            setTimetableLoading(true);
-                            const result = await getTimeTable(auth);
-                            if (result.data && Object.keys(result.data).length > 0) {
-                                setTimetable(result.data);
-                                localStorage.setItem('umsy_timetable_data', JSON.stringify(result.data));
-                            }
-                        } catch (e) {
-                            console.warn('Timetable load failed:', e.message);
-                        } finally {
-                            setTimetableLoading(false);
-                        }
-                    })(),
-                    (async () => {
-                        try {
-                            const seatingPlanResult = await getSeatingPlan(auth);
-                            setSeatingPlan(seatingPlanResult.data);
-                        } catch (seatingError) {
-                            console.warn('Seating plan fetch failed:', seatingError.message);
-                            setSeatingPlan([]);
-                        }
-                    })(),
-                    (async () => {
-                        try {
-                            setAssignmentsLoading(true);
-                            const result = await getPendingAssignments(auth);
-                            setPendingAssignments(result.data || []);
-                        } catch (e) {
-                            console.warn('Assignments fetch failed:', e.message);
-                        } finally {
-                            setAssignmentsLoading(false);
-                        }
-                    })(),
-                    (async () => {
-                        try {
-                            const result = isV04 ? await getResultV04(auth) : await getResult(auth);
-                            if (result.success && result.data) {
-                                localStorage.setItem('umsy_result_data', JSON.stringify(result.data));
-                                setBacklogCount(calculateBacklogsCount(result.data));
-                            }
-                        } catch (e) {
-                            console.warn('Backlogs load failed:', e.message);
-                        }
-                    })()
-                ];
-
-                await Promise.allSettled(promises);
-            } catch (globalErr) {
-                console.error('Concurrently fetch error:', globalErr);
-            } finally {
-                setLoading(false);
-                setIsInitialFetching(false);
+            // If no cache at all (first-time login), trigger sync immediately
+            if (!hasCache) {
+                await handleStartSync();
+            } else {
+                // Otherwise, check if daily sync is needed
+                const lastSync = localStorage.getItem('umsy_last_sync_date');
+                const today = new Date().toDateString();
+                if (lastSync !== today) {
+                    setShowSyncPrompt(true);
+                }
             }
         };
 
@@ -1176,6 +1186,51 @@ const Dashboard = () => {
                 onRefresh={handleHostelLeave}
                 loading={leaveSlipLoading}
             />
+
+            {/* Daily Sync Prompt Modal */}
+            {showSyncPrompt && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="bg-white/95 dark:bg-zinc-950/95 border border-slate-200/50 dark:border-zinc-800/80 rounded-[32px] w-full max-w-sm p-6 shadow-2xl flex flex-col items-center text-center relative overflow-hidden select-none">
+                        <div className="w-16 h-16 bg-[#bef227] text-[#1c312e] rounded-2xl flex items-center justify-center mb-5 shadow-md shadow-[#bef227]/25">
+                            <RefreshCw className={`h-8 w-8 text-[#1c312e] ${isSyncing ? 'animate-spin' : ''}`} />
+                        </div>
+                        
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Sync Academic Data</h3>
+                        <p className="text-slate-550 dark:text-zinc-400 text-[13px] leading-relaxed mb-6 font-bold">
+                            Keep your attendance, grades, and timetables fully updated with UMS for today.
+                        </p>
+                        
+                        {isSyncing ? (
+                            <div className="w-full space-y-3">
+                                <div className="h-1.5 w-full bg-slate-100 dark:bg-zinc-850 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-[#bef227] rounded-full transition-all duration-300 ease-out"
+                                        style={{ width: `${syncProgress}%` }}
+                                    />
+                                </div>
+                                <p className="text-[11px] font-bold text-[#bef227] tracking-wide uppercase animate-pulse">
+                                    {syncStatus}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="w-full flex flex-col gap-2.5">
+                                <button
+                                    onClick={handleStartSync}
+                                    className="w-full bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black py-3.5 px-6 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#bef227]/20 cursor-pointer text-sm"
+                                >
+                                    Sync Now
+                                </button>
+                                <button
+                                    onClick={() => setShowSyncPrompt(false)}
+                                    className="w-full hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-500 dark:text-zinc-400 font-bold py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs"
+                                >
+                                    Later
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
