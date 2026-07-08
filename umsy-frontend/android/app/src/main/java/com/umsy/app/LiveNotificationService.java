@@ -104,12 +104,25 @@ public class LiveNotificationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         updateTimetableState();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        
+        boolean insideActiveWindow = isInsideActiveWindow();
+        
+        if (insideActiveWindow) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification());
+            }
+            startTimer();
         } else {
-            startForeground(NOTIFICATION_ID, buildNotification());
+            // Trigger roasts if it's the right time slot
+            checkSarcasticAlertsOutsideWindow();
+            // Schedule wake-up triggers
+            scheduleAlarms();
+            // Stop and clear service notification immediately
+            stopForeground(true);
+            stopSelf();
         }
-        startTimer();
         return START_STICKY;
     }
 
@@ -122,7 +135,7 @@ public class LiveNotificationService extends Service {
                 @Override
                 public void run() {
                     updateNotificationText();
-                    checkSarcasticAlerts();
+                    checkSarcasticAlertsInsideWindow();
                     handler.postDelayed(this, 60000); // Check every 1 minute
                 }
             };
@@ -132,8 +145,17 @@ public class LiveNotificationService extends Service {
 
     private void updateNotificationText() {
         updateTimetableState();
-        Notification notification = buildNotification();
-        notificationManager.notify(NOTIFICATION_ID, notification);
+        if (isInsideActiveWindow()) {
+            Notification notification = buildNotification();
+            if (notificationManager != null) {
+                notificationManager.notify(NOTIFICATION_ID, notification);
+            }
+        } else {
+            // Clean exit if class tracking window has completed
+            scheduleAlarms();
+            stopForeground(true);
+            stopSelf();
+        }
     }
 
     private void updateTimetableState() {
@@ -276,17 +298,126 @@ public class LiveNotificationService extends Service {
         }
     }
 
-    private void checkSarcasticAlerts() {
+    private boolean isInsideActiveWindow() {
         try {
             SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
+            String timetableStr = prefs.getString("timetable_data", null);
+            if (timetableStr == null) return false;
+
+            JSONObject fullTimetable = new JSONObject(timetableStr);
+            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            int dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK);
+            String[] days = new String[]{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+            String todayStr = days[dayOfWeek - 1];
+
+            JSONArray schedule = fullTimetable.optJSONArray(todayStr);
+            if (schedule == null || schedule.length() == 0) return false;
+
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            String currentTime = timeFormat.format(new Date());
+            int currentMinutes = parseTimeToMinutes(currentTime);
+
+            int firstClassStartMins = Integer.MAX_VALUE;
+            int lastClassEndMins = Integer.MIN_VALUE;
+            for (int i = 0; i < schedule.length(); i++) {
+                JSONObject cls = schedule.getJSONObject(i);
+                String timeRange = cls.optString("time", "");
+                if (timeRange.contains("-")) {
+                    String[] parts = timeRange.split("-");
+                    int startMins = parseTimeToMinutes(parts[0].trim());
+                    int endMins = parseTimeToMinutes(parts[1].trim());
+                    if (startMins < firstClassStartMins) firstClassStartMins = startMins;
+                    if (endMins > lastClassEndMins) lastClassEndMins = endMins;
+                }
+            }
+            if (firstClassStartMins != Integer.MAX_VALUE && lastClassEndMins != Integer.MIN_VALUE) {
+                return currentMinutes >= (firstClassStartMins - 60) && currentMinutes <= (lastClassEndMins + 30);
+            }
+        } catch (Exception e) {}
+        return false;
+    }
+
+    private void scheduleAlarms() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
+            String timetableStr = prefs.getString("timetable_data", null);
+            if (timetableStr == null) return;
+
+            JSONObject fullTimetable = new JSONObject(timetableStr);
+            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            int dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK);
+            String[] days = new String[]{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+            String todayStr = days[dayOfWeek - 1];
+
+            JSONArray schedule = fullTimetable.optJSONArray(todayStr);
+            int firstClassStartMins = 540; // Default 9 AM
+            if (schedule != null && schedule.length() > 0) {
+                int calculatedFirst = Integer.MAX_VALUE;
+                for (int i = 0; i < schedule.length(); i++) {
+                    JSONObject cls = schedule.getJSONObject(i);
+                    String timeRange = cls.optString("time", "");
+                    if (timeRange.contains("-")) {
+                        String[] parts = timeRange.split("-");
+                        int startMins = parseTimeToMinutes(parts[0].trim());
+                        if (startMins < calculatedFirst) calculatedFirst = startMins;
+                    }
+                }
+                if (calculatedFirst != Integer.MAX_VALUE) firstClassStartMins = calculatedFirst;
+            }
+
+            // 1. Morning alarm (e.g. 7:30 AM / 450 minutes)
+            scheduleServiceStart(450);
             
-            // Get current time details
+            // 2. Class Tracker Start alarm (firstClassStartMins - 60)
+            scheduleServiceStart(firstClassStartMins - 60);
+
+            // 3. Evening alarm (e.g. 6:30 PM / 1110 minutes)
+            scheduleServiceStart(1110);
+
+            // 4. Goodnight alarm (9:00 PM / 1260 minutes)
+            scheduleServiceStart(1260);
+
+        } catch (Exception e) {
+            Log.e("LiveNotification", "Failed to schedule alarms", e);
+        }
+    }
+
+    private void scheduleServiceStart(int targetMinutes) {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+        int currentMinutes = currentHour * 60 + calendar.get(java.util.Calendar.MINUTE);
+
+        long delayMs;
+        if (targetMinutes > currentMinutes) {
+            delayMs = (targetMinutes - currentMinutes) * 60 * 1000L;
+        } else {
+            // Next day
+            delayMs = ((24 * 60 - currentMinutes) + targetMinutes) * 60 * 1000L;
+        }
+
+        Intent intent = new Intent(this, LiveNotificationService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(this,
+                targetMinutes, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+
+        android.app.AlarmManager alarmManager = (android.app.AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager != null) {
+            long triggerTime = System.currentTimeMillis() + delayMs;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+            } else {
+                alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+            }
+        }
+    }
+
+    private void checkSarcasticAlertsOutsideWindow() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
             java.util.Calendar calendar = java.util.Calendar.getInstance();
             int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
             int currentMinutes = currentHour * 60 + calendar.get(java.util.Calendar.MINUTE);
             String todayDateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-            // Fetch student info details
             String firstName = "";
             double cgpa = 8.0;
             double attendance = 85.0;
@@ -326,98 +457,88 @@ public class LiveNotificationService extends Service {
                 } catch (Exception e) {}
             }
 
-            // Fetch timetable to calculate class hours
-            String timetableStr = prefs.getString("timetable_data", null);
-            int firstClassStartMins = 540; // Default 9 AM
-            int lastClassEndMins = 1020;  // Default 5 PM
-            boolean hasClasses = false;
-
-            if (timetableStr != null) {
-                JSONObject fullTimetable = new JSONObject(timetableStr);
-                int dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK);
-                String[] days = new String[]{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-                String todayStr = days[dayOfWeek - 1];
-
-                JSONArray schedule = fullTimetable.optJSONArray(todayStr);
-                if (schedule != null && schedule.length() > 0) {
-                    hasClasses = true;
-                    int calculatedFirst = Integer.MAX_VALUE;
-                    int calculatedLast = Integer.MIN_VALUE;
-                    for (int i = 0; i < schedule.length(); i++) {
-                        JSONObject cls = schedule.getJSONObject(i);
-                        String timeRange = cls.optString("time", "");
-                        if (timeRange.contains("-")) {
-                            String[] parts = timeRange.split("-");
-                            int startMins = parseTimeToMinutes(parts[0].trim());
-                            int endMins = parseTimeToMinutes(parts[1].trim());
-                            if (startMins < calculatedFirst) calculatedFirst = startMins;
-                            if (endMins > calculatedLast) calculatedLast = endMins;
-                        }
-                    }
-                    if (calculatedFirst != Integer.MAX_VALUE) firstClassStartMins = calculatedFirst;
-                    if (calculatedLast != Integer.MIN_VALUE) lastClassEndMins = calculatedLast;
-                }
-            }
-
             String fallbackQuote = "";
             String timeOfDay = "day";
 
-            // Morning Alerts (4:00 AM to class starts)
-            if (currentMinutes >= 240 && currentMinutes < firstClassStartMins) {
-                fallbackQuote = getRandomQuote(MORNING_QUOTES, firstName);
-                timeOfDay = "morning";
-            }
-            // Class Time Roasts (Within class phase hours)
-            else if (hasClasses && currentMinutes >= firstClassStartMins && currentMinutes <= lastClassEndMins) {
-                fallbackQuote = getRandomQuote(CLASS_TIME_ROASTS, firstName);
-                timeOfDay = "class";
-            }
-            // After-Class Alerts (30 mins after classes end up to 9:00 PM)
-            else if (hasClasses && currentMinutes > (lastClassEndMins + 30) && currentMinutes < 1260) {
-                ArrayList<String> candidateQuotes = new ArrayList<>();
-                for (String q : AFTER_CLASS_ROASTS) candidateQuotes.add(q);
-                if (cgpa < 7.5) {
-                    for (String q : LOW_CGPA_ROASTS) candidateQuotes.add(q);
+            // Morning check (4:00 AM to 9:00 AM)
+            if (currentMinutes >= 240 && currentMinutes < 540) {
+                String lastMorning = prefs.getString("last_morning_date", "");
+                if (!lastMorning.equals(todayDateStr)) {
+                    prefs.edit().putString("last_morning_date", todayDateStr).apply();
+                    fallbackQuote = getRandomQuote(MORNING_QUOTES, firstName);
+                    timeOfDay = "morning";
                 }
-                if (backlogs > 0) {
-                    for (String q : BACKLOGS_ROASTS) candidateQuotes.add(q);
-                }
-                fallbackQuote = getRandomQuote(candidateQuotes.toArray(new String[0]), firstName);
-                timeOfDay = "evening";
             }
-            // Goodnight Alert (Exactly at 9 PM / 21:00)
-            else if (currentHour == 21 && currentMinutes >= 1260 && currentMinutes < 1275) {
+            // Evening check (6:00 PM to 8:30 PM)
+            else if (currentMinutes >= 1080 && currentMinutes < 1230) {
+                String lastEvening = prefs.getString("last_evening_date", "");
+                if (!lastEvening.equals(todayDateStr)) {
+                    prefs.edit().putString("last_evening_date", todayDateStr).apply();
+                    ArrayList<String> candidateQuotes = new ArrayList<>();
+                    for (String q : AFTER_CLASS_ROASTS) candidateQuotes.add(q);
+                    if (cgpa < 7.5) {
+                        for (String q : LOW_CGPA_ROASTS) candidateQuotes.add(q);
+                    }
+                    if (backlogs > 0) {
+                        for (String q : BACKLOGS_ROASTS) candidateQuotes.add(q);
+                    }
+                    fallbackQuote = getRandomQuote(candidateQuotes.toArray(new String[0]), firstName);
+                    timeOfDay = "evening";
+                }
+            }
+            // Goodnight check (9:00 PM to 10:00 PM)
+            else if (currentHour == 21) {
                 String lastGoodnight = prefs.getString("last_goodnight_date", "");
                 if (!lastGoodnight.equals(todayDateStr)) {
                     prefs.edit().putString("last_goodnight_date", todayDateStr).apply();
                     fallbackQuote = getRandomQuote(GOODNIGHT_QUOTES, firstName);
                     timeOfDay = "goodnight";
-                    fetchAndTriggerRoast(firstName.isEmpty() ? "Student" : firstName, cgpa, attendance, backlogs, timeOfDay, fallbackQuote);
                 }
-                return;
             }
 
-            if (fallbackQuote.isEmpty()) {
-                return;
+            if (!fallbackQuote.isEmpty()) {
+                fetchAndTriggerRoast(firstName.isEmpty() ? "Student" : firstName, cgpa, attendance, backlogs, timeOfDay, fallbackQuote);
             }
+        } catch (Exception e) {
+            Log.e("LiveNotification", "Error checking sarcastic alerts outside window", e);
+        }
+    }
 
-            // Enforce minimum gap of 20 minutes between consecutive notification alerts (except Goodnight)
+    private void checkSarcasticAlertsInsideWindow() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
+            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+            int currentMinutes = currentHour * 60 + calendar.get(java.util.Calendar.MINUTE);
+
             long lastAlertTime = prefs.getLong("last_sarcastic_alert_time", 0);
             long nowMs = System.currentTimeMillis();
             if (nowMs - lastAlertTime < 20 * 60 * 1000) {
                 return;
             }
 
-            // Roll random probability (5% chance of triggering notification during this tick)
             if (Math.random() > 0.05) {
                 return;
             }
 
-            prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
-            fetchAndTriggerRoast(firstName.isEmpty() ? "Student" : firstName, cgpa, attendance, backlogs, timeOfDay, fallbackQuote);
+            String firstName = "";
+            String infoStr = prefs.getString("umsy_student_info", null);
+            if (infoStr != null) {
+                try {
+                    JSONObject info = new JSONObject(infoStr);
+                    String fullName = info.optString("Name", "");
+                    if (!fullName.isEmpty()) {
+                        firstName = fullName.split(" ")[0];
+                    }
+                } catch (Exception e) {}
+            }
 
+            String fallbackQuote = getRandomQuote(CLASS_TIME_ROASTS, firstName);
+            prefs.edit().putLong("last_sarcastic_alert_time", nowMs).apply();
+            
+            fetchAndTriggerRoast(firstName.isEmpty() ? "Student" : firstName, 8.0, 85.0, 0, "class", fallbackQuote);
         } catch (Exception e) {
-            Log.e("LiveNotification", "Error checking sarcastic alerts", e);
+            Log.e("LiveNotification", "Error checking sarcastic alerts inside window", e);
         }
     }
 
