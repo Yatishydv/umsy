@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:apk": "npm run build && npx cap sync && rm -f android/app/src/main/assets/public/umsy.apk android/app/src/main/assets/public/umsy.apk.idsig && cd android && ./gradlew assembleRelease && cd .. && cp android/app/build/outputs/apk/release/app-release.apk public/umsy.apk",
     "lint": "eslint .",
     "preview": "vite preview"
   },
