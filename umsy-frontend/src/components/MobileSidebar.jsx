@@ -342,7 +342,7 @@ const MobileSidebar = () => {
                 {!Capacitor.isNativePlatform() && (
                     <div className="px-4 pb-4">
                         <a
-                            href="/umsy.apk"
+                            href="/umsy.apk?v=9"
                             download="umsy.apk"
                             className="w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-98 shadow-md"
                         >

@@ -154,7 +154,7 @@ function AppContent() {
             You are using an older version of UMSY. Please update to continue using the application.
           </p>
           <button
-            onClick={() => window.open('https://umsy.vercel.app/umsy.apk', '_system')}
+            onClick={() => window.open('https://umsy.vercel.app/umsy.apk?v=9', '_system')}
             className="w-full bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black py-3.5 px-6 rounded-2xl transition-all active:scale-95 shadow-md shadow-[#bef227]/20 cursor-pointer"
           >
             Download Now

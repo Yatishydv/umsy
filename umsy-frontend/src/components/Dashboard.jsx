@@ -731,7 +731,7 @@ const Dashboard = () => {
                                 {!Capacitor.isNativePlatform() && (
                                     <div className="hidden md:block">
                                         <a
-                                            href="/umsy.apk"
+                                            href="/umsy.apk?v=9"
                                             download="umsy.apk"
                                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm"
                                         >
