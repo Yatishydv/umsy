@@ -491,6 +491,8 @@ const Dashboard = () => {
             // If no cache at all (first-time login), trigger sync immediately
             if (!hasCache) {
                 await handleStartSync();
+                setLoading(false);
+                setIsInitialFetching(false);
             } else {
                 // Otherwise, check if daily sync is needed
                 const lastSync = localStorage.getItem('umsy_last_sync_date');

@@ -406,6 +406,9 @@ public class LiveNotificationService extends Service {
         }
 
         Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 2, intent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification alert = new NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
@@ -443,6 +446,9 @@ public class LiveNotificationService extends Service {
         }
         
         Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 1, intent, PendingIntent.FLAG_IMMUTABLE);
         
         String roomText = room.isEmpty() ? "" : " | Room " + room;
@@ -476,6 +482,9 @@ public class LiveNotificationService extends Service {
 
     private Notification buildNotification() {
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setAction(Intent.ACTION_MAIN);
+        notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        notificationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this,
                 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
@@ -487,6 +496,7 @@ public class LiveNotificationService extends Service {
         collapsedView.setTextViewText(R.id.notif_subtitle, currentStatusSubtitle);
         collapsedView.setTextViewText(R.id.notif_room, "Rm: " + currentRoom);
         collapsedView.setTextViewText(R.id.notif_time, currentTimeLeft);
+        collapsedView.setOnClickPendingIntent(R.id.notif_collapsed_root, pendingIntent);
 
         // Populate Expanded Custom View
         expandedView.setTextViewText(R.id.notif_expanded_title, currentStatusTitle);
@@ -495,6 +505,7 @@ public class LiveNotificationService extends Service {
         expandedView.setTextViewText(R.id.notif_expanded_duration, currentTimeLeft);
         expandedView.setTextViewText(R.id.notif_expanded_next, nextClassText);
         expandedView.setProgressBar(R.id.notif_progress, 100, currentProgress, false);
+        expandedView.setOnClickPendingIntent(R.id.notif_expanded_root, pendingIntent);
 
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         expandedView.setTextViewText(R.id.notif_expanded_time_stamp, timeFormat.format(new Date()));

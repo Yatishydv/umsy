@@ -244,8 +244,8 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/app-version', (req, res) => {
     res.json({
-        latestVersionCode: 11,
-        versionName: "2.2",
+        latestVersionCode: 12,
+        versionName: "2.3",
         forceUpdate: true
     });
 });
