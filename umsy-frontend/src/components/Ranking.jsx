@@ -94,7 +94,6 @@ const Ranking = () => {
                     if (parsed.regno === currentRegno) {
                         const merged = mergeLiveDetails(parsed.data, currentRegno);
                         setMyRanking(merged);
-                        return;
                     }
                 } catch (e) {
                     localStorage.removeItem('umsy_ranking_data');
@@ -102,7 +101,7 @@ const Ranking = () => {
             }
 
             // 2. Fetch from API
-            setLoadingMyRank(true);
+            setLoadingMyRank(!cachedRanking);
             try {
                 const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/ranking`;
                 const payload = { registrationNumber: currentRegno };
