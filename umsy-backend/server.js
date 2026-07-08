@@ -125,7 +125,7 @@ app.use((req, res, next) => {
     // Only run check for API paths, ignoring app-version check itself
     if (isApp && req.path.startsWith('/api/') && req.path !== '/api/app-version') {
         const clientVersion = req.headers['x-umsy-version'];
-        if (!clientVersion || parseInt(clientVersion) < 8) {
+        if (!clientVersion || parseInt(clientVersion) < 9) {
             console.log(`[security] Blocked outdated app request. UA: ${userAgent}, Version: ${clientVersion}`);
             return res.status(426).json({
                 success: false,
@@ -244,8 +244,8 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/app-version', (req, res) => {
     res.json({
-        latestVersionCode: 8,
-        versionName: "1.7",
+        latestVersionCode: 9,
+        versionName: "2.0",
         forceUpdate: true
     });
 });

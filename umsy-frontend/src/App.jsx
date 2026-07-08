@@ -62,6 +62,11 @@ function AppContent() {
 
   // Check version on startup
   useEffect(() => {
+    const handleForceUpdate = () => {
+      setShowUpdateModal(true);
+    };
+    window.addEventListener('umsy-force-update', handleForceUpdate);
+
     const checkVersion = async () => {
       if (!Capacitor.isNativePlatform()) return;
       try {
@@ -80,6 +85,8 @@ function AppContent() {
       }
     };
     checkVersion();
+
+    return () => window.removeEventListener('umsy-force-update', handleForceUpdate);
   }, []);
 
   // Monitor credentials and student info. If missing, logout and redirect.
