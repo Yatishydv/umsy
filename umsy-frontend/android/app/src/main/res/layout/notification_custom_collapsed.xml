@@ -8,11 +8,12 @@
     android:gravity="center_vertical">
 
     <!-- Left Brand Accent Line -->
-    <View
+    <LinearLayout
         android:id="@+id/accent_bar"
         android:layout_width="4dp"
         android:layout_height="36dp"
-        android:background="#BEF227" />
+        android:background="#BEF227"
+        android:orientation="vertical" />
 
     <!-- Center content container -->
     <LinearLayout
