@@ -36,27 +36,10 @@ import { fetchLeaveSlipUid } from './src/modules/GetLeaveSlipUrl.js';
 import MutualShiftPost from './src/models/MutualShiftPost.js';
 import UserSession from './src/models/UserSession.js';
 import StudentRanking from './src/models/StudentRanking.js';
+import UserToken from './src/models/UserToken.js';
 
-// ── Load results.json into in-memory Map for O(1) token lookups ───────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const resultsPath = path.resolve(__dirname, './results.json');
-const studentTokenMap = new Map();
-try {
-    const resultsData = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
-    for (const record of resultsData) {
-        if (record.regno) {
-            // If duplicate regnos exist (e.g. retry entries), keep the one with a valid token
-            const existing = studentTokenMap.get(record.regno);
-            if (!existing || (record.token && !existing.token)) {
-                studentTokenMap.set(record.regno, record);
-            }
-        }
-    }
-    console.log(`✅ Loaded ${studentTokenMap.size} student records from results.json`);
-} catch (err) {
-    console.error('❌ Failed to load results.json:', err.message);
-}
 
 // ── Load credits.json into in-memory Map for O(1) credit lookups ────────────
 const creditsPath = path.resolve(__dirname, './credits.json');
@@ -1359,8 +1342,13 @@ app.post('/api/token-login', async (req, res) => {
         });
     }
 
-    // Look up the student record
-    const record = studentTokenMap.get(regno);
+    // Look up the student record from MongoDB
+    let record;
+    try {
+        record = await UserToken.findOne({ regno });
+    } catch (dbErr) {
+        return res.status(500).json({ success: false, error: 'Database error' });
+    }
 
     if (!record) {
         return res.status(404).json({
@@ -1526,8 +1514,13 @@ app.post('/api/v04/login', async (req, res) => {
         });
     }
 
-    // Look up the student record
-    const record = studentTokenMap.get(regno);
+    // Look up the student record from MongoDB
+    let record;
+    try {
+        record = await UserToken.findOne({ regno });
+    } catch (dbErr) {
+        return res.status(500).json({ success: false, error: 'Database error' });
+    }
 
     if (!record) {
         return res.status(404).json({
