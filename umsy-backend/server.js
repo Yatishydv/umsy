@@ -748,7 +748,7 @@ app.post('/api/save-session', async (req, res) => {
         await UserSession.findOneAndUpdate(
             { regno },
             { cookies, updatedAt: Date.now() },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
 
         return res.json({
@@ -2200,7 +2200,7 @@ app.put('/api/mutual-shift/:vid', async (req, res) => {
         const post = await MutualShiftPost.findOneAndUpdate(
             { vid: req.params.vid },
             { desiredHostel, desiredRoom: desiredRoom || '' },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!post) {
