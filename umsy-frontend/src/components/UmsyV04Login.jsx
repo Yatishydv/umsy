@@ -282,7 +282,7 @@ const UmsyV04Login = () => {
                             {theme === 'dark' ? <Sun className="h-4 w-4 text-orange-400" /> : <Moon className="h-4 w-4 text-blue-500" />}
                         </button>
                         <a 
-                            href="https://github.com/yatishydv/umsy"
+                            href="https://ums.lpu.in/"
                             target="_blank"
                             rel="noreferrer"
                             className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors px-3 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 shadow-sm"

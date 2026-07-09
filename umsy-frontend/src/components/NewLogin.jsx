@@ -344,7 +344,9 @@ const NewLogin = () => {
                             {theme === 'dark' ? <Sun className="h-4.5 w-4.5 text-orange-400" /> : <Moon className="h-4.5 w-4.5 text-blue-500" />}
                         </button>
                         <a 
-                            href="#" 
+                            href="https://ums.lpu.in/" 
+                            target="_blank"
+                            rel="noreferrer"
                             className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-850 border border-slate-200/60 dark:border-zinc-700/80"
                         >
                             <HelpCircle className="w-3.5 h-3.5" />
