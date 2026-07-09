@@ -3,6 +3,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
         ? `http://${window.location.hostname}:3001/api` 
         : 'https://umsy-backend.onrender.com/api');
 
+console.log("🔌 UMSY API Base URL:", API_BASE_URL);
+
 /**
  * Helper to construct the request body based on provided auth info
  * @param {string|object} auth - Either cookie string or { regno } or { cookies }
@@ -498,3 +500,19 @@ export async function parseTimeTable(html) {
     if (!response.ok) throw new Error(data.error || 'Failed to parse timetable');
     return data;
 }
+
+/**
+ * Fetch student placement drive records and statistics
+ */
+export async function getPlacements(auth) {
+    const response = await fetch(`${API_BASE_URL}/placements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getAuthBody(auth)),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch placements data');
+    return data;
+}
+
+

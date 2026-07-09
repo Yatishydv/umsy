@@ -17,7 +17,8 @@ import {
     Settings,
     Eye,
     AlertCircle,
-    Download
+    Download,
+    Briefcase
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import PrivacySettingsModal from './PrivacySettingsModal';
@@ -234,7 +235,8 @@ const MobileSidebar = () => {
         { name: "CGPA", icon: GraduationCap, path: "/cgpa" },
         { name: "timetable", icon: Calendar, path: "/time-table" },
         { name: "Ranking", icon: Trophy, path: "/ranking" },
-        { name: "Courses", icon: BookOpen, path: "/courses" }
+        { name: "Courses", icon: BookOpen, path: "/courses" },
+        { name: "Placements", icon: Briefcase, path: "/placements" }
     ];
 
     const getInitials = (name) => {

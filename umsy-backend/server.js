@@ -29,6 +29,7 @@ import { fetchStudentSeatingPlan } from './src/modules/GetSeatingPlan.js';
 import { fetchPasswordExpiry } from './src/modules/GetPasswordExpiry.js';
 import { fetchHostelInfo } from './src/modules/GetHostelInfo.js';
 import { fetchStudentResult } from './src/modules/GetStudentResult.js';
+import { fetchPlacements } from './src/modules/GetPlacements.js';
 import { getAIBuddyResponse } from './src/modules/AiBuddy.js';
 import { fetchPendingAssignments } from './src/modules/GetPendingAssignments.js';
 import { fetchLeaveSlipUid } from './src/modules/GetLeaveSlipUrl.js';
@@ -2096,6 +2097,27 @@ app.post('/api/seating-plan', async (req, res) => {
             success: false,
             error: error.message
         });
+    }
+});
+
+/**
+ * POST /api/placements
+ * Fetch student placement drive records and statistics
+ */
+app.post('/api/placements', async (req, res) => {
+    try {
+        const cookies = await getEffectiveCookies(req);
+
+        if (!cookies) {
+            return res.status(400).json({ success: false, error: 'Cookies or registration number are required' });
+        }
+
+        const axiosClient = createAxiosClient(cookies);
+        const placementData = await fetchPlacements(axiosClient);
+
+        return res.json({ success: true, data: placementData });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 

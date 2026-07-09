@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CalendarCheck, Award, Calendar, GraduationCap, Trophy, BookOpen, RefreshCw, Bell, LogOut, Menu } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, Award, Calendar, GraduationCap, Trophy, BookOpen, RefreshCw, Bell, LogOut, Menu, Receipt, Briefcase, ChevronDown } from 'lucide-react';
 import MobileNotificationsSheet from './MobileNotificationsSheet';
 
 const HeaderNav = ({ activeTab }) => {
@@ -8,6 +8,8 @@ const HeaderNav = ({ activeTab }) => {
     const [studentInfo, setStudentInfo] = useState(null);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         const handleSyncState = (e) => {
@@ -19,20 +21,37 @@ const HeaderNav = ({ activeTab }) => {
         return () => window.removeEventListener('sync-state-changed', handleSyncState);
     }, []);
     
+    // Close dropdown on click outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     // Sliding indicator state
     const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0, opacity: 0 });
     const containerRef = useRef(null);
     const tabRefs = useRef({});
 
-    const tabs = [
+    const mainTabs = [
         { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { id: 'attendance', label: 'Attendance', path: '/attendance', icon: CalendarCheck },
-        { id: 'grades', label: 'Grades', path: '/grades', icon: Award },
         { id: 'cgpa', label: 'CGPA', path: '/cgpa', icon: GraduationCap },
         { id: 'timetable', label: 'timetable', path: '/time-table', icon: Calendar },
+        { id: 'placements', label: 'Placements', path: '/placements', icon: Briefcase },
+    ];
+
+    const otherTabs = [
+        { id: 'grades', label: 'Grades', path: '/grades', icon: Award },
         { id: 'ranking', label: 'Ranking', path: '/ranking', icon: Trophy },
         { id: 'courses', label: 'Courses', path: '/courses', icon: BookOpen },
     ];
+
+    const isOtherActive = otherTabs.some(tab => tab.id === activeTab);
 
     useEffect(() => {
         const loadInfo = () => {
@@ -55,7 +74,8 @@ const HeaderNav = ({ activeTab }) => {
 
     // Update sliding capsule position
     useEffect(() => {
-        const activeTabEl = tabRefs.current[activeTab];
+        const targetTabKey = isOtherActive ? 'other' : activeTab;
+        const activeTabEl = tabRefs.current[targetTabKey];
         const containerEl = containerRef.current;
         if (activeTabEl && containerEl) {
             // Scroll active tab into view
@@ -82,7 +102,7 @@ const HeaderNav = ({ activeTab }) => {
                 containerEl.removeEventListener('scroll', updatePosition);
             };
         }
-    }, [activeTab]);
+    }, [activeTab, isOtherActive]);
 
     const handleResync = () => {
         window.dispatchEvent(new CustomEvent('trigger-resync'));
@@ -155,11 +175,10 @@ const HeaderNav = ({ activeTab }) => {
             </div>
 
             {/* Navigation Tabs (Scrollable on Mobile, standard on Desktop) */}
-            <div className="hidden lg:block w-full lg:w-auto overflow-hidden">
+            <div className="hidden lg:block w-full lg:w-auto">
                 <div 
                     ref={containerRef}
-                    className="relative flex items-center gap-1 bg-slate-100 dark:bg-zinc-850 p-1 rounded-full overflow-x-auto lg:overflow-hidden max-w-full no-scrollbar snap-x scroll-smooth select-none"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    className="relative flex items-center gap-1 bg-slate-100 dark:bg-zinc-850 p-1 rounded-full select-none"
                 >
                     {/* Sliding lime green background pill */}
                     <div 
@@ -173,7 +192,7 @@ const HeaderNav = ({ activeTab }) => {
                         }}
                     />
 
-                    {tabs.map((tab) => {
+                    {mainTabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         const Icon = tab.icon;
                         return (
@@ -192,6 +211,48 @@ const HeaderNav = ({ activeTab }) => {
                             </button>
                         );
                     })}
+
+                    {/* "Other" Dropdown Tab */}
+                    <div className="relative" ref={dropdownRef}>
+                        <button
+                            ref={el => tabRefs.current['other'] = el}
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className={`relative z-10 px-3.5 py-1.5 lg:px-4 lg:py-2 rounded-full font-bold text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors duration-300 select-none whitespace-nowrap shrink-0 ${
+                                isOtherActive 
+                                    ? 'text-[#1c312e]' 
+                                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                        >
+                            <span>Other</span>
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isDropdownOpen && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl shadow-xl py-2 z-55 animate-in fade-in slide-in-from-top-2 duration-150">
+                                {otherTabs.map((tab) => {
+                                    const isActive = activeTab === tab.id;
+                                    const Icon = tab.icon;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => {
+                                                navigate(tab.path);
+                                                setIsDropdownOpen(false);
+                                            }}
+                                            className={`w-full px-4 py-2.5 text-left font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 transition-colors ${
+                                                isActive
+                                                    ? 'bg-slate-100 dark:bg-zinc-800 text-[#1c312e] dark:text-white'
+                                                    : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            <span>{tab.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

@@ -13,6 +13,7 @@ import MutualShift from './components/MutualShift';
 import HostelInfo from './components/HostelInfo';
 import AiBuddy from './components/AiBuddy';
 import Profile from './components/Profile';
+import Placements from './components/Placements';
 import MobileBacklogs from './components/MobileBacklogs';
 import MobileBottomNav from './components/MobileBottomNav';
 import ByeBye from './components/ByeBye';
@@ -268,6 +269,7 @@ function AppContent() {
           <Route path="/ranking" element={<Ranking />} />
           <Route path="/hostel-info" element={<HostelInfo />} />
           <Route path="/ai-buddy" element={<AiBuddy />} />
+          <Route path="/placements" element={<Placements />} />
         </Route>
 
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

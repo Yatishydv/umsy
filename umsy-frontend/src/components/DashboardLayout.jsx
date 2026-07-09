@@ -147,6 +147,7 @@ const DashboardLayout = () => {
         if (pathname.includes('/cgpa')) return 'cgpa';
         if (pathname.includes('/ranking')) return 'ranking';
         if (pathname.includes('/courses')) return 'courses';
+        if (pathname.includes('/placements')) return 'placements';
         return 'dashboard';
     };
 
