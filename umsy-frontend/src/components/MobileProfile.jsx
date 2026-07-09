@@ -19,7 +19,7 @@ const MobileProfile = ({ studentInfo, onLogout, onNavigate }) => {
         if (permission === 'granted') {
             new Notification('Notifications Active!', {
                 body: 'You will now receive real-time updates.',
-                icon: '/favicon.ico'
+                icon: '/icon.png'
             });
         }
     };
