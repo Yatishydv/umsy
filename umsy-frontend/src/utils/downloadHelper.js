@@ -22,7 +22,7 @@ export const downloadFile = (blob, filename) => {
             const apiBase = import.meta.env.VITE_API_BASE_URL || 
                 (window.location.hostname === 'localhost' || window.location.hostname.match(/^\d+\./) 
                     ? `http://${window.location.hostname}:3001/api` 
-                    : 'https://umsy-backend.onrender.com/api');
+                    : 'https://umsy-backend-production.up.railway.app/api');
             const cleanApiBase = apiBase.replace(/\/$/, '');
             
             try {

@@ -75,7 +75,7 @@ function AppContent() {
       try {
         if (Capacitor.Plugins.LiveNotification) {
           const { versionCode } = await Capacitor.Plugins.LiveNotification.getVersionCode();
-          const response = await fetch('https://umsy-backend.onrender.com/api/app-version');
+          const response = await fetch('https://umsy-backend-production.up.railway.app/api/app-version');
           if (response.ok) {
             const data = await response.json();
             if (versionCode < data.latestVersionCode) {

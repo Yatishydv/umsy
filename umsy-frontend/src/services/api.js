@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
     (window.location.hostname === 'localhost' || window.location.hostname.match(/^\d+\./) 
         ? `http://${window.location.hostname}:3001/api` 
-        : 'https://umsy-backend.onrender.com/api');
+        : 'https://umsy-backend-production.up.railway.app/api');
 
 console.log("🔌 UMSY API Base URL:", API_BASE_URL);
 
