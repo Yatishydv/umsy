@@ -290,73 +290,51 @@ const V05Login = () => {
                         {/* Turnstile Solver Trigger */}
                         <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
                             <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">
-                                Step 1: Open verification window & click checkbox
+                                1. Open popup & click Turnstile checkbox
                             </p>
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const win = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
+                                    window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
                                     setStatusMsg('Complete checkbox in popup window...');
-                                    
-                                    // Monitor popup for solved token
-                                    const timer = setInterval(() => {
-                                        if (win.closed) {
-                                            clearInterval(timer);
-                                            return;
-                                        }
-                                        try {
-                                            const doc = win.document;
-                                            const tokenInput = doc.querySelector('[name="cf-turnstile-response"]');
-                                            if (tokenInput && tokenInput.value && tokenInput.value.length > 20) {
-                                                setTurnstileToken(tokenInput.value);
-                                                setError('');
-                                                setStatusMsg('✅ Cloudflare verified! Click Sign in below.');
-                                                clearInterval(timer);
-                                                win.close();
-                                            }
-                                        } catch (e) {
-                                            // Cross-origin fallback instructions
-                                        }
-                                    }, 1000);
                                 }}
-                                className="w-full py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all mb-3"
+                                className="w-full py-2.5 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all mb-3 shadow-md shadow-[#bef227]/20"
                             >
-                                Open Cloudflare Verification Popup
+                                ⚡ 1. Open Cloudflare Verification Popup
                             </button>
 
                             {turnstileToken ? (
-                                <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-center space-x-2">
+                                <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-center space-x-2 animate-bounce">
                                     <span>✓ Turnstile Token Captured & Ready!</span>
                                 </div>
                             ) : (
                                 <div className="space-y-2 mt-2">
-                                    <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                        Step 2: Copy token after checking box in popup
+                                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                        <span>2. Copy token from popup console:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText("copy(document.querySelector('[name=\"cf-turnstile-response\"]').value)");
+                                                alert('Copied 1-line command! Paste in popup DevTools Console (F12) & hit Enter!');
+                                            }}
+                                            className="text-[#1c312e] dark:text-[#bef227] underline font-bold hover:opacity-80"
+                                        >
+                                            Copy 1-Line Console Code
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const code = `navigator.clipboard.writeText(document.querySelector('[name="cf-turnstile-response"]').value); alert('Token copied!');`;
-                                            navigator.clipboard.writeText(code);
-                                            alert('Copied helper script! Open DevTools console in popup (F12 -> Console) and paste it.');
-                                        }}
-                                        className="w-full py-2 px-3 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
-                                    >
-                                        Copy Token Extraction Helper
-                                    </button>
 
                                     <input
                                         type="text"
-                                        placeholder="Paste cf-turnstile-response token here"
+                                        placeholder="Paste token here (Auto-submits on paste)"
                                         onChange={(e) => {
                                             const val = e.target.value.trim();
                                             if (val.length > 20) {
                                                 setTurnstileToken(val);
                                                 setError('');
-                                                setStatusMsg('✓ Token accepted! Click Sign in.');
+                                                setStatusMsg('✓ Token accepted! Logging in...');
                                             }
                                         }}
-                                        className="w-full mt-2 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#bef227]"
+                                        className="w-full mt-2 px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#bef227]"
                                     />
                                 </div>
                             )}
