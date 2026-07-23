@@ -22,6 +22,7 @@ import NewLogin from './components/NewLogin';
 import UmsyV04Login from './components/UmsyV04Login';
 import DashboardLayout from './components/DashboardLayout';
 import SeatingPlan from './components/SeatingPlan';
+import V05Login from './components/V05Login';
 import './App.css';
 
 import { useState } from 'react';
@@ -252,6 +253,7 @@ function AppContent() {
     <>
       <Routes>
         <Route path="/cookie" element={<Cookie />} />
+        <Route path="/v05login" element={<V05Login />} />
         <Route path="/newlogin" element={<NewLogin />} />
         <Route path="/newlogin2" element={<NewLogin />} />
         <Route path="/v04/login" element={<Navigate to="/login" replace />} />

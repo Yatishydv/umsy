@@ -638,6 +638,42 @@ export function parseOldUmsSeatingHtml(html) {
 }
 
 /**
+ * Parse seating plan HTML directly from old UMS frmSeatingPlan.aspx page
+ */
+export function parseFrmSeatingPlanHtml(html) {
+    const $ = cheerio.load(html);
+    const plan = [];
+
+    $('table tr').each((_, tr) => {
+        const cells = $(tr).find('td').map((_, td) => $(td).text().trim()).get();
+        if (cells.length >= 6) {
+            const codeIndex = cells.findIndex(c => /^[A-Z]{2,5}\d{3,4}[A-Z0-9]*$/.test(c));
+            if (codeIndex !== -1) {
+                const courseCode = cells[codeIndex];
+                const courseName = cells[codeIndex + 1] || '';
+                const examType = cells[codeIndex + 2] || '';
+                const room = cells[codeIndex + 3] || '';
+                const rawReportTime = cells[codeIndex + 4] || '';
+                const date = cells[codeIndex + 5] || '';
+                const time = cells[codeIndex + 6] || '';
+
+                plan.push({
+                    courseCode,
+                    courseName,
+                    exam: examType,
+                    room: room || 'Awaited',
+                    reportingTime: time && time.length < 25 ? time : (rawReportTime && rawReportTime.length < 25 ? rawReportTime : '30 min before exam'),
+                    date: date || 'Date Awaited',
+                    status: 'Upcoming'
+                });
+            }
+        }
+    });
+
+    return plan;
+}
+
+/**
  * Main entry: fetch student seating plan
  */
 export async function fetchStudentSeatingPlan(client) {
@@ -652,13 +688,37 @@ export async function fetchStudentSeatingPlan(client) {
 
     console.log('🪑 [SeatingPlan] Starting seating plan fetch for', regno || 'unknown');
 
-    // We only use the stored cookies fallback here.
-    // The live browser-based fetch is now handled during login (/api/complete-login)
-    // to avoid blocking the sync and preventing headless Turnstile errors.
+    // Strategy 1: Direct HTTP fetch of frmSeatingPlan.aspx using cookies (Fast & Turnstile-free)
+    if (cookieString) {
+        try {
+            console.log('🪑 [SeatingPlan] Strategy 1: Fetching frmSeatingPlan.aspx directly...');
+            const response = await axios.get(
+                'https://ums.lpu.in/lpuums/frmSeatingPlan.aspx',
+                {
+                    headers: {
+                        'Cookie': cookieString,
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+                    },
+                    timeout: 10000
+                }
+            );
 
-    // Strategy 2: Try old WebMethod with stored cookies (may work if cookies have ASP.NET_SessionId)
+            if (response.data && typeof response.data === 'string' && response.data.length > 50) {
+                const plan = parseFrmSeatingPlanHtml(response.data);
+                if (plan.length > 0) {
+                    console.log(`🪑 [SeatingPlan] ✅ Parsed ${plan.length} entries directly from frmSeatingPlan.aspx!`);
+                    return plan;
+                }
+            }
+        } catch (e) {
+            console.log('🪑 [SeatingPlan] frmSeatingPlan.aspx fetch failed:', e.message);
+        }
+    }
+
+    // Strategy 2: Try old WebMethod with stored cookies
     try {
-        console.log('🪑 [SeatingPlan] Fallback: old WebMethod with stored cookies...');
+        console.log('🪑 [SeatingPlan] Strategy 2: WebMethod with stored cookies...');
         const response = await axios.post(
             'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetSeatingPlan',
             {},
@@ -679,7 +739,7 @@ export async function fetchStudentSeatingPlan(client) {
             if (plan.length > 0) return plan;
         }
     } catch (e) {
-        console.log('🪑 [SeatingPlan] Fallback failed:', e.message);
+        console.log('🪑 [SeatingPlan] WebMethod failed:', e.message);
     }
 
     return [];

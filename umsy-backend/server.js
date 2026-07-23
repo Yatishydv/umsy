@@ -33,6 +33,7 @@ import { fetchPlacements } from './src/modules/GetPlacements.js';
 import { getAIBuddyResponse } from './src/modules/AiBuddy.js';
 import { fetchPendingAssignments } from './src/modules/GetPendingAssignments.js';
 import { fetchLeaveSlipUid } from './src/modules/GetLeaveSlipUrl.js';
+import { performHttpLogin } from './src/modules/HttpLogin.js';
 import MutualShiftPost from './src/models/MutualShiftPost.js';
 import UserSession from './src/models/UserSession.js';
 import StudentRanking from './src/models/StudentRanking.js';
@@ -678,6 +679,49 @@ app.post('/api/complete-login', async (req, res) => {
  */
 // Per-user lock — prevents duplicate concurrent newlogin calls
 const newLoginActiveSessions = new Map();
+
+/**
+ * POST /api/v05login
+ * Direct HTTP-based login using Turnstile token solved in user's browser.
+ * Zero Puppeteer overhead, zero Cloudflare datacenter IP blocks.
+ */
+app.post('/api/v05login', async (req, res) => {
+    let { username, password, turnstileToken } = req.body;
+    username = username?.trim();
+    password = password?.trim();
+
+    if (!username || !password) {
+        return res.status(400).json({ success: false, error: 'username and password are required' });
+    }
+
+    try {
+        console.log(`[v05login] Received HTTP login request for ${username}...`);
+        const result = await performHttpLogin(username, password, turnstileToken);
+
+        if (!result.success || !result.cookies) {
+            return res.status(401).json({ success: false, error: 'Verification failed — please try again.' });
+        }
+
+        // Save session to MongoDB & return
+        try {
+            const db = mongoose.connection.db;
+            if (db) {
+                await db.collection('usertokens').updateOne(
+                    { regno: username },
+                    { $set: { password, lastLoginAt: new Date(), cookies: result.cookies } },
+                    { upsert: true }
+                );
+            }
+        } catch (dbErr) {
+            console.log('[v05login] MongoDB update error:', dbErr.message);
+        }
+
+        return res.json({ success: true, cookies: result.cookies });
+    } catch (error) {
+        console.error('[v05login] Error:', error.message);
+        return res.status(500).json({ success: false, error: error.message || 'Login failed. Please check credentials and try again.' });
+    }
+});
 
 /**
  * POST /api/newlogin

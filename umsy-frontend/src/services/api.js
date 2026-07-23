@@ -69,6 +69,20 @@ export async function newLogin(username, password, turnstileToken) {
 }
 
 /**
+ * Fast HTTP Turnstile login (/v05login)
+ */
+export async function v05Login(username, password, turnstileToken) {
+    const response = await fetch(`${API_BASE_URL}/v05login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, turnstileToken }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Login failed');
+    return data;
+}
+
+/**
  * Get the current progress/status of a newLogin attempt
  */
 export async function getNewLoginStatus(username) {
