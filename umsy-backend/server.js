@@ -25,7 +25,7 @@ import { fetchTermWiseMarks } from './src/modules/TermWiseMarks.js';
 import { fetchStudentMessages } from './src/modules/GetStudentMessages.js';
 import { fetchTimeTable, parseTimeTableHtml } from './src/modules/GetTimeTable.js';
 import { fetchStudentCourses } from './src/modules/GetStudentCourses.js';
-import { fetchStudentSeatingPlan } from './src/modules/GetSeatingPlan.js';
+import { fetchStudentSeatingPlan, parseOldUmsSeatingHtml, fetchViaStealthPuppeteer } from './src/modules/GetSeatingPlan.js';
 import { fetchPasswordExpiry } from './src/modules/GetPasswordExpiry.js';
 import { fetchHostelInfo } from './src/modules/GetHostelInfo.js';
 import { fetchStudentResult } from './src/modules/GetStudentResult.js';
@@ -486,8 +486,168 @@ app.post('/api/complete-login', async (req, res) => {
         }
 
         // Close browser and cleanup session
-        await browser.close();
-        sessions.delete(sessionId);
+        // Close browser and cleanup session after starting background fetches
+        const username = session.regno || null;
+        if (username) {
+            // Save or update the password (DOB) and UMS cookies in MongoDB upon successful validation
+            try {
+                await mongoose.connection.db.collection('usertokens').updateOne(
+                    { regno: username },
+                    { $set: { dob: session.password, umsCookies: cookieString, umsCookiesSavedAt: new Date(), updatedAt: new Date() } },
+                    { upsert: true }
+                );
+                console.log(`[complete-login] 🔐 Saved credentials + UMS cookies for ${username} (${cookieString.length} chars)`);
+            } catch (dbErr) {
+                console.error('[complete-login] Error saving credentials to DB:', dbErr.message);
+            }
+
+
+            // Run seating plan fetch in the background asynchronously
+            // We reuse the active, authenticated page session to navigate openapp.aspx.
+            // This prevents location confirm dialog loops on concurrent tabs.
+            (async () => {
+                try {
+                    console.log(`[complete-login] 🪑 Background seating plan fetch started for ${username}...`);
+                    
+                    // Dismiss previous login location popup if it appears
+                    const bodyText = await page.evaluate(() => document.body?.innerText || '');
+                    if (bodyText.includes('Previous Log in')) {
+                        console.log('[complete-login] 🪑 Concurrent login dialog detected. Confirming location...');
+                        await page.evaluate(() => {
+                            const btns = Array.from(document.querySelectorAll('input, button, a'));
+                            const target = btns.find(b =>
+                                b.value?.toLowerCase().includes('logout') ||
+                                b.innerText?.toLowerCase().includes('logout') ||
+                                b.className?.includes('btn-location') ||
+                                b.className?.includes('location-item')
+                            );
+                            if (target) {
+                                target.click();
+                            } else {
+                                const sub = document.querySelector('input[type="submit"], button[type="submit"]');
+                                if (sub) sub.click();
+                            }
+                        });
+                        await page.waitForTimeout(6000);
+                    }
+
+                    let capturedStudentUmsUrl = null;
+                    page.on('request', req => {
+                        const url = req.url();
+                        if (url.includes('studentums.lpu.in') && url.includes('token=')) {
+                            capturedStudentUmsUrl = url;
+                        }
+                    });
+
+                    const openappTarget = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
+                    try {
+                        await page.goto(openappTarget, { waitUntil: 'domcontentloaded', timeout: 15000 });
+                    } catch (e) {
+                        console.log('[complete-login] 🪑 Openapp target navigation warning:', e.message);
+                    }
+                    
+                    // Submit the redirect form if present
+                    const hasForm = await page.$('#form1');
+                    if (hasForm) {
+                        await page.evaluate(() => {
+                            const form = document.getElementById('form1');
+                            if (form) form.submit();
+                        });
+                    }
+                    await new Promise(r => setTimeout(r, 8000));
+
+                    const currentUrl = page.url();
+                    if (currentUrl.includes('studentums.lpu.in')) {
+                        capturedStudentUmsUrl = currentUrl;
+                    }
+
+                    if (capturedStudentUmsUrl) {
+                        console.log('[complete-login] 🪑 Captured studentums URL, loading seating plan page...');
+                        if (!page.url().includes('studentums.lpu.in')) {
+                            await page.goto(capturedStudentUmsUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+                        }
+                        await new Promise(r => setTimeout(r, 8000));
+
+                        const seatingData = await page.evaluate(() => {
+                            const results = [];
+                            const body = document.body?.innerText || '';
+
+                            // Table-based
+                            document.querySelectorAll('table').forEach(table => {
+                                const headers = [];
+                                const headerRow = table.querySelector('thead tr, tr:first-child');
+                                if (headerRow) {
+                                    headerRow.querySelectorAll('th, td').forEach(cell => {
+                                        headers.push(cell.innerText.trim().toLowerCase().replace(/\s+/g, ' '));
+                                    });
+                                }
+                                table.querySelectorAll('tbody tr, tr').forEach((row, i) => {
+                                    if (i === 0 && headers.length > 0) return;
+                                    const cells = row.querySelectorAll('td');
+                                    if (cells.length >= 2) {
+                                        const rowData = {};
+                                        cells.forEach((cell, j) => { rowData[headers[j] || `col${j}`] = cell.innerText.trim(); });
+                                        if (Object.values(rowData).some(v => v.length > 0)) results.push(rowData);
+                                    }
+                                });
+                            });
+
+                            // Card-based
+                            if (results.length === 0) {
+                                document.querySelectorAll('[class*="card"],[class*="Card"],[class*="MuiPaper"],[class*="exam"],[class*="Exam"],[class*="seating"]').forEach(el => {
+                                    const text = el.innerText || '';
+                                    if ((text.includes('Room') || text.includes('Seat') || text.includes('Exam')) && text.length < 2000) {
+                                        const data = {};
+                                        const m1 = text.match(/([A-Z]{2,5}\d{3,4}[A-Z0-9]*)/); if (m1) data.courseCode = m1[1];
+                                        const m2 = text.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/); if (m2) data.date = m2[1];
+                                        const m3 = text.match(/Room\s*(?:No)?\.?\s*:?\s*([^\n,]+)/i); if (m3) data.room = m3[1].trim();
+                                        const m4 = text.match(/Report(?:ing)?\s*(?:Time)?\.?\s*:?\s*([^\n,]+)/i); if (m4) data.reportingTime = m4[1].trim();
+                                        const m5 = text.match(/Seat\s*(?:No)?\.?\s*:?\s*([^\n,]+)/i); if (m5) data.seatNo = m5[1].trim();
+                                        const m6 = text.match(/(?:Course|Subject)\s*:?\s*([^\n]+)/i); if (m6) data.courseName = m6[1].trim();
+                                        if (Object.keys(data).length >= 2) results.push(data);
+                                    }
+                                });
+                            }
+
+                            return { results, pageText: body.substring(0, 3000), title: document.title };
+                        });
+
+                        console.log('[complete-login] 🪑 Seating plan entries found:', seatingData.results?.length || 0);
+
+                        const seatingPlan = (seatingData.results || []).map(item => ({
+                            date: item.date || item.Date || '',
+                            courseCode: item.courseCode || item['course code'] || '',
+                            courseName: item.courseName || item['course name'] || item.Subject || '',
+                            status: item.status || item.Status || '',
+                            exam: item.exam || item.Exam || '',
+                            room: item.room || item.Room || item['room no'] || '',
+                            reportingTime: item.reportingTime || item['reporting time'] || '',
+                            seatNo: item.seatNo || item['seat no'] || item.Seat || ''
+                        }));
+
+                        // Cache seating plan in MongoDB
+                        await mongoose.connection.db.collection('usertokens').updateOne(
+                            { regno: username },
+                            { $set: { seatingPlan, seatingPlanFetchedAt: new Date() } },
+                            { upsert: true }
+                        );
+                        console.log(`[complete-login] 🪑 Cached seating plan for ${username}: ${seatingPlan.length} entries`);
+                    } else {
+                        console.log('[complete-login] 🪑 Could not capture studentums URL during login');
+                    }
+                } catch (spErr) {
+                    console.error('[complete-login] 🪑 Background seating plan fetch failed:', spErr.message);
+                } finally {
+                    await browser.close();
+                    sessions.delete(sessionId);
+                    console.log('[complete-login] Session browser closed.');
+                }
+            })();
+        } else {
+            await browser.close();
+            sessions.delete(sessionId);
+        }
+
 
         return res.json({
             success: true,
@@ -567,6 +727,12 @@ app.post('/api/newlogin', async (req, res) => {
         const page = await browser.newPage();
         await page.setViewport({ width: 1920, height: 1080 });
 
+        // Mask navigator.webdriver and automation flags for Turnstile verification
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        });
+        await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+
         // Auto-dismiss any unexpected alerts so they don't hang the scraper
         page.on('dialog', async dialog => {
             console.log(`[newlogin] Auto-dismissed alert: ${dialog.message()}`);
@@ -576,89 +742,149 @@ app.post('/api/newlogin', async (req, res) => {
         const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
         // ── Stage 2: Navigate to UMS ─────────────────────────────────────────
-        // networkidle2 = max 2 active connections (puppeteer term)
-        // This is equivalent to playwright's 'load' but more lenient on background polls
         console.log('[newlogin] Navigating to UMS...');
         loginStatus.set(username, { status: 'Navigating to UMS...', percent: 15, timestamp: Date.now() });
-        await page.goto('https://ums.lpu.in/lpuums/', { waitUntil: 'networkidle2', timeout: 60000 });
+        await page.goto('https://ums.lpu.in/lpuums/', { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(e => {
+            console.log('[newlogin] Nav load timeout (proceeding):', e.message?.substring(0, 60));
+        });
 
-        // ── Stage 2: Fill username via DOM + trigger ASP.NET postback ─────────
-        console.log('[newlogin] Entering username and triggering postback...');
-        loginStatus.set(username, { status: 'Identifying account...', percent: 30, timestamp: Date.now() });
-        await page.waitForSelector('#txtU', { timeout: 15000, visible: true });
-        await page.click('#txtU');
-
-        await page.evaluate((val) => {
-            const input = document.querySelector('#txtU');
-            input.value = val;
-            // Direct ASP.NET postback — reveals the password field
-            if (typeof __doPostBack === 'function') {
-                __doPostBack('txtU', '');
-            }
-        }, username);
-
-        // ── Stage 3: Wait for DOM to update (password field appears) ─────
-        console.log('[newlogin] Waiting for password field to appear...');
-        loginStatus.set(username, { status: 'Waiting for password gateway...', percent: 45, timestamp: Date.now() });
-
-        // ── Stage 3: Type password ────────────────────────────────────────────
-        const passSelector = 'input[type="password"], input[placeholder*="Pass"]';
-        console.log('[newlogin] Entering password...');
-        loginStatus.set(username, { status: 'Submitting credentials...', percent: 60, timestamp: Date.now() });
-        await page.waitForSelector(passSelector, { timeout: 15000, visible: true });
-        await page.click(passSelector);
-        await page.type(passSelector, password, { delay: 50 });
-
-        // ── Stage 3: Inject Turnstile token ───────────────────────────────────
-        let turnstileSolved = false;
-
-        if (turnstileToken) {
-            console.log('[newlogin] Injecting Turnstile token from frontend...');
-            await page.evaluate((token) => {
-                const input = document.querySelector('[name="cf-turnstile-response"]');
-                if (input) input.value = token;
-            }, turnstileToken);
-            turnstileSolved = true;
-        }
-
-        // Keyboard-based fallback solve loop (if no token provided)
-        if (!turnstileSolved) {
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                console.log(`[newlogin] Turnstile solve attempt ${attempt}/3...`);
-                const turnstilePresent = await page.evaluate(() =>
-                    !!document.querySelector('iframe[src*="cloudflare"]') ||
-                    !!document.querySelector('.cf-turnstile')
-                );
-
-                if (turnstilePresent) {
-                    await page.focus(passSelector);
-                    await page.keyboard.press('Tab');
-                    await delay(500);
-                    await page.keyboard.press('Space');
-                    try {
-                        await page.waitForFunction(() => {
-                            const inp = document.querySelector('[name="cf-turnstile-response"]');
-                            return inp && inp.value && inp.value.length > 0;
-                        }, { timeout: 15000 });
-                        turnstileSolved = true;
-                        console.log('[newlogin] Turnstile solved via keyboard.');
-                        break;
-                    } catch { console.log('[newlogin] Turnstile solve timeout.'); }
-                } else {
-                    turnstileSolved = true; // not present
-                    break;
+        // Helper for safe DOM evaluation across page postbacks / navigations
+        const safeEvaluate = async (fn, ...args) => {
+            for (let i = 0; i < 4; i++) {
+                try {
+                    return await page.evaluate(fn, ...args);
+                } catch (err) {
+                    if (err.message?.includes('Execution context') || err.message?.includes('navigat')) {
+                        await delay(1000);
+                    } else {
+                        throw err;
+                    }
                 }
             }
+            return null;
+        };
+
+        // ── Stage 2: Fill Username & Trigger Account Lookup ─────────────────
+        console.log('[newlogin] Entering username...');
+        loginStatus.set(username, { status: 'Entering username...', percent: 25, timestamp: Date.now() });
+
+        await page.waitForSelector('#txtU', { timeout: 15000, visible: true });
+        await page.focus('#txtU');
+        await page.keyboard.down('Meta');
+        await page.keyboard.press('A');
+        await page.keyboard.up('Meta');
+        await page.keyboard.press('Backspace');
+        await page.type('#txtU', username, { delay: 20 });
+
+        // Trigger change & blur to fire ASP.NET __doPostBack('txtU','')
+        await safeEvaluate(() => {
+            const input = document.querySelector('#txtU');
+            if (input) {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.blur();
+                if (typeof __doPostBack === 'function') {
+                    __doPostBack('txtU', '');
+                }
+            }
+        });
+
+        console.log('[newlogin] Postback triggered. Settling page...');
+        loginStatus.set(username, { status: 'Processing account...', percent: 40, timestamp: Date.now() });
+        await delay(2000);
+
+        // ── Stage 3: Type Password (Native Typing) ───────────────────────────
+        console.log('[newlogin] Locating & entering password...');
+        loginStatus.set(username, { status: 'Entering password...', percent: 55, timestamp: Date.now() });
+
+        const passElement = await page.$('input[type="password"]');
+        if (passElement) {
+            await passElement.focus();
+            await page.keyboard.down('Meta');
+            await page.keyboard.press('A');
+            await page.keyboard.up('Meta');
+            await page.keyboard.press('Backspace');
+            await passElement.type(password, { delay: 20 });
+            console.log('[newlogin] Password entered via native keyboard.');
+        } else {
+            const passFilled = await safeEvaluate((p) => {
+                const inputs = Array.from(document.querySelectorAll('input'));
+                const pass = inputs.find(i => i.type === 'password') ||
+                             inputs.find(i => `${i.id} ${i.name} ${i.placeholder}`.toLowerCase().includes('pass')) ||
+                             inputs.find(i => i.type !== 'hidden' && i.id !== 'txtU');
+                if (pass) {
+                    pass.value = p;
+                    pass.dispatchEvent(new Event('input', { bubbles: true }));
+                    pass.dispatchEvent(new Event('change', { bubbles: true }));
+                    return true;
+                }
+                return false;
+            }, password);
+            console.log(`[newlogin] Fallback password filled: ${passFilled}`);
+        }
+        await delay(500);
+
+        // ── Stage 4: Native Turnstile Solving on UMS domain ──────────────────
+        console.log('[newlogin] Solving Cloudflare Turnstile on UMS domain...');
+        
+        let turnstileValid = await safeEvaluate(() => {
+            const inp = document.querySelector('[name="cf-turnstile-response"]');
+            return inp && inp.value && inp.value.length > 20;
+        });
+
+        if (!turnstileValid) {
+            try {
+                const iframeElement = await page.$('iframe[src*="cloudflare"], iframe[src*="turnstile"]');
+                if (iframeElement) {
+                    const box = await iframeElement.boundingBox();
+                    if (box) {
+                        await page.mouse.click(box.x + Math.min(35, box.width / 2), box.y + box.height / 2);
+                        console.log('[newlogin] Clicked Cloudflare Turnstile widget.');
+                    }
+                }
+            } catch (e) {
+                console.log('[newlogin] Turnstile click trigger:', e.message?.substring(0, 60));
+            }
         }
 
-        // ── Submission ────────────────────────────────────────────────────────
-        const loginBtnSelector = 'input[type="submit"][value="Login"]';
+        // Wait up to 10 seconds for Turnstile token to be populated on ums.lpu.in
+        try {
+            await page.waitForFunction(() => {
+                const inp = document.querySelector('[name="cf-turnstile-response"]');
+                return inp && inp.value && inp.value.length > 20;
+            }, { timeout: 10000 });
+            console.log('[newlogin] ✅ Cloudflare Turnstile token validated on UMS domain!');
+        } catch (e) {
+            console.log('[newlogin] Turnstile token wait timeout (proceeding to submit)...');
+        }
+
+        // ── Stage 5: Submit Login Form via Native Button Click ────────────────
         console.log('[newlogin] Submitting login form...');
         loginStatus.set(username, { status: 'Securing session...', percent: 80, timestamp: Date.now() });
+
+        const submitBtn = await page.$('input[type="submit"][value="Login"]') || await page.$('input[type="submit"]');
+
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }).catch(() => {}),
-            page.click(loginBtnSelector).catch(() => {})
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 25000 }).catch(e => console.log('[newlogin] Submit nav:', e.message?.substring(0, 80))),
+            (async () => {
+                if (submitBtn) {
+                    console.log('[newlogin] Clicking submit button via Puppeteer mouse click...');
+                    await submitBtn.click().catch(async () => {
+                        await safeEvaluate(() => {
+                            const btn = document.querySelector('input[type="submit"][value="Login"]') || document.querySelector('input[type="submit"]');
+                            if (btn) btn.click();
+                        });
+                    });
+                } else {
+                    await safeEvaluate(() => {
+                        const btn = document.querySelector('input[type="submit"][value="Login"]') || document.querySelector('input[type="submit"]');
+                        if (btn) btn.click();
+                    });
+                }
+            })()
         ]);
+
+        await delay(2000);
 
         // Handle SweetAlert popup (wrong captcha/credentials warning)
         const swalConfirm = await page.$('.swal2-confirm');
@@ -703,7 +929,222 @@ app.post('/api/newlogin', async (req, res) => {
         const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
         console.log(`[newlogin] ✅ Cookie string length: ${cookieString.length}`);
 
-        await browser.close();
+        // Save UMS cookies to MongoDB so seating plan can use them without re-login
+        try {
+            await mongoose.connection.db.collection('usertokens').updateOne(
+                { regno: username },
+                { $set: { dob: password, umsCookies: cookieString, umsCookiesSavedAt: new Date(), updatedAt: new Date() } },
+                { upsert: true }
+            );
+            console.log(`[newlogin] 🍪 Saved UMS cookies for ${username} to DB`);
+        } catch (dbSaveErr) {
+            console.error('[newlogin] Error saving UMS cookies:', dbSaveErr.message);
+        }
+
+        // ── Stage 6: Fetch seating plan in the background while browser is open ─
+        // We do this BEFORE closing the browser because we have a valid, authenticated
+        // session. Store the result in MongoDB so it can be served without re-login.
+        (async () => {
+            try {
+                console.log('[newlogin] 🪑 Fetching seating plan in background...');
+
+                // First, try the old WebMethod with fresh session cookies (fastest)
+                try {
+                    console.log('[newlogin] 🪑 Trying GetSeatingPlan WebMethod first...');
+                    const webMethodResp = await axios.post(
+                        'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetSeatingPlan',
+                        {},
+                        {
+                            headers: {
+                                'Cookie': cookieString,
+                                'Content-Type': 'application/json; charset=UTF-8',
+                                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+                            },
+                            timeout: 15000
+                        }
+                    ).catch(e => { console.log('[newlogin] 🪑 WebMethod error:', e.message); return null; });
+
+                    const html = webMethodResp?.data?.d;
+                    console.log(`[newlogin] 🪑 WebMethod response length: ${html?.length || 0}`);
+
+                    if (html && typeof html === 'string' && html.length > 10) {
+                        const plan = parseOldUmsSeatingHtml(html);
+                        if (plan.length > 0) {
+                            console.log(`[newlogin] 🪑 ✅ Got ${plan.length} entries from WebMethod!`);
+                            const db = mongoose.connection.db;
+                            await db.collection('usertokens').updateOne(
+                                { regno: username },
+                                { $set: { seatingPlan: plan, seatingPlanFetchedAt: new Date() } },
+                                { upsert: true }
+                            );
+                            console.log(`[newlogin] 🪑 Seating plan cached for ${username}: ${plan.length} entries`);
+                            await browser.close();
+                            console.log('[newlogin] Browser closed after WebMethod seating plan fetch');
+                            return; // Done! No need for portal scrape
+                        }
+                    }
+                    console.log('[newlogin] 🪑 WebMethod returned no data, trying new portal...');
+                } catch (wmErr) {
+                    console.log('[newlogin] 🪑 WebMethod attempt failed:', wmErr.message);
+                }
+
+                // Fallback: Navigate to new portal
+                let capturedStudentUmsUrl = null;
+
+                page.on('request', req => {
+                    const url = req.url();
+                    if (url.includes('studentums.lpu.in') && url.includes('token=')) {
+                        capturedStudentUmsUrl = url;
+                    }
+                });
+
+                const openappTarget = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
+                await page.goto(openappTarget, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+                await page.evaluate(() => { const f = document.getElementById('form1'); if (f) f.submit(); });
+                await new Promise(r => setTimeout(r, 8000));
+
+                const currentUrl = page.url();
+                if (currentUrl.includes('studentums.lpu.in')) capturedStudentUmsUrl = currentUrl;
+
+                if (capturedStudentUmsUrl) {
+                    console.log('[newlogin] 🪑 Navigating to captured studentums token URL...');
+                    await page.goto(capturedStudentUmsUrl, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
+                    await new Promise(r => setTimeout(r, 4000));
+
+                    const seatingRouteUrl = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan';
+                    if (!page.url().includes('/examination/conduct/seatingplan')) {
+                        console.log('[newlogin] 🪑 Navigating explicitly to seating plan route...');
+                        await page.goto(seatingRouteUrl, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
+                        await new Promise(r => setTimeout(r, 3000));
+                    }
+                    await page.waitForFunction(
+                        () => {
+                            const text = document.body?.innerText || '';
+                            return /[A-Z]{2,5}\d{3,4}/.test(text) || text.includes('Date Sheet') || text.includes('Seating Plan');
+                        },
+                        { timeout: 15000 }
+                    ).catch(() => {});
+                    await new Promise(r => setTimeout(r, 3000));
+
+                    const seatingData = await page.evaluate(() => {
+                        const results = [];
+                        const body = document.body?.innerText || '';
+
+                        // Table-based
+                        document.querySelectorAll('table').forEach(table => {
+                            const headers = [];
+                            const headerRow = table.querySelector('thead tr, tr:first-child');
+                            if (headerRow) {
+                                headerRow.querySelectorAll('th, td').forEach(cell => {
+                                    headers.push(cell.innerText.trim().toLowerCase().replace(/\s+/g, ' '));
+                                });
+                            }
+                            table.querySelectorAll('tbody tr, tr').forEach((row, i) => {
+                                if (i === 0 && headers.length > 0) return;
+                                const cells = row.querySelectorAll('td');
+                                if (cells.length >= 2) {
+                                    const rowData = {};
+                                    cells.forEach((cell, j) => { rowData[headers[j] || `col${j}`] = cell.innerText.trim(); });
+                                    if (Object.values(rowData).some(v => v.length > 0)) results.push(rowData);
+                                }
+                            });
+                        });
+
+                        // Block-based line parsing (Examination Date Sheet format)
+                        if (results.length === 0 && body.length > 20) {
+                            const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
+
+                            for (let i = 0; i < lines.length; i++) {
+                                const line = lines[i];
+                                const codeMatch = line.match(/\b([A-Z]{2,5}\d{3,4}[A-Z0-9]*)\b/);
+                                if (codeMatch) {
+                                    const code = codeMatch[1];
+                                    const nearbyLines = lines.slice(i, Math.min(lines.length, i + 9));
+                                    const nearby = nearbyLines.join(' ');
+
+                                    const dateMatch = nearby.match(/(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i) || nearby.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/);
+                                    const timeMatch = nearby.match(/(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?)/);
+                                    const roomMatch = nearby.match(/\b(\d{1,3}-\d{3,4})\b/) || nearby.match(/Room\s*(?:No)?\.?\s*:?\s*([^\n\r,]+)/i);
+                                    const examMatch = nearby.match(/(Practical[^\n\r]*|End Term[^\n\r]*|Mid Term[^\n\r]*|ReAppear[^\n\r]*|Theory[^\n\r]*|Regular[^\n\r]*)/i);
+
+                                    let status = 'Scheduled';
+                                    if (/upcoming/i.test(nearby)) status = 'Upcoming';
+                                    else if (/completed|done/i.test(nearby)) status = 'Completed';
+
+                                    let existing = results.find(r => r.courseCode === code);
+                                    if (!existing) {
+                                        existing = {
+                                            courseCode: code,
+                                            courseName: '',
+                                            date: '',
+                                            reportingTime: '',
+                                            room: '',
+                                            exam: '',
+                                            status: status,
+                                            instructions: ''
+                                        };
+                                        results.push(existing);
+                                    }
+
+                                    if (dateMatch && !existing.date) existing.date = dateMatch[1].trim();
+                                    if (timeMatch && !existing.reportingTime) existing.reportingTime = timeMatch[1].trim();
+                                    if (roomMatch && !existing.room) existing.room = roomMatch[1].trim();
+                                    if (examMatch && !existing.exam) existing.exam = examMatch[1].trim();
+                                    if (!existing.status || existing.status === 'Scheduled') existing.status = status;
+
+                                    const nameMatch = line.match(/[A-Z]{2,5}\d{3,4}[A-Z0-9]*\s*[-:]\s*([^\n\r]+)/);
+                                    if (nameMatch && nameMatch[1].trim() && !existing.courseName) {
+                                        existing.courseName = nameMatch[1].trim();
+                                    }
+
+                                    if (/Instruction\s*-\s*Awaited|Awaited/i.test(nearby)) {
+                                        existing.instructionAwaited = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        return { results, pageText: body.substring(0, 3000), title: document.title };
+                    });
+
+                    console.log('[newlogin] 🪑 Seating plan entries found:', seatingData.results?.length || 0);
+                    console.log('[newlogin] 🪑 Page title:', seatingData.title);
+                    console.log('[newlogin] 🪑 Page preview:', seatingData.pageText?.substring(0, 300));
+
+                    const seatingPlan = (seatingData.results || []).map(item => ({
+                        date: item.date || item.Date || '',
+                        courseCode: item.courseCode || item['course code'] || '',
+                        courseName: item.courseName || item['course name'] || item.Subject || '',
+                        status: item.status || item.Status || '',
+                        exam: item.exam || item.Exam || '',
+                        room: item.room || item.Room || item['room no'] || '',
+                        reportingTime: item.reportingTime || item['reporting time'] || '',
+                        seatNo: item.seatNo || item['seat no'] || item.Seat || ''
+                    }));
+
+                    // Cache seating plan in MongoDB
+                    const db = mongoose.connection.db;
+                    await db.collection('usertokens').updateOne(
+                        { regno: username },
+                        { $set: { seatingPlan, seatingPlanFetchedAt: new Date() } },
+                        { upsert: true }
+                    );
+                    console.log(`[newlogin] 🪑 Seating plan cached for ${username}: ${seatingPlan.length} entries`);
+                } else {
+                    console.log('[newlogin] 🪑 Could not capture studentums URL for seating plan');
+                    const debugText = await page.evaluate(() => document.body?.innerText?.substring(0, 300) || '');
+                    console.log('[newlogin] 🪑 Page text:', debugText);
+                }
+            } catch (spErr) {
+                console.log('[newlogin] 🪑 Background seating plan fetch failed:', spErr.message);
+            } finally {
+                await browser.close();
+                console.log('[newlogin] Browser closed after background seating plan fetch');
+            }
+        })();
+
         newLoginActiveSessions.delete(username);
         loginStatus.delete(username);
 
@@ -717,6 +1158,7 @@ app.post('/api/newlogin', async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 });
+
 
 /**
  * GET /api/newlogin-status/:username
@@ -1482,6 +1924,51 @@ app.post('/api/token-login', async (req, res) => {
         const cookieString = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
         console.log(`[token-login] ✅ Got ${allCookies.length} cookies for ${regno} (length: ${cookieString.length})`);
 
+        // Save UMS cookies and fetch seating plan in background
+        try {
+            await mongoose.connection.db.collection('usertokens').updateOne(
+                { regno },
+                { $set: { umsCookies: cookieString, umsCookiesSavedAt: new Date(), updatedAt: new Date() } },
+                { upsert: true }
+            );
+            console.log(`[token-login] 🍪 Saved UMS cookies for ${regno} to DB`);
+
+            // Fetch seating plan directly via WebMethod
+            console.log(`[token-login] 🪑 Fetching seating plan for ${regno}...`);
+            const seatingResp = await axios.post('https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetSeatingPlan', {}, {
+                headers: {
+                    'Cookie': cookieString,
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                timeout: 15000
+            }).catch(e => {
+                console.log(`[token-login] 🪑 Seating plan WebMethod error:`, e.message);
+                return null;
+            });
+
+            const seatingHtml = seatingResp?.data?.d;
+            let seatingPlan = [];
+            if (seatingHtml && typeof seatingHtml === 'string' && seatingHtml.length > 10 && seatingHtml !== 'NA') {
+                seatingPlan = parseOldUmsSeatingHtml(seatingHtml);
+            }
+
+            console.log(`[token-login] 🪑 Seating plan entries parsed: ${seatingPlan.length} (HTML length: ${seatingHtml?.length || 0})`);
+
+            await mongoose.connection.db.collection('usertokens').updateOne(
+                { regno },
+                { $set: { seatingPlan, seatingPlanFetchedAt: new Date() } },
+                { upsert: true }
+            );
+            console.log(`[token-login] 🪑 Cached ${seatingPlan.length} seating plan entries in DB for ${regno}`);
+
+        } catch (spErr) {
+            console.warn(`[token-login] ⚠️ Seating plan caching failed (non-fatal):`, spErr.message);
+        }
+
         return res.json({
             success: true,
             cookies: cookieString,
@@ -1685,6 +2172,51 @@ app.post('/api/v04/login', async (req, res) => {
         const cookieString = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
         console.log(`[v04-login] ✅ Got ${allCookies.length} cookies for ${regno} (length: ${cookieString.length})`);
         console.log(`[v04-login] 🍪 Cookie names: ${allCookies.map(c => c.name).join(', ')}`);
+
+        // Save UMS cookies and fetch seating plan in background
+        try {
+            await mongoose.connection.db.collection('usertokens').updateOne(
+                { regno },
+                { $set: { umsCookies: cookieString, umsCookiesSavedAt: new Date(), updatedAt: new Date() } },
+                { upsert: true }
+            );
+            console.log(`[v04-login] 🍪 Saved UMS cookies for ${regno} to DB`);
+
+            // Fetch seating plan directly via WebMethod
+            console.log(`[v04-login] 🪑 Fetching seating plan for ${regno}...`);
+            const seatingResp = await axios.post('https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetSeatingPlan', {}, {
+                headers: {
+                    'Cookie': cookieString,
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                timeout: 15000
+            }).catch(e => {
+                console.log(`[v04-login] 🪑 Seating plan WebMethod error:`, e.message);
+                return null;
+            });
+
+            const seatingHtml = seatingResp?.data?.d;
+            let seatingPlan = [];
+            if (seatingHtml && typeof seatingHtml === 'string' && seatingHtml.length > 10 && seatingHtml !== 'NA') {
+                seatingPlan = parseOldUmsSeatingHtml(seatingHtml);
+            }
+
+            console.log(`[v04-login] 🪑 Seating plan entries parsed: ${seatingPlan.length} (HTML length: ${seatingHtml?.length || 0})`);
+
+            await mongoose.connection.db.collection('usertokens').updateOne(
+                { regno },
+                { $set: { seatingPlan, seatingPlanFetchedAt: new Date() } },
+                { upsert: true }
+            );
+            console.log(`[v04-login] 🪑 Cached ${seatingPlan.length} seating plan entries in DB for ${regno}`);
+
+        } catch (spErr) {
+            console.warn(`[v04-login] ⚠️ Seating plan caching failed (non-fatal):`, spErr.message);
+        }
 
         return res.json({
             success: true,
@@ -2066,12 +2598,125 @@ app.post('/api/seating-plan', async (req, res) => {
             });
         }
 
-        // console.log('🪑 Fetching student seating plan...');
+        console.log('🪑 Fetching student seating plan...');
 
         const axiosClient = createAxiosClient(cookies);
-        const seatingPlanData = await fetchStudentSeatingPlan(axiosClient);
 
-        // console.log(`✅ Seating plan fetched successfully. Items: ${seatingPlanData?.length || 0}`);
+        // Resolve regno: prefer explicit body param, then look up from DB by matching cookies
+        let { regno } = { ...req.body, ...req.query };
+        if (!regno) {
+            try {
+                const sessionDoc = await UserSession.findOne({ cookies });
+                if (sessionDoc) regno = sessionDoc.regno;
+            } catch (e) {
+                console.log('🪑 Could not resolve regno from session:', e.message);
+            }
+        }
+        console.log('🪑 Seating plan fetch for regno:', regno || '(unknown)');
+
+        // ── Cache-first: check MongoDB for seating plan (set during newlogin) ───
+        const forceFetch = req.body?.force === true || req.query?.force === 'true';
+        if (regno && !forceFetch) {
+            try {
+                const db = mongoose.connection.db;
+                const tokenDoc = await db.collection('usertokens').findOne({ regno });
+                if (tokenDoc && Array.isArray(tokenDoc.seatingPlan) && tokenDoc.seatingPlan.length > 0 && tokenDoc.seatingPlanFetchedAt) {
+                    const ageHours = (Date.now() - new Date(tokenDoc.seatingPlanFetchedAt).getTime()) / 3600000;
+                    if (ageHours < 24) {
+                        console.log(`🪑 Serving seating plan from cache for ${regno} (${tokenDoc.seatingPlan.length} entries, fetched ${Math.round(ageHours * 60)}min ago)`);
+                        return res.json({ success: true, data: tokenDoc.seatingPlan, cached: true });
+                    }
+                }
+            } catch (cacheErr) {
+                console.log('🪑 Cache lookup failed:', cacheErr.message);
+            }
+        }
+
+        axiosClient._regno = regno || null;
+        let seatingPlanData = await fetchStudentSeatingPlan(axiosClient);
+
+        // If WebMethod with frontend cookies returned empty, try with saved UMS session cookies from DB
+        if ((!seatingPlanData || seatingPlanData.length === 0) && regno) {
+            console.log(`🪑 Seating plan empty with frontend cookies. Trying saved UMS cookies for ${regno}...`);
+            try {
+                const db = mongoose.connection.db;
+                const tokenDoc = await db.collection('usertokens').findOne({ regno });
+                if (tokenDoc?.umsCookies) {
+                    const ageHrs = tokenDoc.umsCookiesSavedAt
+                        ? (Date.now() - new Date(tokenDoc.umsCookiesSavedAt).getTime()) / 3600000
+                        : 999;
+                    console.log(`🪑 Found UMS cookies for ${regno} (saved ${Math.round(ageHrs * 60)}min ago)`);
+
+                    // Try WebMethod with the real UMS session cookies
+                    const axios = await import('axios').then(m => m.default);
+                    const webMethodResp = await axios.post(
+                        'https://ums.lpu.in/lpuums/StudentDashboard.aspx/GetSeatingPlan',
+                        {},
+                        {
+                            headers: {
+                                'Cookie': tokenDoc.umsCookies,
+                                'Content-Type': 'application/json; charset=UTF-8',
+                                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Referer': 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'
+                            },
+                            timeout: 15000
+                        }
+                    ).catch(e => { console.log('🪑 umsCookies WebMethod error:', e.message); return null; });
+
+                    const html = webMethodResp?.data?.d;
+                    console.log(`🪑 umsCookies WebMethod response length: ${html?.length || 0}`);
+
+                    if (html && typeof html === 'string' && html.length > 10) {
+                        const plan = parseOldUmsSeatingHtml(html);
+
+                        if (plan.length > 0) {
+                            console.log(`🪑 ✅ Got ${plan.length} entries from umsCookies WebMethod!`);
+                            seatingPlanData = plan;
+                            // Cache it
+                            await db.collection('usertokens').updateOne(
+                                { regno },
+                                { $set: { seatingPlan: plan, seatingPlanFetchedAt: new Date() } },
+                                { upsert: true }
+                            );
+                        }
+                    }
+                } else {
+                    console.log(`🪑 No saved UMS cookies found for ${regno} — user needs to login again`);
+                }
+            } catch (err) {
+                console.log('🪑 umsCookies fallback failed:', err.message);
+            }
+        }
+
+        if ((!seatingPlanData || seatingPlanData.length === 0) && regno) {
+            console.log(`🪑 Seating plan still empty. Trying stealth puppeteer fetch for ${regno}...`);
+            try {
+                const plan = await fetchViaStealthPuppeteer(cookies, regno);
+                if (plan && plan.length > 0) {
+                    seatingPlanData = plan;
+                    const db = mongoose.connection.db;
+                    await db.collection('usertokens').updateOne(
+                        { regno },
+                        { $set: { seatingPlan: plan, seatingPlanFetchedAt: new Date() } },
+                        { upsert: true }
+                    );
+                }
+            } catch (err) {
+                console.error(`🪑 Stealth puppeteer fetch error:`, err.message);
+            }
+        }
+
+
+        if (seatingPlanData && seatingPlanData.error) {
+            console.log(`❌ Seating plan fetch failed: ${seatingPlanData.error}`);
+            return res.status(401).json({
+                success: false,
+                error: seatingPlanData.error
+            });
+        }
+
+        console.log(`✅ Seating plan fetched successfully. Items: ${seatingPlanData?.length || 0}`);
         // console.log('📤 Sending response:', JSON.stringify({
         //     success: true,
         //     data: seatingPlanData

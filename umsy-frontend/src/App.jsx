@@ -21,6 +21,7 @@ import Cookie from './components/Cookie';
 import NewLogin from './components/NewLogin';
 import UmsyV04Login from './components/UmsyV04Login';
 import DashboardLayout from './components/DashboardLayout';
+import SeatingPlan from './components/SeatingPlan';
 import './App.css';
 
 import { useState } from 'react';
@@ -270,6 +271,7 @@ function AppContent() {
           <Route path="/hostel-info" element={<HostelInfo />} />
           <Route path="/ai-buddy" element={<AiBuddy />} />
           <Route path="/placements" element={<Placements />} />
+          <Route path="/seating-plan" element={<SeatingPlan />} />
         </Route>
 
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

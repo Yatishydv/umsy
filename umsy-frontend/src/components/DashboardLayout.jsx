@@ -148,6 +148,7 @@ const DashboardLayout = () => {
         if (pathname.includes('/ranking')) return 'ranking';
         if (pathname.includes('/courses')) return 'courses';
         if (pathname.includes('/placements')) return 'placements';
+        if (pathname.includes('/seating-plan')) return 'seatingplan';
         return 'dashboard';
     };
 

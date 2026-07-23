@@ -228,6 +228,7 @@ const NewLogin = () => {
                 localStorage.removeItem('umsy_marks_data');
                 localStorage.removeItem('umsy_courses_data');
                 localStorage.removeItem('umsy_attendance_data');
+                localStorage.removeItem('umsy_seating_plan');
 
                 try {
                     await saveSession(cleanUsername, result.cookies);

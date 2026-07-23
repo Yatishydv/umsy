@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CalendarCheck, Award, Calendar, GraduationCap, Trophy, BookOpen, RefreshCw, Bell, LogOut, Menu, Receipt, Briefcase, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, Award, Calendar, GraduationCap, Trophy, BookOpen, RefreshCw, Bell, LogOut, Menu, Receipt, Briefcase, ChevronDown, MapPin } from 'lucide-react';
 import MobileNotificationsSheet from './MobileNotificationsSheet';
 
 const HeaderNav = ({ activeTab }) => {
@@ -46,6 +46,7 @@ const HeaderNav = ({ activeTab }) => {
     ];
 
     const otherTabs = [
+        { id: 'seatingplan', label: 'Seating Plan', path: '/seating-plan', icon: MapPin },
         { id: 'grades', label: 'Grades', path: '/grades', icon: Award },
         { id: 'ranking', label: 'Ranking', path: '/ranking', icon: Trophy },
         { id: 'courses', label: 'Courses', path: '/courses', icon: BookOpen },

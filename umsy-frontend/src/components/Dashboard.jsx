@@ -175,7 +175,7 @@ const Dashboard = () => {
     const handleHostelLeave = async (force = false) => {
         try {
             const cookies = localStorage.getItem('umsy_cookies');
-            const auth = cookies ? cookies : { regno: localStorage.getItem('umsy_regno') };
+            const auth = cookies ? { cookies, regno: localStorage.getItem('umsy_regno') } : { regno: localStorage.getItem('umsy_regno') };
 
             // Start loading and open modal immediately to remove lag feeling
             setShowLeaveSlip(true);
@@ -311,121 +311,149 @@ const Dashboard = () => {
         window.dispatchEvent(new CustomEvent('sync-state-changed', { detail: { syncing: true } }));
 
         try {
+            let auth = null;
             const result = await tokenLoginV04(cleanRegno, cleanPassword);
             if (result.success && result.cookies) {
                 localStorage.setItem('umsy_cookies', result.cookies);
                 try {
                     await saveSession(cleanRegno, result.cookies);
                 } catch (saveErr) {}
+                auth = result.cookies;
+            } else {
+                // tokenLoginV04 returned success: false (e.g. user logged in via /newlogin)
+                // Fall back to existing cookies from localStorage
+                console.log('🔄 Token re-auth returned no cookies, using existing session...');
+                auth = localStorage.getItem('umsy_cookies');
+            }
 
-                setSyncStatus('Fetching basic details...');
-                setSyncProgress(20);
+            if (!auth) {
+                console.log('🔄 No auth available for sync');
+                return;
+            }
 
-                const auth = result.cookies;
+            setSyncStatus('Fetching basic details...');
+            setSyncProgress(20);
 
-                // Concurrent fetches
-                const promises = [
-                    (async () => {
-                        try {
-                            const studentRes = await getStudentDashboardV04(auth);
-                            if (studentRes.success && studentRes.data) {
-                                setStudentInfo(studentRes.data);
-                                localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
-                                window.dispatchEvent(new Event('student-info-updated'));
-                            }
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const attRes = await getAttendanceDetails(auth);
-                            if (attRes.success && attRes.data) {
-                                setAttendanceData(attRes.data);
-                                localStorage.setItem('umsy_attendance_data', JSON.stringify(attRes.data));
-                            }
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const coursesRes = await getCourses(auth);
-                            if (coursesRes.success && coursesRes.data) {
-                                setCoursesData(coursesRes.data);
-                                localStorage.setItem('umsy_courses_data', JSON.stringify(coursesRes.data));
-                            }
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const marksRes = await getMarksV04(auth);
-                            if (marksRes.success && marksRes.data) {
-                                setMarksData(marksRes.data);
-                                localStorage.setItem('umsy_marks_data', JSON.stringify(marksRes.data));
-                            }
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const result = await getTimeTable(auth);
-                            if (result.data && Object.keys(result.data).length > 0) {
-                                setTimetable(result.data);
-                                localStorage.setItem('umsy_timetable_data', JSON.stringify(result.data));
-                            }
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const seatingPlanResult = await getSeatingPlan(auth);
-                            setSeatingPlan(seatingPlanResult.data);
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const result = await getPendingAssignments(auth);
-                            setPendingAssignments(result.data || []);
-                        } catch (e) {}
-                    })(),
-                    (async () => {
-                        try {
-                            const result = await getResultV04(auth);
-                            if (result.success && result.data) {
-                                localStorage.setItem('umsy_result_data', JSON.stringify(result.data));
-                                setBacklogCount(calculateBacklogsCount(result.data));
-                            }
-                        } catch (e) {}
-                    })()
-                ];
-
-                await Promise.allSettled(promises);
-                
-                // Fetch rankings too
-                try {
-                    const res = await getRanking(cleanRegno);
-                    if (res.success) {
-                        setRanking(res.data);
-                        localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno: cleanRegno, data: res.data }));
-                    }
-                } catch (e) {}
-
-                localStorage.setItem('umsy_last_sync_date', new Date().toDateString());
-                setShowSyncPrompt(false);
-
-                if (Capacitor.isNativePlatform() && Capacitor.Plugins.LiveNotification) {
-                    const hasWelcomed = localStorage.getItem('umsy_welcomed');
-                    if (!hasWelcomed) {
-                        localStorage.setItem('umsy_welcomed', 'true');
-                        try {
-                            const cachedTimetable = localStorage.getItem('umsy_timetable_data');
-                            if (cachedTimetable) {
-                                await Capacitor.Plugins.LiveNotification.saveTimetable({ data: cachedTimetable });
-                            }
-                            await Capacitor.Plugins.LiveNotification.triggerWelcomeNotification();
-                        } catch (e) {
-                            console.error('Failed to trigger welcome notification:', e);
+            // Concurrent fetches
+            const promises = [
+                (async () => {
+                    try {
+                        const studentRes = await getStudentDashboardV04(auth);
+                        if (studentRes.success && studentRes.data) {
+                            setStudentInfo(studentRes.data);
+                            localStorage.setItem('umsy_student_info', JSON.stringify(studentRes.data));
+                            window.dispatchEvent(new Event('student-info-updated'));
                         }
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const attRes = await getAttendanceDetails(auth);
+                        if (attRes.success && attRes.data) {
+                            setAttendanceData(attRes.data);
+                            localStorage.setItem('umsy_attendance_data', JSON.stringify(attRes.data));
+                        }
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const coursesRes = await getCourses(auth);
+                        if (coursesRes.success && coursesRes.data) {
+                            setCoursesData(coursesRes.data);
+                            localStorage.setItem('umsy_courses_data', JSON.stringify(coursesRes.data));
+                        }
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const marksRes = await getMarksV04(auth);
+                        if (marksRes.success && marksRes.data) {
+                            setMarksData(marksRes.data);
+                            localStorage.setItem('umsy_marks_data', JSON.stringify(marksRes.data));
+                        }
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const result = await getTimeTable(auth);
+                        if (result.data && Object.keys(result.data).length > 0) {
+                            setTimetable(result.data);
+                            localStorage.setItem('umsy_timetable_data', JSON.stringify(result.data));
+                        }
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const seatingPlanResult = await getSeatingPlan(auth);
+                        if (seatingPlanResult.success && seatingPlanResult.data) {
+                            setSeatingPlan(seatingPlanResult.data);
+                            localStorage.setItem('umsy_seating_plan', JSON.stringify(seatingPlanResult.data));
+                        }
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const result = await getPendingAssignments(auth);
+                        setPendingAssignments(result.data || []);
+                    } catch (e) {}
+                })(),
+                (async () => {
+                    try {
+                        const result = await getResultV04(auth);
+                        if (result.success && result.data) {
+                            localStorage.setItem('umsy_result_data', JSON.stringify(result.data));
+                            setBacklogCount(calculateBacklogsCount(result.data));
+                        }
+                    } catch (e) {}
+                })()
+            ];
+
+            await Promise.allSettled(promises);
+            
+            // Fetch rankings too
+            try {
+                const res = await getRanking(cleanRegno);
+                if (res.success) {
+                    setRanking(res.data);
+                    localStorage.setItem('umsy_ranking_data', JSON.stringify({ regno: cleanRegno, data: res.data }));
+                }
+            } catch (e) {}
+
+            localStorage.setItem('umsy_last_sync_date', new Date().toDateString());
+            setShowSyncPrompt(false);
+
+            if (Capacitor.isNativePlatform() && Capacitor.Plugins.LiveNotification) {
+                const hasWelcomed = localStorage.getItem('umsy_welcomed');
+                if (!hasWelcomed) {
+                    localStorage.setItem('umsy_welcomed', 'true');
+                    try {
+                        const cachedTimetable = localStorage.getItem('umsy_timetable_data');
+                        if (cachedTimetable) {
+                            await Capacitor.Plugins.LiveNotification.saveTimetable({ data: cachedTimetable });
+                        }
+                        await Capacitor.Plugins.LiveNotification.triggerWelcomeNotification();
+                    } catch (e) {
+                        console.error('Failed to trigger welcome notification:', e);
                     }
                 }
             }
         } catch (e) {
             console.error('Background sync failed:', e);
+            // Last resort fallback: if everything failed, try with existing cookies
+            const fallbackCookies = localStorage.getItem('umsy_cookies');
+            if (fallbackCookies) {
+                console.log('🔄 Sync error, attempting fallback with existing cookies...');
+                setSyncStatus('Fetching with existing session...');
+                try {
+                    const seatingPlanResult = await getSeatingPlan(fallbackCookies);
+                    if (seatingPlanResult.success && seatingPlanResult.data) {
+                        setSeatingPlan(seatingPlanResult.data);
+                        localStorage.setItem('umsy_seating_plan', JSON.stringify(seatingPlanResult.data));
+                    }
+                } catch (spErr) {
+                    console.error('Fallback seating plan fetch failed:', spErr);
+                }
+            }
         } finally {
             setIsSyncing(false);
             setSyncProgress(100);
@@ -488,6 +516,11 @@ const Dashboard = () => {
             const cachedResult = localStorage.getItem('umsy_result_data');
             if (cachedResult) {
                 try { setBacklogCount(calculateBacklogsCount(JSON.parse(cachedResult))); } catch (e) { }
+            }
+
+            const cachedSeatingPlan = localStorage.getItem('umsy_seating_plan');
+            if (cachedSeatingPlan) {
+                try { setSeatingPlan(JSON.parse(cachedSeatingPlan)); } catch (e) { }
             }
 
             const cachedRanking = localStorage.getItem('umsy_ranking_data');
@@ -746,18 +779,32 @@ const Dashboard = () => {
                                     </h1>
                                     <p className="text-xs text-zinc-450 dark:text-zinc-500 mt-1">Here's your academic overview</p>
                                 </div>
-                                {!Capacitor.isNativePlatform() && (
-                                    <div className="hidden md:block">
-                                        <a
-                                            href="/umsy.apk?v=9"
-                                            download="umsy.apk"
-                                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm"
-                                        >
-                                            <Download className="w-4.5 h-4.5" />
-                                            <span>Download Android App</span>
-                                        </a>
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setShowSeatingPlan(true)}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 dark:bg-zinc-800 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm hover:bg-zinc-850 dark:hover:bg-zinc-700 cursor-pointer"
+                                    >
+                                        <Calendar className="w-4 h-4 text-[#bef227]" />
+                                        <span>Seating Plan 🪑</span>
+                                        {Array.isArray(seatingPlan) && seatingPlan.length > 0 && (
+                                            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-extrabold bg-[#bef227] text-zinc-950 rounded-full">
+                                                {seatingPlan.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                    {!Capacitor.isNativePlatform() && (
+                                        <div className="hidden md:block">
+                                            <a
+                                                href="/umsy.apk?v=9"
+                                                download="umsy.apk"
+                                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm"
+                                            >
+                                                <Download className="w-4.5 h-4.5" />
+                                                <span>Download Android App</span>
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* 3 Stats Cards (Tappable & Responsive) */}
@@ -967,12 +1014,25 @@ const Dashboard = () => {
                                         <div>
                                             <div className="flex items-center justify-between mb-4">
                                                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Schedule Focus</h3>
-                                                <button 
-                                                    onClick={() => navigate('/time-table')}
-                                                    className="text-xs font-bold text-[#7cb918] hover:text-[#9be11f] transition-colors"
-                                                >
-                                                    Full Timetable
-                                                </button>
+                                                <div className="flex items-center gap-3">
+                                                    <button 
+                                                        onClick={() => setShowSeatingPlan(true)}
+                                                        className="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-950 dark:hover:text-white transition-colors"
+                                                    >
+                                                        Seating Plan 🪑
+                                                        {Array.isArray(seatingPlan) && seatingPlan.length > 0 && (
+                                                            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-extrabold bg-[#bef227] text-zinc-950 rounded-full">
+                                                                {seatingPlan.length}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => navigate('/time-table')}
+                                                        className="text-xs font-bold text-[#7cb918] hover:text-[#9be11f] transition-colors"
+                                                    >
+                                                        Full Timetable
+                                                    </button>
+                                                </div>
                                             </div>
                                             <p className="text-xs text-zinc-400 mb-6">
                                                 {dayName}, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -1276,6 +1336,19 @@ const Dashboard = () => {
 const SeatingModal = ({ isOpen, onClose, seatingPlan }) => {
     if (!isOpen) return null;
 
+    // Normalize field names — support both camelCase (scraper) and PascalCase (legacy WebMethod)
+    const normalizeEntry = (exam) => ({
+        date: exam.date || exam.Date || '',
+        courseCode: exam.courseCode || exam.CourseCode || exam.col0 || '',
+        courseName: exam.courseName || exam.CourseName || exam.Subject || exam.col1 || '',
+        status: exam.status || exam.Status || '',
+        exam: exam.exam || exam.Exam || exam['exam type'] || '',
+        room: exam.room || exam.Room || exam['room no'] || exam.RoomNo || '',
+        reportingTime: exam.reportingTime || exam.ReportingTime || exam.Time || exam['reporting time'] || '',
+        seatNo: exam.seatNo || exam.SeatNo || exam.Seat || exam['seat no'] || '',
+        dutyId: exam.dutyId || exam.DutyID || exam.DutyId || '',
+    });
+
     return (
         <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center p-0 sm:p-4 animate-in fade-in duration-300">
             <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
@@ -1304,40 +1377,63 @@ const SeatingModal = ({ isOpen, onClose, seatingPlan }) => {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {seatingPlan.map((exam, idx) => (
-                                <div key={idx} className="p-5 rounded-[24px] bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800/50">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm">
-                                                <Calendar className="h-5 w-5 text-indigo-500" />
+                            {seatingPlan.map((rawExam, idx) => {
+                                const exam = normalizeEntry(rawExam);
+                                return (
+                                    <div key={idx} className="p-5 rounded-[24px] bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800/50">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm">
+                                                    <Calendar className="h-5 w-5 text-indigo-500" />
+                                                </div>
+                                                <div>
+                                                    {exam.date && <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{exam.date}</p>}
+                                                    {exam.courseCode && <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-none mt-0.5">{exam.courseCode}</h4>}
+                                                    {exam.courseName && <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{exam.courseName}</p>}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{exam.Date}</p>
-                                                <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-none mt-0.5">{exam.CourseCode}</h4>
-                                            </div>
+                                            {exam.status && (
+                                                <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                                                    {exam.status}
+                                                </span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {exam.room && (
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Room</p>
+                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.room}</p>
+                                                </div>
+                                            )}
+                                            {exam.seatNo && (
+                                                <div className="space-y-1 text-right">
+                                                    <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Seat Number</p>
+                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.seatNo}</p>
+                                                </div>
+                                            )}
+                                            {exam.reportingTime && (
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Time</p>
+                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.reportingTime}</p>
+                                                </div>
+                                            )}
+                                            {exam.exam && (
+                                                <div className="space-y-1 text-right">
+                                                    <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Exam Type</p>
+                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.exam}</p>
+                                                </div>
+                                            )}
+                                            {exam.dutyId && (
+                                                <div className="space-y-1 text-right">
+                                                    <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Duty ID</p>
+                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.dutyId}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Room</p>
-                                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.Room}</p>
-                                        </div>
-                                        <div className="space-y-1 text-right">
-                                            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Seat Number</p>
-                                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.SeatNo}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Time</p>
-                                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.Time}</p>
-                                        </div>
-                                        <div className="space-y-1 text-right">
-                                            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Duty ID</p>
-                                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{exam.DutyID || '—'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -1345,6 +1441,8 @@ const SeatingModal = ({ isOpen, onClose, seatingPlan }) => {
         </div>
     );
 };
+
+
 
 const AssignmentsModal = ({ isOpen, onClose, assignments, loading }) => {
     if (!isOpen) return null;

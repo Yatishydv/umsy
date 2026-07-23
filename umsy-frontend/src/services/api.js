@@ -268,13 +268,16 @@ export async function getCourses(auth) {
 
 /**
  * Get student seating plan
+ * Always sends regno so the backend can perform fresh auth if cookies are stale
  */
-export async function getSeatingPlan(auth) {
+export async function getSeatingPlan(auth, force = false) {
     try {
+        const regno = localStorage.getItem('umsy_regno')?.trim() || '';
+        const body = { ...getAuthBody(auth), ...(regno ? { regno } : {}), ...(force ? { force: true } : {}) };
         const response = await fetch(`${API_BASE_URL}/seating-plan`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(getAuthBody(auth)),
+            body: JSON.stringify(body),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to fetch seating plan');
@@ -284,6 +287,7 @@ export async function getSeatingPlan(auth) {
         throw error;
     }
 }
+
 
 /**
  * Get student hostel information

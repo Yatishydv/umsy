@@ -230,6 +230,7 @@ const MobileSidebar = () => {
 
     const menuItems = [
         { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+        { name: "Seating Plan", icon: Eye, path: "/seating-plan" },
         { name: "Attendance", icon: CalendarCheck, path: "/attendance" },
         { name: "Grades", icon: Award, path: "/grades" },
         { name: "CGPA", icon: GraduationCap, path: "/cgpa" },
