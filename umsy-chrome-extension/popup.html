@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 280px;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #0f172a;
+            color: #ffffff;
+            margin: 0;
+            padding: 16px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #bef227;
+        }
+        .status {
+            font-size: 11px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            margin-bottom: 12px;
+        }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: #bef227;
+            color: #0f172a;
+            font-weight: 800;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #a9d821;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">⚡ UMSY Auto-Sync</div>
+        <span style="font-size:10px;color:#94a3b8;">v1.0.0</span>
+    </div>
+    <div id="statusBox" class="status">
+        Checking UMS session status...
+    </div>
+    <button id="syncBtn" class="btn">⚡ Sync Session to UMSY Website</button>
+    <script src="popup.js"></script>
+</body>
+</html>

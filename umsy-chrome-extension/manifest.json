@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "UMSY Cloudflare Auto-Bypass & Session Sync",
+  "version": "1.0.0",
+  "description": "Automatically solves Cloudflare Turnstile and syncs UMS session to UMSY in 1 click with zero manual copying.",
+  "permissions": [
+    "cookies",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://ums.lpu.in/*",
+    "https://studentums.lpu.in/*",
+    "https://umsy.vercel.app/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://ums.lpu.in/*",
+        "https://studentums.lpu.in/*",
+        "https://umsy.vercel.app/*",
+        "http://localhost/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
