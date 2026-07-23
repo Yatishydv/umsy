@@ -59,7 +59,7 @@ function ProtectedRoute({ children }) {
 
 function AppContent() {
   const location = useLocation();
-  const loginRoutes = ['/v05login', '/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
+  const loginRoutes = ['/tlogin', '/v05login', '/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
   const isLoginPage = loginRoutes.includes(location.pathname);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(null);
@@ -253,12 +253,13 @@ function AppContent() {
     <>
       <Routes>
         <Route path="/cookie" element={<Cookie />} />
+        <Route path="/tlogin" element={<UmsyV04Login />} />
         <Route path="/v05login" element={<V05Login />} />
         <Route path="/newlogin" element={<V05Login />} />
         <Route path="/newlogin2" element={<V05Login />} />
-        <Route path="/v04/login" element={<Navigate to="/login" replace />} />
-        <Route path="/umsyV04" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<UmsyV04Login />} />
+        <Route path="/v04/login" element={<Navigate to="/tlogin" replace />} />
+        <Route path="/umsyV04" element={<Navigate to="/tlogin" replace />} />
+        <Route path="/login" element={<Login />} />
 
         {/* Dashboard layout wrapping all core authenticated pages */}
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
