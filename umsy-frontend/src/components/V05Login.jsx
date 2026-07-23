@@ -316,7 +316,7 @@ const V05Login = () => {
                             </div>
                         </div>
 
-                        {/* One-Click Automated Verification */}
+                        {/* One-Click Automated Verification & Sync */}
                         <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
                             <button
                                 type="button"
@@ -326,47 +326,32 @@ const V05Login = () => {
                                         return;
                                     }
                                     setError('');
-                                    setStatusMsg('Opening UMS verification...');
-
-                                    // Open focused popup directly to UMS login
-                                    const win = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=500,height=620');
-                                    
-                                    // Automatic background polling for session completion
-                                    const interval = setInterval(async () => {
-                                        if (win && win.closed) {
-                                            clearInterval(interval);
-                                            return;
-                                        }
-
-                                        try {
-                                            // Attempt direct background authentication check
-                                            const res = await v05Login(username.trim(), password.trim(), '');
-                                            if (res && res.success && res.cookies) {
-                                                clearInterval(interval);
-                                                if (win && !win.closed) win.close();
-
-                                                saveSession(username.trim(), res.cookies);
-                                                localStorage.setItem('umsy_cookies', res.cookies);
-                                                localStorage.setItem('umsy_regno', username.trim());
-                                                localStorage.setItem('umsy_password', password.trim());
-                                                localStorage.removeItem('umsy_seating_plan');
-
-                                                setStatusMsg('✅ Verified & Logged in! Redirecting...');
-                                                setTimeout(() => navigate('/dashboard'), 500);
-                                            }
-                                        } catch (e) {
-                                            // Silent poll
-                                        }
-                                    }, 2000);
+                                    localStorage.setItem('umsy_regno', username.trim());
+                                    localStorage.setItem('umsy_password', password.trim());
+                                    window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
                                 }}
                                 className="w-full py-3.5 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all shadow-md shadow-[#bef227]/20 flex items-center justify-center space-x-2 active:scale-95"
                             >
-                                <span>⚡ 1-Click Verification & Sign In</span>
+                                <span>⚡ 1. Open UMS & Log in in Popup</span>
                             </button>
 
-                            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                                Click the button, solve the checkbox in the popup window, and UMSY will automatically log you in! Zero copying required.
-                            </p>
+                            <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-left space-y-2">
+                                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                    2. Once logged in inside popup, click below to sync:
+                                </p>
+                                <a
+                                    href="javascript:location.href='https://umsy.vercel.app/cookie-callback?cookie='+encodeURIComponent(document.cookie);"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const code = "javascript:location.href='https://umsy.vercel.app/cookie-callback?cookie='+encodeURIComponent(document.cookie);";
+                                        navigator.clipboard.writeText(code);
+                                        alert('Copied 1-Click Sync Bookmark! Drag this link to your browser bookmarks bar, or paste in popup address bar to sync instantly!');
+                                    }}
+                                    className="block w-full py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs text-center transition-all cursor-pointer shadow-sm"
+                                >
+                                    ⚡ Sync Session to UMSY (Zero Copying)
+                                </a>
+                            </div>
                         </div>
 
                         <button

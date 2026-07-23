@@ -18,6 +18,7 @@ import MobileBacklogs from './components/MobileBacklogs';
 import MobileBottomNav from './components/MobileBottomNav';
 import ByeBye from './components/ByeBye';
 import Cookie from './components/Cookie';
+import CookieCallback from './components/CookieCallback';
 import NewLogin from './components/NewLogin';
 import UmsyV04Login from './components/UmsyV04Login';
 import DashboardLayout from './components/DashboardLayout';
@@ -59,7 +60,7 @@ function ProtectedRoute({ children }) {
 
 function AppContent() {
   const location = useLocation();
-  const loginRoutes = ['/tlogin', '/v05login', '/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
+  const loginRoutes = ['/cookie-callback', '/tlogin', '/v05login', '/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
   const isLoginPage = loginRoutes.includes(location.pathname);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(null);
@@ -253,6 +254,7 @@ function AppContent() {
     <>
       <Routes>
         <Route path="/cookie" element={<Cookie />} />
+        <Route path="/cookie-callback" element={<CookieCallback />} />
         <Route path="/tlogin" element={<UmsyV04Login />} />
         <Route path="/v05login" element={<V05Login />} />
         <Route path="/newlogin" element={<V05Login />} />
