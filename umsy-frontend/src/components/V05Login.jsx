@@ -289,19 +289,61 @@ const V05Login = () => {
 
                         {/* Turnstile Solver Trigger */}
                         <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
-                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-3">
-                                Cloudflare Verification Required
+                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">
+                                Step 1: Open verification window & click checkbox
                             </p>
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const win = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=500,height=600');
-                                    setStatusMsg('Please complete verification in popup...');
+                                    const win = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
+                                    setStatusMsg('Complete checkbox in popup window...');
+                                    
+                                    // Monitor popup for solved token
+                                    const timer = setInterval(() => {
+                                        if (win.closed) {
+                                            clearInterval(timer);
+                                            return;
+                                        }
+                                        try {
+                                            const doc = win.document;
+                                            const tokenInput = doc.querySelector('[name="cf-turnstile-response"]');
+                                            if (tokenInput && tokenInput.value && tokenInput.value.length > 20) {
+                                                setTurnstileToken(tokenInput.value);
+                                                setError('');
+                                                setStatusMsg('✅ Cloudflare verified! Click Sign in below.');
+                                                clearInterval(timer);
+                                                win.close();
+                                            }
+                                        } catch (e) {
+                                            // Cross-origin fallback instructions
+                                        }
+                                    }, 1000);
                                 }}
-                                className="w-full py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all"
+                                className="w-full py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all mb-3"
                             >
                                 Open Cloudflare Verification Popup
                             </button>
+
+                            {turnstileToken ? (
+                                <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                                    ✓ Turnstile Verified & Ready!
+                                </div>
+                            ) : (
+                                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                    Or paste solved token:
+                                    <input
+                                        type="text"
+                                        placeholder="Paste cf-turnstile-response token here"
+                                        onChange={(e) => {
+                                            if (e.target.value.length > 20) {
+                                                setTurnstileToken(e.target.value.trim());
+                                                setError('');
+                                            }
+                                        }}
+                                        className="w-full mt-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#bef227]"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <button
