@@ -254,8 +254,8 @@ function AppContent() {
       <Routes>
         <Route path="/cookie" element={<Cookie />} />
         <Route path="/v05login" element={<V05Login />} />
-        <Route path="/newlogin" element={<NewLogin />} />
-        <Route path="/newlogin2" element={<NewLogin />} />
+        <Route path="/newlogin" element={<V05Login />} />
+        <Route path="/newlogin2" element={<V05Login />} />
         <Route path="/v04/login" element={<Navigate to="/login" replace />} />
         <Route path="/umsyV04" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<UmsyV04Login />} />
