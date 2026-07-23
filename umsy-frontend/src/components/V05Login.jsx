@@ -287,9 +287,21 @@ const V05Login = () => {
                             </div>
                         </div>
 
-                        {/* Turnstile Container */}
-                        <div className="flex justify-center my-4">
-                            <div ref={turnstileRef}></div>
+                        {/* Turnstile Solver Trigger */}
+                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-3">
+                                Cloudflare Verification Required
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const win = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=500,height=600');
+                                    setStatusMsg('Please complete verification in popup...');
+                                }}
+                                className="w-full py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all"
+                            >
+                                Open Cloudflare Verification Popup
+                            </button>
                         </div>
 
                         <button
