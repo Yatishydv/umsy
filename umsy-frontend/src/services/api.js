@@ -77,6 +77,12 @@ export async function v05Login(username, password, turnstileToken) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, turnstileToken }),
     });
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+        throw new Error('Backend server error. Please ensure the backend server is running.');
+    }
+
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Login failed');
     return data;
