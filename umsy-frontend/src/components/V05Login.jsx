@@ -331,39 +331,42 @@ const V05Login = () => {
                                     Check the box above to verify, then click Sign in.
                                 </p>
                             )}
-                        {/* Extension Auto-Sync Indicator & Download Link */}
-                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                    🧩 Extension Auto-Bypass
-                                </span>
-                                <a
-                                    href="https://github.com/Yatishydv/umsy/tree/main/umsy-chrome-extension"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[11px] font-bold text-[#1c312e] dark:text-[#bef227] underline hover:opacity-80"
-                                >
-                                    Get Chrome Extension
-                                </a>
-                            </div>
-                            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 text-left">
-                                Install the UMSY Extension to bypass Cloudflare Turnstile 100% automatically across all deployed environments!
-                            </p>
                         </div>
-
+                        {/* Instant 1-Click Direct Login */}
                         <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-4 px-6 rounded-2xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black tracking-wide shadow-lg shadow-[#bef227]/20 transition-all duration-200 transform active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                            type="button"
+                            onClick={() => {
+                                if (!username || !password) {
+                                    setError('Please enter Registration Number and Password.');
+                                    return;
+                                }
+                                setError('');
+                                setLoading(true);
+                                setStatusMsg('Connecting to UMS...');
+
+                                v05Login(username.trim(), password.trim(), '')
+                                    .then(res => {
+                                        if (res.success && res.cookies) {
+                                            saveSession(username.trim(), res.cookies);
+                                            localStorage.setItem('umsy_cookies', res.cookies);
+                                            localStorage.setItem('umsy_regno', username.trim());
+                                            localStorage.setItem('umsy_password', password.trim());
+                                            localStorage.removeItem('umsy_seating_plan');
+                                            setStatusMsg('Login successful! Redirecting...');
+                                            setTimeout(() => navigate('/dashboard'), 500);
+                                        } else {
+                                            setError(res.error || 'Login failed — please check credentials.');
+                                            setLoading(false);
+                                        }
+                                    })
+                                    .catch(err => {
+                                        setError(err.message || 'Login failed.');
+                                        setLoading(false);
+                                    });
+                            }}
+                            className="w-full py-4 px-6 rounded-2xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-sm tracking-wide shadow-lg shadow-[#bef227]/20 transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center space-x-2 cursor-pointer"
                         >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>{statusMsg || 'Authenticating...'}</span>
-                                </>
-                            ) : (
-                                <span>Sign in</span>
-                            )}
+                            <span>⚡ Instant Sign in (No Cloudflare Needed)</span>
                         </button>
                     </form>
                 </div>
