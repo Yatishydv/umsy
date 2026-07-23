@@ -259,7 +259,7 @@ function AppContent() {
         <Route path="/newlogin2" element={<V05Login />} />
         <Route path="/v04/login" element={<Navigate to="/tlogin" replace />} />
         <Route path="/umsyV04" element={<Navigate to="/tlogin" replace />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<UmsyV04Login />} />
 
         {/* Dashboard layout wrapping all core authenticated pages */}
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
