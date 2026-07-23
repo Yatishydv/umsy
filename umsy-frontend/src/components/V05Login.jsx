@@ -316,35 +316,57 @@ const V05Login = () => {
                             </div>
                         </div>
 
-                        {/* Login Method Switcher */}
+                        {/* One-Click Automated Verification */}
                         <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                🔑 Seamless Cloudflare Bypass
-                            </p>
-                            
                             <button
                                 type="button"
-                                onClick={() => window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650')}
-                                className="w-full py-3 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all shadow-md shadow-[#bef227]/20 flex items-center justify-center space-x-2"
+                                onClick={() => {
+                                    if (!username || !password) {
+                                        setError('Please enter your Registration Number and Password first.');
+                                        return;
+                                    }
+                                    setError('');
+                                    setStatusMsg('Opening UMS verification...');
+
+                                    // Open focused popup directly to UMS login
+                                    const win = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=500,height=620');
+                                    
+                                    // Automatic background polling for session completion
+                                    const interval = setInterval(async () => {
+                                        if (win && win.closed) {
+                                            clearInterval(interval);
+                                            return;
+                                        }
+
+                                        try {
+                                            // Attempt direct background authentication check
+                                            const res = await v05Login(username.trim(), password.trim(), '');
+                                            if (res && res.success && res.cookies) {
+                                                clearInterval(interval);
+                                                if (win && !win.closed) win.close();
+
+                                                saveSession(username.trim(), res.cookies);
+                                                localStorage.setItem('umsy_cookies', res.cookies);
+                                                localStorage.setItem('umsy_regno', username.trim());
+                                                localStorage.setItem('umsy_password', password.trim());
+                                                localStorage.removeItem('umsy_seating_plan');
+
+                                                setStatusMsg('✅ Verified & Logged in! Redirecting...');
+                                                setTimeout(() => navigate('/dashboard'), 500);
+                                            }
+                                        } catch (e) {
+                                            // Silent poll
+                                        }
+                                    }, 2000);
+                                }}
+                                className="w-full py-3.5 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all shadow-md shadow-[#bef227]/20 flex items-center justify-center space-x-2 active:scale-95"
                             >
-                                <span>⚡ 1. Open UMS Portal Popup & Log in</span>
+                                <span>⚡ 1-Click Verification & Sign In</span>
                             </button>
 
-                            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 text-left space-y-1 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <p className="font-bold text-slate-700 dark:text-slate-200">2. Paste ASP.NET_SessionId cookie or Turnstile Token:</p>
-                                <input
-                                    type="text"
-                                    placeholder="Paste ASP.NET_SessionId=... or cf-turnstile-response token"
-                                    onChange={(e) => {
-                                        const val = e.target.value.trim();
-                                        if (val.includes('ASP.NET_SessionId=') || val.length > 20) {
-                                            setTurnstileToken(val);
-                                            setError('');
-                                        }
-                                    }}
-                                    className="w-full mt-1.5 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#bef227]"
-                                />
-                            </div>
+                            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                                Click the button, solve the checkbox in the popup window, and UMSY will automatically log you in! Zero copying required.
+                            </p>
                         </div>
 
                         <button
