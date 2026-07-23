@@ -681,6 +681,54 @@ app.post('/api/complete-login', async (req, res) => {
 const newLoginActiveSessions = new Map();
 
 /**
+ * GET /api/ums-auth-proxy
+ * Serves UMS LoginNew.aspx with injected auto-postMessage script that automatically sends the solved Turnstile token back to V05Login window.
+ */
+app.get('/api/ums-auth-proxy', async (req, res) => {
+    try {
+        const response = await axios.get('https://ums.lpu.in/lpuums/LoginNew.aspx', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+
+        let html = response.data;
+        const bridgeScript = `
+            <script>
+                (function() {
+                    console.log('⚡ UMSY Automated Token Bridge Active...');
+                    const checkTimer = setInterval(function() {
+                        try {
+                            const inp = document.querySelector('[name="cf-turnstile-response"]');
+                            if (inp && inp.value && inp.value.length > 20) {
+                                if (window.opener) {
+                                    window.opener.postMessage({ type: 'UMSY_TURNSTILE_TOKEN', token: inp.value }, '*');
+                                }
+                                clearInterval(checkTimer);
+                                document.body.innerHTML = '<div style="font-family:sans-serif;text-align:center;padding:60px;background:#0f172a;color:#fff;height:100vh;"><h2 style="color:#bef227;">✅ Cloudflare Verified!</h2><p>Returning to UMSY...</p></div>';
+                                setTimeout(function() { window.close(); }, 700);
+                            }
+                        } catch(e) {}
+                    }, 400);
+                })();
+            </script>
+        `;
+
+        if (html.includes('</body>')) {
+            html = html.replace('</body>', bridgeScript + '</body>');
+        } else {
+            html += bridgeScript;
+        }
+
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    } catch (err) {
+        console.error('[ums-auth-proxy] Error:', err.message);
+        res.status(500).send('Failed to load proxy authentication page');
+    }
+});
+
+/**
  * POST /api/v05login
  * Direct HTTP-based login using Turnstile token solved in user's browser.
  * Zero Puppeteer overhead, zero Cloudflare datacenter IP blocks.

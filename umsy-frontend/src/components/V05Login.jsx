@@ -66,6 +66,21 @@ const V05Login = () => {
         return () => clearInterval(interval);
     }, [slides.length]);
 
+    // Listen for automated zero-click Turnstile token message from proxy popup
+    useEffect(() => {
+        const handleMessage = (event) => {
+            if (event.data && event.data.type === 'UMSY_TURNSTILE_TOKEN' && event.data.token) {
+                console.log('⚡ Received Turnstile token automatically from proxy popup!');
+                setTurnstileToken(event.data.token);
+                setError('');
+                setStatusMsg('✅ Cloudflare verified automatically!');
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
     // Load Turnstile Script for frontend solving
     useEffect(() => {
         const scriptId = 'cf-turnstile-script';
@@ -290,53 +305,30 @@ const V05Login = () => {
                         {/* Turnstile Solver Trigger */}
                         <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
                             <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">
-                                1. Open popup & click Turnstile checkbox
+                                Step 1: Open verification popup & check Turnstile box
                             </p>
                             <button
                                 type="button"
                                 onClick={() => {
-                                    window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
-                                    setStatusMsg('Complete checkbox in popup window...');
+                                    const proxyUrl = (window.location.hostname === 'localhost' || window.location.hostname.match(/^\d+\./))
+                                        ? 'http://localhost:3001/api/ums-auth-proxy'
+                                        : 'https://umsy-backend-production.up.railway.app/api/ums-auth-proxy';
+                                    window.open(proxyUrl, '_blank', 'width=550,height=650');
+                                    setStatusMsg('Complete Cloudflare checkbox in popup window...');
                                 }}
-                                className="w-full py-2.5 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all mb-3 shadow-md shadow-[#bef227]/20"
+                                className="w-full py-3 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all mb-2 shadow-md shadow-[#bef227]/20"
                             >
-                                ⚡ 1. Open Cloudflare Verification Popup
+                                ⚡ Open Auto-Verification Popup
                             </button>
 
                             {turnstileToken ? (
                                 <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-center space-x-2 animate-bounce">
-                                    <span>✓ Turnstile Token Captured & Ready!</span>
+                                    <span>✓ Verified Automatically! Click Sign in below.</span>
                                 </div>
                             ) : (
-                                <div className="space-y-2 mt-2">
-                                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                        <span>2. Copy token from popup console:</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText("copy(document.querySelector('[name=\"cf-turnstile-response\"]').value)");
-                                                alert('Copied 1-line command! Paste in popup DevTools Console (F12) & hit Enter!');
-                                            }}
-                                            className="text-[#1c312e] dark:text-[#bef227] underline font-bold hover:opacity-80"
-                                        >
-                                            Copy 1-Line Console Code
-                                        </button>
-                                    </div>
-
-                                    <input
-                                        type="text"
-                                        placeholder="Paste token here (Auto-submits on paste)"
-                                        onChange={(e) => {
-                                            const val = e.target.value.trim();
-                                            if (val.length > 20) {
-                                                setTurnstileToken(val);
-                                                setError('');
-                                                setStatusMsg('✓ Token accepted! Logging in...');
-                                            }
-                                        }}
-                                        className="w-full mt-2 px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#bef227]"
-                                    />
-                                </div>
+                                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1">
+                                    The popup closes automatically once checked. Zero manual copying required!
+                                </p>
                             )}
                         </div>
 
