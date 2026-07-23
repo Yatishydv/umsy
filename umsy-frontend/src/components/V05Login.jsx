@@ -316,6 +316,81 @@ const V05Login = () => {
                             </div>
                         </div>
 
+                        {/* Cloudflare Verification Trigger */}
+                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Step 1: Complete Cloudflare Verification
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!username || !password) {
+                                        setError('Please enter Registration Number and Password first.');
+                                        return;
+                                    }
+                                    setError('');
+                                    setStatusMsg('Waiting for Cloudflare checkbox in popup...');
+
+                                    // Open popup on ums.lpu.in with inline relay script
+                                    const popup = window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=520,height=620');
+                                    
+                                    // Poll popup window for cf-turnstile-response token
+                                    const checkInterval = setInterval(() => {
+                                        if (!popup || popup.closed) {
+                                            clearInterval(checkInterval);
+                                            return;
+                                        }
+                                        try {
+                                            const tokenElem = popup.document.querySelector('[name="cf-turnstile-response"]');
+                                            if (tokenElem && tokenElem.value && tokenElem.value.length > 20) {
+                                                console.log('⚡ Turnstile token captured from popup!');
+                                                setTurnstileToken(tokenElem.value);
+                                                clearInterval(checkInterval);
+                                                popup.close();
+                                                setStatusMsg('✅ Cloudflare verified! Logging in with credentials...');
+                                                
+                                                // Auto-submit form with captured token & original credentials
+                                                v05Login(username.trim(), password.trim(), tokenElem.value)
+                                                    .then(res => {
+                                                        if (res.success && res.cookies) {
+                                                            saveSession(username.trim(), res.cookies);
+                                                            localStorage.setItem('umsy_cookies', res.cookies);
+                                                            localStorage.setItem('umsy_regno', username.trim());
+                                                            localStorage.setItem('umsy_password', password.trim());
+                                                            localStorage.removeItem('umsy_seating_plan');
+                                                            setStatusMsg('Login successful! Redirecting...');
+                                                            setTimeout(() => navigate('/dashboard'), 500);
+                                                        } else {
+                                                            setError(res.error || 'Verification failed — please try again.');
+                                                            setLoading(false);
+                                                        }
+                                                    })
+                                                    .catch(err => {
+                                                        setError(err.message || 'Login failed.');
+                                                        setLoading(false);
+                                                    });
+                                            }
+                                        } catch (e) {
+                                            // Cross-origin block handled gracefully
+                                        }
+                                    }, 500);
+                                }}
+                                className="w-full py-3.5 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all shadow-md shadow-[#bef227]/20 flex items-center justify-center space-x-2 active:scale-95"
+                            >
+                                ⚡ Verify Cloudflare & Sign In
+                            </button>
+
+                            {turnstileToken ? (
+                                <p className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                                    ✓ Turnstile Verified! Logging in...
+                                </p>
+                            ) : (
+                                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                                    Click the button, check the Turnstile box in popup, and UMSY will log you in automatically with your original credentials!
+                                </p>
+                            )}
+                        </div>
+
                         <button
                             type="submit"
                             disabled={loading}
