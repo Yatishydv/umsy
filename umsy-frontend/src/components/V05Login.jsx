@@ -310,15 +310,12 @@ const V05Login = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const proxyUrl = (window.location.hostname === 'localhost' || window.location.hostname.match(/^\d+\./))
-                                        ? 'http://localhost:3001/api/ums-auth-proxy'
-                                        : 'https://umsy-backend-production.up.railway.app/api/ums-auth-proxy';
-                                    window.open(proxyUrl, '_blank', 'width=550,height=650');
+                                    window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
                                     setStatusMsg('Complete Cloudflare checkbox in popup window...');
                                 }}
                                 className="w-full py-3 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all mb-2 shadow-md shadow-[#bef227]/20"
                             >
-                                ⚡ Open Auto-Verification Popup
+                                ⚡ Open Cloudflare Verification Popup
                             </button>
 
                             {turnstileToken ? (
