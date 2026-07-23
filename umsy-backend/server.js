@@ -744,7 +744,63 @@ app.post('/api/v05login', async (req, res) => {
 
     try {
         console.log(`[v05login] Received HTTP login request for ${username}...`);
-        const result = await performHttpLogin(username, password, turnstileToken);
+        
+        let result = { success: false };
+        if (turnstileToken && turnstileToken.length > 20) {
+            result = await performHttpLogin(username, password, turnstileToken);
+        }
+
+        // If direct Turnstile login failed or token was empty, fallback to token-based session fetch
+        if (!result.success || !result.cookies) {
+            console.log(`[v05login] Turnstile empty/failed. Attempting auto token-based session fetch for ${username}...`);
+            const record = await UserToken.findOne({ regno: username });
+            if (record && record.token) {
+                const tokenUrl = `https://ums.lpu.in/lpuums/frmSickStudentFoodRequest.aspx?uid=${record.token}==`;
+                let allCookies = [];
+                let currentUrl = tokenUrl;
+                let maxHops = 10;
+
+                while (maxHops-- > 0) {
+                    try {
+                        const response = await axios.get(currentUrl, {
+                            maxRedirects: 0,
+                            validateStatus: (status) => status >= 200 && status < 400,
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                                ...(allCookies.length > 0 && { 'Cookie': allCookies.map(c => `${c.name}=${c.value}`).join('; ') })
+                            }
+                        });
+
+                        const setCookies = response.headers['set-cookie'];
+                        if (setCookies) {
+                            for (const cookieStr of setCookies) {
+                                const parts = cookieStr.split(';')[0].split('=');
+                                const name = parts[0].trim();
+                                const value = parts.slice(1).join('=').trim();
+                                const existing = allCookies.findIndex(c => c.name === name);
+                                if (existing >= 0) allCookies[existing].value = value;
+                                else allCookies.push({ name, value });
+                            }
+                        }
+
+                        if (response.status >= 300 && response.status < 400 && response.headers.location) {
+                            currentUrl = new URL(response.headers.location, currentUrl).href;
+                        } else {
+                            break;
+                        }
+                    } catch (e) {
+                        break;
+                    }
+                }
+
+                const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
+                if (cookieHeader.includes('ASP.NET_SessionId=')) {
+                    console.log(`[v05login] ✅ Successfully fetched token session cookies for ${username}!`);
+                    result = { success: true, cookies: cookieHeader };
+                }
+            }
+        }
 
         if (!result.success || !result.cookies) {
             return res.status(401).json({ success: false, error: 'Verification failed — please try again.' });
