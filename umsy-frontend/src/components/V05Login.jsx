@@ -155,9 +155,23 @@ const V05Login = () => {
         setStatusMsg('Verifying credentials via UMS...');
 
         try {
+            // Check if user pasted an ASP.NET_SessionId cookie directly
+            if (turnstileToken && turnstileToken.includes('ASP.NET_SessionId=')) {
+                saveSession(username.trim(), turnstileToken.trim());
+                localStorage.setItem('umsy_cookies', turnstileToken.trim());
+                localStorage.setItem('umsy_regno', username.trim());
+                localStorage.setItem('umsy_password', password.trim());
+                localStorage.removeItem('umsy_seating_plan');
+
+                setStatusMsg('Login successful via Session Cookie! Redirecting...');
+                setTimeout(() => navigate('/dashboard'), 600);
+                return;
+            }
+
             const res = await v05Login(username.trim(), password.trim(), turnstileToken);
             if (res.success && res.cookies) {
                 saveSession(username.trim(), res.cookies);
+                localStorage.setItem('umsy_cookies', res.cookies);
                 localStorage.setItem('umsy_regno', username.trim());
                 localStorage.setItem('umsy_password', password.trim());
                 localStorage.removeItem('umsy_seating_plan');
@@ -302,31 +316,35 @@ const V05Login = () => {
                             </div>
                         </div>
 
-                        {/* Turnstile Solver Trigger */}
-                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
-                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">
-                                Step 1: Open verification popup & check Turnstile box
+                        {/* Login Method Switcher */}
+                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                🔑 Seamless Cloudflare Bypass
                             </p>
+                            
                             <button
                                 type="button"
-                                onClick={() => {
-                                    window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650');
-                                    setStatusMsg('Complete Cloudflare checkbox in popup window...');
-                                }}
-                                className="w-full py-3 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all mb-2 shadow-md shadow-[#bef227]/20"
+                                onClick={() => window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', '_blank', 'width=550,height=650')}
+                                className="w-full py-3 px-4 rounded-xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-xs transition-all shadow-md shadow-[#bef227]/20 flex items-center justify-center space-x-2"
                             >
-                                ⚡ Open Cloudflare Verification Popup
+                                <span>⚡ 1. Open UMS Portal Popup & Log in</span>
                             </button>
 
-                            {turnstileToken ? (
-                                <div className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-center space-x-2 animate-bounce">
-                                    <span>✓ Verified Automatically! Click Sign in below.</span>
-                                </div>
-                            ) : (
-                                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1">
-                                    The popup closes automatically once checked. Zero manual copying required!
-                                </p>
-                            )}
+                            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 text-left space-y-1 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <p className="font-bold text-slate-700 dark:text-slate-200">2. Paste ASP.NET_SessionId cookie or Turnstile Token:</p>
+                                <input
+                                    type="text"
+                                    placeholder="Paste ASP.NET_SessionId=... or cf-turnstile-response token"
+                                    onChange={(e) => {
+                                        const val = e.target.value.trim();
+                                        if (val.includes('ASP.NET_SessionId=') || val.length > 20) {
+                                            setTurnstileToken(val);
+                                            setError('');
+                                        }
+                                    }}
+                                    className="w-full mt-1.5 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#bef227]"
+                                />
+                            </div>
                         </div>
 
                         <button
@@ -337,10 +355,10 @@ const V05Login = () => {
                             {loading ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>{statusMsg || 'Verifying...'}</span>
+                                    <span>{statusMsg || 'Authenticating...'}</span>
                                 </>
                             ) : (
-                                <span>Sign in</span>
+                                <span>Sign in to UMSY</span>
                             )}
                         </button>
                     </form>
