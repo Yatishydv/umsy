@@ -1,22 +1,15 @@
 (function() {
     console.log('⚡ UMSY Chrome Extension Active!');
 
-    // 1. On UMS Login page: Auto-detect Turnstile Token
-    if (window.location.hostname.includes('ums.lpu.in')) {
-        const turnstileCheck = setInterval(() => {
-            try {
-                const turnstileInput = document.querySelector('[name="cf-turnstile-response"]');
-                if (turnstileInput && turnstileInput.value && turnstileInput.value.length > 20) {
-                    chrome.storage.local.set({ turnstileToken: turnstileInput.value });
-                    window.postMessage({ type: 'UMSY_TURNSTILE_TOKEN', token: turnstileInput.value }, '*');
-                }
-            } catch (e) {}
-
-            // Detect ASP.NET Session Cookie when logged in
+    // Always keep cookies synced if on lpu.in domain
+    if (window.location.hostname.includes('lpu.in')) {
+        const syncCookie = () => {
             if (document.cookie && document.cookie.includes('ASP.NET_SessionId=')) {
                 chrome.storage.local.set({ umsCookies: document.cookie });
             }
-        }, 500);
+        };
+        syncCookie();
+        setInterval(syncCookie, 1000);
     }
 
     // 2. On UMSY Website: Automatically inject extension presence & relay session
