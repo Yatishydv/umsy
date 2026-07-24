@@ -75,7 +75,7 @@ const V05Login = ({ mode }) => {
                 setError('');
                 setStatusMsg('✅ Cloudflare verified automatically!');
             }
-            if (event.data && event.data.type === 'UMSY_AUTO_SESSION' && event.data.cookies) {
+            if ((event.data && (event.data.type === 'UMSY_AUTO_SESSION' || event.data.type === 'UMSY_RESPONSE_SESSION')) && event.data.cookies) {
                 console.log('⚡ Received active session from extension!');
                 const cookiesStr = event.data.cookies.trim();
                 localStorage.setItem('umsy_cookies', cookiesStr);
@@ -84,25 +84,35 @@ const V05Login = ({ mode }) => {
                 // Fetch student info using session cookie
                 getStudentInfo(cookiesStr)
                     .then(info => {
-                        const regno = info?.RegistrationNo || info?.RegNo || '12300000';
+                        const regno = info?.RegistrationNo || info?.RegNo || username || '12301342';
                         localStorage.setItem('umsy_student_info', JSON.stringify(info));
                         localStorage.setItem('umsy_regno', regno);
                         saveSession(regno, cookiesStr).catch(() => {});
                         setStatusMsg('✅ Auto-login complete! Redirecting...');
-                        setTimeout(() => navigate('/dashboard'), 400);
+                        setTimeout(() => navigate('/dashboard'), 300);
                     })
                     .catch(err => {
                         console.error('Failed to fetch student info via extension session:', err);
-                        // Fallback if student info fetch fails
-                        localStorage.setItem('umsy_regno', 'STUDENT');
-                        setTimeout(() => navigate('/dashboard'), 400);
+                        const fallbackReg = username || localStorage.getItem('umsy_regno') || '12301342';
+                        localStorage.setItem('umsy_regno', fallbackReg);
+                        setTimeout(() => navigate('/dashboard'), 300);
                     });
             }
         };
 
         window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, [navigate]);
+
+        // Actively request session from extension on mount and poll every 1s
+        window.postMessage({ type: 'UMSY_REQUEST_SESSION' }, '*');
+        const pollInterval = setInterval(() => {
+            window.postMessage({ type: 'UMSY_REQUEST_SESSION' }, '*');
+        }, 1000);
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+            clearInterval(pollInterval);
+        };
+    }, [navigate, username]);
 
     // Load Turnstile Script for frontend solving
     useEffect(() => {
