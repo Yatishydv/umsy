@@ -230,11 +230,11 @@ const V05Login = ({ mode }) => {
                 setStatusMsg('Login successful! Redirecting...');
                 setTimeout(() => navigate('/dashboard'), 600);
             } else {
-                setError(res.error || 'Verification failed — please try again.');
+                setError(res.error || 'Invalid Registration Number or Password. Please check credentials.');
                 setLoading(false);
             }
         } catch (err) {
-            setError(err.message || 'Login failed. Please check credentials.');
+            setError(err.message || 'Verification failed. Please check your credentials or try again.');
             setLoading(false);
         }
     };
