@@ -262,8 +262,8 @@ function AppContent() {
         <Route path="/v05login/2" element={<V05Login mode="popup" />} />
         <Route path="/v05login/3" element={<V05Login mode="turnstile" />} />
         <Route path="/v05login/4" element={<V05Login mode="instant" />} />
-        <Route path="/newlogin" element={<Navigate to="/v05login/1" replace />} />
-        <Route path="/newlogin2" element={<Navigate to="/v05login/1" replace />} />
+        <Route path="/newlogin" element={<V05Login />} />
+        <Route path="/newlogin2" element={<V05Login />} />
         <Route path="/v04/login" element={<Navigate to="/tlogin" replace />} />
         <Route path="/umsyV04" element={<Navigate to="/tlogin" replace />} />
         <Route path="/login" element={<UmsyV04Login />} />
