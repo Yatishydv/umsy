@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import illustration1 from '../assets/illustration1.png';
 import illustration2 from '../assets/illustration2.png';
 import illustration3 from '../assets/illustration3.png';
-import { v05Login, saveSession } from '../services/api';
+import { v05Login, saveSession, getStudentInfo } from '../services/api';
 import { Eye, EyeOff, Sun, Moon, HelpCircle, Loader2 } from 'lucide-react';
 
 const UMS_TURNSTILE_SITEKEY = '0x4AAAAAABqizXa69CuLKKuQ';
@@ -77,9 +77,26 @@ const V05Login = ({ mode }) => {
             }
             if (event.data && event.data.type === 'UMSY_AUTO_SESSION' && event.data.cookies) {
                 console.log('⚡ Received active session from extension!');
-                localStorage.setItem('umsy_cookies', event.data.cookies.trim());
-                setStatusMsg('✅ Session auto-detected from Extension! Redirecting...');
-                setTimeout(() => navigate('/dashboard'), 500);
+                const cookiesStr = event.data.cookies.trim();
+                localStorage.setItem('umsy_cookies', cookiesStr);
+                setStatusMsg('✅ Session auto-detected! Fetching student profile...');
+
+                // Fetch student info using session cookie
+                getStudentInfo(cookiesStr)
+                    .then(info => {
+                        const regno = info?.RegistrationNo || info?.RegNo || '12300000';
+                        localStorage.setItem('umsy_student_info', JSON.stringify(info));
+                        localStorage.setItem('umsy_regno', regno);
+                        saveSession(regno, cookiesStr).catch(() => {});
+                        setStatusMsg('✅ Auto-login complete! Redirecting...');
+                        setTimeout(() => navigate('/dashboard'), 400);
+                    })
+                    .catch(err => {
+                        console.error('Failed to fetch student info via extension session:', err);
+                        // Fallback if student info fetch fails
+                        localStorage.setItem('umsy_regno', 'STUDENT');
+                        setTimeout(() => navigate('/dashboard'), 400);
+                    });
             }
         };
 
