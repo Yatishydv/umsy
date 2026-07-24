@@ -1,224 +1,164 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-
-import { RefreshCw } from 'lucide-react';
-import logoUmsy from '../assets/logoUmsy.png';
-import { startLogin, completeLogin, saveSession, getStudentInfo, healthCheck } from '../services/api';
-
-import loginImg1 from '../assets/login_visual.png'
-import loginImg2 from '../assets/login_visual.png'
-import loginImg3 from '../assets/login_visual.png'
+import { useNavigate } from 'react-router-dom';
+import illustration1 from '../assets/illustration1.png';
+import illustration2 from '../assets/illustration2.png';
+import illustration3 from '../assets/illustration3.png';
+import { tokenLoginV04, saveSession, getNewLoginStatus } from '../services/api';
+import { Eye, EyeOff, Sun, Moon, HelpCircle, Loader2, KeyRound, User2 } from 'lucide-react';
 
 const Login = () => {
     const navigate = useNavigate();
-    const location = useLocation();
 
+    // ── UI state ───────────────────────────────────────────────────────────
     const [theme, setTheme] = useState('light');
     const [currentSlide, setCurrentSlide] = useState(0);
-    const [showPassword, setShowPassword] = useState(false);
 
-    // Login flow state
-    const [step, setStep] = useState(1); // 1 = regno/password, 2 = captcha
+    // ── Form state ─────────────────────────────────────────────────────────
     const [regno, setRegno] = useState('');
     const [password, setPassword] = useState('');
-    const [captcha, setCaptcha] = useState('');
-    const [sessionId, setSessionId] = useState('');
-    const [captchaImage, setCaptchaImage] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [serverDown, setServerDown] = useState(false);
+    const [statusMsg, setStatusMsg] = useState('');
+    const [progress, setProgress] = useState(0);
+    const [displayedPercent, setDisplayedPercent] = useState(0);
 
-    // Slider images (empty placeholders)
     const slides = [
-        { id: "Secure Login", image: loginImg1 },
-        { id: "Track Your Academic Progress", image: loginImg2 },
-        { id: "See Yourself Improving", image: loginImg3 },
+        {
+            id: 'Exam Mastery Hub',
+            title: 'Exam Mastery Hub',
+            desc: 'Unleash Your Academic Success with Exam Mastery Hub\'s Exam Excellence Platform.',
+            image: illustration1
+        },
+        {
+            id: 'Track Progress',
+            title: 'Track Progress',
+            desc: 'Monitor your courses, grades, and CGPA in real-time.',
+            image: illustration2
+        },
+        {
+            id: 'Get Insights',
+            title: 'Get Insights',
+            desc: 'Receive personalized notifications and smart study reminders.',
+            image: illustration3
+        }
     ];
-    
-    // useEffect(() => {
-    //     const checkServerStatus = async () => {
-    //         try {
-    //             await healthCheck();
-    //         } catch (error) {
-    //             console.error('🔴 API is offline:', error);
-    //             setError('Server is currently offline. Please login to start the server.');
-    //             setServerDown(true);
-    //         }
-    //     };
 
-    //     checkServerStatus();
-    // }, []);
-
+    // ── Theme init ─────────────────────────────────────────────────────────
     useEffect(() => {
-        // Check for saved theme preference or default to 'dark'
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        setTheme(savedTheme);
-        document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        const savedRegno = localStorage.getItem('umsy_regno');
+        const savedPassword = localStorage.getItem('umsy_password');
+        if (savedRegno) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
 
-        // Session Auto-Recovery: ONLY if 'regno' is provided in the URL query params
-        const checkExistingSession = async () => {
-            const queryParams = new URLSearchParams(location.search);
-            const queryRegno = queryParams.get('regno');
-            const queryCookies = queryParams.get('cookies');
+        const saved = localStorage.getItem('theme') || 'light';
+        setTheme(saved);
+        document.documentElement.classList.toggle('dark', saved === 'dark');
 
-            // Helper to clear cache when switching users
-            const clearUserCache = () => {
-                console.log('🔄 Clearing user cache');
-                localStorage.removeItem('umsy_student_info');
-                localStorage.removeItem('umsy_timetable_data');
-                localStorage.removeItem('umsy_result_data');
-                localStorage.removeItem('umsy_attendance_summary');
-            };
+        if (savedRegno) setRegno(savedRegno);
+        if (savedPassword) setPassword(savedPassword);
+    }, [navigate]);
 
-            // NEW: Direct cookie injection (for WebView/Mobile Apps)
-            if (queryRegno && queryCookies) {
-                try {
-                    setLoading(true);
-                    setError('Synchronizing mobile session...');
-                    
-                    const oldRegno = localStorage.getItem('umsy_regno');
-                    if (oldRegno !== queryRegno) clearUserCache();
-
-                    localStorage.setItem('umsy_regno', queryRegno);
-                    localStorage.setItem('umsy_cookies', queryCookies);
-                    
-                    // Sync with backend database
-                    await saveSession(queryRegno, queryCookies);
-                    
-                    navigate('/dashboard');
-                    return;
-                } catch (err) {
-                    console.error('Mobile sync failed:', err.message);
-                    setError('Mobile sync failed. Please login manually.');
-                } finally {
-                    setLoading(false);
-                }
-            }
-            
-            // Existing logic: If we have ONLY a regno, try recovery from DB
-            else if (queryRegno) {
-                setRegno(queryRegno);
-                try {
-                    setLoading(true);
-                    setError('Checking active session for ' + queryRegno + '...');
-                    
-                    const result = await getStudentInfo({ regno: queryRegno });
-                    
-                    if (result.success) {
-                        const oldRegno = localStorage.getItem('umsy_regno');
-                        if (oldRegno && oldRegno !== queryRegno) clearUserCache();
-
-                        localStorage.setItem('umsy_regno', queryRegno);
-                        if (result.cookies) {
-                            localStorage.setItem('umsy_cookies', result.cookies);
-                        }
-                        navigate('/dashboard');
-                        return;
-                    }
-                } catch (err) {
-                    console.log('URL session recovery failed:', err.message);
-                    setError('Session recovery failed. Please login manually.');
-                } finally {
-                    setLoading(false);
-                }
-            } else {
-                // Normal flow: just load saved credentials if available, but don't auto-redirect
-                const savedRegno = localStorage.getItem('umsy_regno');
-                const savedPassword = localStorage.getItem('umsy_password');
-                if (savedRegno) setRegno(savedRegno);
-                if (savedPassword) setPassword(savedPassword);
-            }
-        };
-
-        checkExistingSession();
-    }, [location.search, navigate]);
-
+    // ── Slide auto-rotate ──────────────────────────────────────────────────
     useEffect(() => {
-        // Auto-rotate slider every 5 seconds
         const interval = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % slides.length);
-        }, 7000);
-
+            setCurrentSlide(prev => (prev + 1) % slides.length);
+        }, 6000);
         return () => clearInterval(interval);
     }, [slides.length]);
 
+    // ── Theme toggle ───────────────────────────────────────────────────────
     const toggleTheme = () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+        const next = theme === 'dark' ? 'light' : 'dark';
+        setTheme(next);
+        localStorage.setItem('theme', next);
+        document.documentElement.classList.toggle('dark', next === 'dark');
     };
 
-    /**
-     * Step 1: Submit regno and password to get captcha
-     */
-    const handleStep1Submit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
-
-        try {
-            const result = await startLogin(regno, password);
-            setSessionId(result.sessionId);
-            setCaptchaImage(result.captchaImage);
-            setStep(2); // Move to captcha step
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
+    // ── Smooth percentage animation with psychological pacing ─────────────
+    useEffect(() => {
+        if (!loading) {
+            setDisplayedPercent(0);
+            return;
         }
-    };
+        
+        const target = progress || 5;
+        let increment = 0;
+        let delay = 0;
 
-    /**
-     * Reload captcha - fetch a new captcha image
-     */
-    const handleReloadCaptcha = async () => {
-        setError('');
-        setLoading(true);
-
-        try {
-            const result = await startLogin(regno, password);
-            setSessionId(result.sessionId);
-            setCaptchaImage(result.captchaImage);
-            setCaptcha(''); // Clear captcha input
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
+        if (displayedPercent < 85) {
+            increment = Math.max(1.5, (target - displayedPercent) / 8); 
+            if (displayedPercent < 70) increment = Math.max(increment, 2.5);
+            delay = 35;
+        } else if (displayedPercent < 95) {
+            increment = 0.4;
+            delay = 60;
+        } else if (displayedPercent < 99) {
+            increment = 0.1;
+            delay = 150;
         }
-    };
 
-    /**
-     * Step 2: Submit captcha to complete login
-     */
-    const handleStep2Submit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+        if (displayedPercent < 99.9) {
+            const timer = setTimeout(() => {
+                setDisplayedPercent(prev => {
+                    const next = prev + increment;
+                    return Math.max(next, target > prev ? target : next);
+                });
+            }, delay);
+            return () => clearTimeout(timer);
+        }
+    }, [loading, progress, displayedPercent]);
 
-        try {
-            const result = await completeLogin(sessionId, captcha);
-            if (result.success) {
-                // Store cookies if needed
-                if (result.cookies) {
-                    // console.log('🍪 Received cookies from backend:', result.cookies);
-                    localStorage.setItem('umsy_cookies', result.cookies);
-
-                    // Save session to backend for persistence and cross-device access
-                    try {
-                        await saveSession(regno, result.cookies);
-                    } catch (saveErr) {
-                        console.error('⚠️ Failed to save session to backend:', saveErr);
-                        // We don't block the user if saving to backend fails, 
-                        // as they still have cookies in localStorage
+    // ── Polling for login progress ─────────────────────────────────────────
+    useEffect(() => {
+        let pollInterval;
+        if (loading && regno) {
+            const cleanRegno = regno.trim();
+            pollInterval = setInterval(async () => {
+                try {
+                    const data = await getNewLoginStatus(cleanRegno);
+                    if (data && data.percent !== undefined) {
+                        setProgress(data.percent);
+                        setStatusMsg(data.status || 'Processing...');
                     }
+                } catch (err) {
+                    // Ignore errors during transition
                 }
+            }, 1000);
+        } else {
+            setProgress(0);
+            setStatusMsg('');
+        }
+        return () => clearInterval(pollInterval);
+    }, [loading, regno]);
 
-                // Store credentials for future use
-                localStorage.setItem('umsy_regno', regno);
-                localStorage.setItem('umsy_password', password);
+    // ── Submit ─────────────────────────────────────────────────────────────
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        const cleanRegno = regno.trim();
+        const cleanPassword = password.trim();
+        setLoading(true);
+        setStatusMsg('Initializing browser...');
 
-                // Clear academic cached data unconditionally on fresh login
+        try {
+            setProgress(5);
+            
+            const result = await tokenLoginV04(cleanRegno, cleanPassword);
+
+            if (result.success && result.cookies) {
+                setDisplayedPercent(100);
+                setProgress(100);
+                setStatusMsg('Success!');
+
+                localStorage.setItem('umsy_cookies', result.cookies);
+                localStorage.setItem('umsy_regno', cleanRegno);
+                localStorage.setItem('umsy_password', cleanPassword);
+                localStorage.setItem('umsy_is_v04', 'true');
+                localStorage.setItem('umsy_is_logging_in', 'true');
+
                 localStorage.removeItem('umsy_student_info');
                 localStorage.removeItem('umsy_timetable_data');
                 localStorage.removeItem('umsy_ranking_data');
@@ -226,255 +166,254 @@ const Login = () => {
                 localStorage.removeItem('umsy_marks_data');
                 localStorage.removeItem('umsy_courses_data');
                 localStorage.removeItem('umsy_attendance_data');
-                localStorage.removeItem('umsy_attendance_summary');
 
-                // Navigate to dashboard
-                navigate('/dashboard');
+                try {
+                    await saveSession(cleanRegno, result.cookies);
+                } catch (saveErr) {
+                    console.warn('⚠️  Could not save session to backend:', saveErr.message);
+                }
+
+                setStatusMsg('Authorized.');
+                setTimeout(() => {
+                    navigate('/dashboard');
+                }, 400);
             }
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
+            setStatusMsg('');
         }
     };
 
-    /**
-     * Go back to step 1
-     */
-    const handleBackToStep1 = () => {
-        setStep(1);
-        setCaptcha('');
-        setCaptchaImage('');
-        setSessionId('');
-        setError('');
-    };
-
     return (
-        <div className="min-h-screen flex bg-background relative">
-            {/* Theme Toggle Button */}
-            <div className='flex justify-between items-center'>
-                {/* {serverDown &&
-                    <h2 className="p-4 absolute top-0 left-0 text-center font-bold text-destructive">Server is down please try after some time</h2>
-                } */}
-                <button
-                    onClick={toggleTheme}
-                    className="cursor-pointer absolute top-4 right-4 p-2 rounded-lg bg-card border border-border hover:bg-accent transition-colors z-50"
-                    aria-label="Toggle theme"
-                >
-                    {theme === 'dark' ? (
-                        <svg className="h-5 w-5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                    ) : (
-                        <svg className="h-5 w-5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                    )}
-                </button>
-            </div>
+        <div className="min-h-screen w-full flex bg-slate-50 dark:bg-zinc-950 transition-colors duration-500 font-plus-jakarta relative overflow-hidden">
+            {/* Background Glows (Mesh-effect) */}
+            <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-[#bef227]/10 to-transparent dark:from-[#bef227]/5 filter blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-emerald-500/10 to-transparent dark:from-emerald-500/5 filter blur-[120px] pointer-events-none" />
 
-            {/* Left Side - Image Slider */}
-            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-                {/* Slider Container */}
-                <div className="relative w-full h-full">
-                    {slides.map((slide, index) => (
-                        <div
-                            key={slide.id}
-                            className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
+            {/* Left Side: Desktop Sliding Panel */}
+            <div className="hidden lg:flex w-1/2 bg-emerald-50/50 dark:bg-zinc-900/20 border-r border-slate-200/50 dark:border-zinc-900/60 flex-col justify-between p-12 min-h-screen relative select-none">
+                <div className="flex items-center gap-1.5 cursor-default text-emerald-700 dark:text-[#bef227] text-[10px] font-black uppercase tracking-widest">
+                    <span>Academic Success Suite</span>
+                </div>
+
+                {/* Sliding Illustration Content */}
+                <div className="my-auto relative w-full flex flex-col items-center">
+                    <div className="w-full max-w-sm lg:max-w-md h-[320px] relative flex items-center justify-center">
+                        {slides.map((slide, index) => (
+                            <div
+                                key={slide.id}
+                                className={`absolute inset-0 flex items-center justify-center transition-all duration-700 ${
+                                    index === currentSlide 
+                                        ? 'opacity-100 scale-100 translate-x-0' 
+                                        : 'opacity-0 scale-95 translate-x-4 pointer-events-none'
                                 }`}
-                        >
-                            <div className={`w-full h-full bg-gradient-to-br ${slide.color} flex items-center justify-center`}>
-                                <div className="text-center space-y-4 p-8">
-                                    <div className={`w-full h-full bg-gradient-to-br ${slide.color} flex items-center justify-center`}>
-                                        <div className="text-center space-y-4 p-8">
-                                            <div className="w-120 h-120 mx-auto rounded-2xl bg-card/10 backdrop-blur-sm border border-border/20 flex items-center justify-center">
-                                                <img src={slide.image} alt="login" className='w-full h-full object-cover rounded-2xl' />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p className="text-lg text-foreground/60 font-medium">
-                                        {slide.id}
-
-                                    </p>
-                                </div>
+                            >
+                                <img 
+                                    src={slide.image} 
+                                    alt={slide.title} 
+                                    className="max-h-full max-w-full object-contain dark:brightness-95 dark:contrast-105"
+                                />
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+
+                    {/* Slide Text Description */}
+                    <div className="text-center mt-8 max-w-xs">
+                        {slides.map((slide, index) => (
+                            <div
+                                key={slide.id + '-text'}
+                                className={`transition-all duration-500 ${
+                                    index === currentSlide 
+                                        ? 'opacity-100 block' 
+                                        : 'opacity-0 hidden'
+                                }`}
+                            >
+                                <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">
+                                    {slide.title}
+                                </h3>
+                                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-2 font-bold leading-relaxed tracking-wide">
+                                    {slide.desc}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Dot Indicators */}
+                    <div className="flex gap-2.5 mt-8 z-10">
+                        {slides.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentSlide(index)}
+                                className={`cursor-pointer h-1.5 rounded-full transition-all duration-300 ${
+                                    index === currentSlide 
+                                        ? 'bg-emerald-600 dark:bg-[#bef227] w-6' 
+                                        : 'bg-emerald-600/20 dark:bg-zinc-800 w-2'
+                                }`}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        ))}
+                    </div>
                 </div>
 
-                {/* Slider Indicators */}
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-                    {slides.map((_, index) => (
-                        <button
-                            key={index}
-                            onClick={() => setCurrentSlide(index)}
-                            className={`cursor-pointer w-2 h-2 rounded-full transition-all duration-300 ${index === currentSlide
-                                ? 'bg-foreground w-8'
-                                : 'bg-foreground/30 hover:bg-foreground/50'
-                                }`}
-                            aria-label={`Go to slide ${index + 1}`}
-                        />
-                    ))}
+                <div className="text-[10px] text-slate-400 dark:text-zinc-650 font-bold uppercase tracking-widest">
+                    <span>© {new Date().getFullYear()} UMSY Inc.</span>
                 </div>
             </div>
 
-            {/* Right Side - Login Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
-                <div className="w-full max-w-xl">
-                    <div className="rounded-xl border border-border bg-card text-card-foreground shadow-lg">
-                        {/* Card Header */}
-                        <div className="flex flex-col space-y-2 p-8 text-center">
-                            <img src={logoUmsy} className="h-35 w-auto mx-auto object-contain mb-2" alt="UMSY Logo" />
-                            <p className="text-sm text-muted-foreground">
-                                {step === 1 ? 'Login to your UMSY Dashboard' : 'Enter the captcha to continue'}
+            {/* Right Side: Login Card Frame */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-10 lg:p-16 min-h-screen relative z-10">
+                {/* Header Actions */}
+                <div className="flex justify-between items-center w-full">
+                    {/* Brand Name */}
+                    <div className="flex items-center">
+                        <span className="text-lg font-black tracking-widest text-slate-800 dark:text-slate-100 select-none uppercase">
+                            umsy
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleTheme}
+                            className="cursor-pointer p-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-850 hover:scale-102 active:scale-95 transition-all duration-300"
+                            aria-label="Toggle theme"
+                        >
+                            {theme === 'dark' ? <Sun className="h-4 w-4 text-orange-400" /> : <Moon className="h-4 w-4 text-blue-500" />}
+                        </button>
+                        <a 
+                            href="https://ums.lpu.in/"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors px-3 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/60 dark:border-zinc-800 shadow-sm"
+                        >
+                            <HelpCircle className="w-3.5 h-3.5" />
+                            <span>Support</span>
+                        </a>
+                    </div>
+                </div>
+
+                {/* Login Form Tray */}
+                <div className="my-auto mx-auto w-full max-w-[390px] py-12 flex flex-col justify-center">
+                    
+                    {/* Styled Card for Mobile */}
+                    <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md border border-slate-200/50 dark:border-zinc-800/80 rounded-[32px] p-6 sm:p-8 shadow-xl shadow-slate-100/50 dark:shadow-none">
+                        
+                        {/* Header text */}
+                        <div className="mb-8 text-left">
+                            <h1 className="text-2xl font-black text-slate-950 dark:text-white tracking-tight mb-2 uppercase">Sign in</h1>
+                            <p className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest leading-relaxed">
+                                Enter your LPU UMS credentials to access your UMSY Dashboard.
                             </p>
                         </div>
 
-                        {/* Card Content */}
-                        <div className="p-8 pt-0 space-y-6">
-                            {/* Error Message */}
-                            {error && (
-                                <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-                                    {error}
-                                </div>
-                            )}
+                        {/* Errors */}
+                        {error && (
+                            <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold animate-in fade-in duration-300">
+                                <span>{error}</span>
+                            </div>
+                        )}
 
-                            {/* Step 1: Registration Number and Password */}
-                            {step === 1 && (
-                                <form onSubmit={handleStep1Submit} className="space-y-6">
-                                    {/* Registration Number Input */}
-                                    <div className="space-y-2">
+                        {/* Loader */}
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center space-y-6 py-8">
+                                <div className="relative w-20 h-20 flex items-center justify-center">
+                                    <div className="absolute inset-0 rounded-full border-4 border-slate-100 dark:border-zinc-850" />
+                                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#bef227] dark:border-t-[#bef227] animate-spin" />
+                                    <span className="text-sm font-black text-slate-800 dark:text-slate-100">
+                                        {Math.floor(displayedPercent)}%
+                                    </span>
+                                </div>
+                                <div className="text-center space-y-1.5">
+                                    <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest flex items-center gap-1.5 justify-center">
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#bef227]" />
+                                        <span>{statusMsg || 'Automating login...'}</span>
+                                    </p>
+                                    <p className="text-[9px] text-slate-400 dark:text-zinc-550 font-black uppercase tracking-widest animate-pulse">
+                                        Please keep this tab open
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Input Form */
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                
+                                {/* Reg No input */}
+                                <div className="space-y-1.5">
+                                    <label htmlFor="v04-regno" className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                                        Registration Number
+                                    </label>
+                                    <div className="relative flex items-center">
                                         <input
-                                            id="registrationNumber"
+                                            id="v04-regno"
                                             type="text"
-                                            placeholder="Registration Number"
+                                            inputMode="numeric"
+                                            placeholder="e.g. 12301927"
                                             value={regno}
                                             onChange={(e) => setRegno(e.target.value)}
                                             required
-                                            disabled={loading}
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex h-12 w-full rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 pl-11 pr-4 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-350 dark:placeholder:text-zinc-650 focus-visible:outline-none focus:border-[#bef227] focus:ring-4 focus:ring-[#bef227]/10 transition-all duration-200 shadow-inner"
                                         />
+                                        <User2 className="absolute left-4 w-4 h-4 text-slate-400 dark:text-zinc-600" />
                                     </div>
+                                </div>
 
-                                    {/* Password Input */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-end">
-                                            <a href="https://ums.lpu.in/lpuums/forgetpassword.aspx" target="_blank" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                                Forgot your password?
-                                            </a>
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                id="password"
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="Password"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                required
-                                                disabled={loading}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                                aria-label={showPassword ? "Hide password" : "Show password"}
-                                            >
-                                                {showPassword ? (
-                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                                    </svg>
-                                                ) : (
-                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                    </svg>
-                                                )}
-                                            </button>
-                                        </div>
+                                {/* Password input */}
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center">
+                                        <label htmlFor="v04-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                                            Password
+                                        </label>
                                     </div>
-
-                                    {/* Next Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full"
-                                    >
-                                        {loading ? 'Loading...' : 'Next'}
-                                    </button>
-                                </form>
-                            )}
-
-                            {/* Step 2: Captcha */}
-                            {step === 2 && (
-                                <form onSubmit={handleStep2Submit} className="space-y-6">
-                                    {/* Captcha Image */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-sm font-medium">Captcha</label>
-                                            <button
-                                                type="button"
-                                                onClick={handleReloadCaptcha}
-                                                disabled={loading}
-                                                className="cursor-pointer p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Reload captcha"
-                                            >
-                                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                            </button>
-                                        </div>
-                                        <div className="flex justify-center p-4 bg-background border border-border rounded-md">
-                                            <img
-                                                src={captchaImage}
-                                                alt="Captcha"
-                                                className="max-h-20 object-contain scale-180 rounded-md"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Captcha Input */}
-                                    <div className="space-y-2">
+                                    <div className="relative flex items-center">
                                         <input
-                                            id="captcha"
-                                            type="text"
-                                            placeholder="Enter captcha"
-                                            value={captcha}
-                                            onChange={(e) => setCaptcha(e.target.value.toUpperCase())}
+                                            id="v04-password"
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="••••••••"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
                                             required
-                                            disabled={loading}
-                                            autoComplete="off"
-                                            autoFocus
-                                            className="inline-flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono text-lg tracking-wider uppercase"
+                                            className="flex h-12 w-full rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 pl-11 pr-12 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-slate-350 dark:placeholder:text-zinc-650 focus-visible:outline-none focus:border-[#bef227] focus:ring-4 focus:ring-[#bef227]/10 transition-all duration-200 shadow-inner"
                                         />
-                                        {/* <p className="text-xs text-muted-foreground">
-                                            Characters are automatically converted to uppercase
-                                        </p> */}
-                                    </div>
-
-                                    {/* Buttons */}
-                                    <div className="flex gap-3">
+                                        <KeyRound className="absolute left-4 w-4 h-4 text-slate-400 dark:text-zinc-600" />
                                         <button
                                             type="button"
-                                            onClick={handleBackToStep1}
-                                            disabled={loading}
-                                            className="cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-11 px-8 flex-1"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="cursor-pointer absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-650 dark:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
                                         >
-                                            Back
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 flex-1"
-                                        >
-                                            {loading ? 'Logging in...' : 'Login'}
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                         </button>
                                     </div>
-                                </form>
-                            )}
-                        </div>
+                                    <div className="text-right">
+                                        <a href="https://ums.lpu.in/lpuums/forgetpassword.aspx" target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 hover:underline transition-all">Forgot password?</a>
+                                    </div>
+                                </div>
+
+                                {/* Submit btn */}
+                                <button
+                                    id="v04-submit"
+                                    type="submit"
+                                    disabled={loading || !regno.trim() || !password.trim()}
+                                    className="cursor-pointer mt-4 inline-flex items-center justify-center gap-2 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-200 bg-[#bef227] hover:bg-[#a6d81d] text-[#1c312e] active:scale-[0.98] h-12 px-8 w-full shadow-lg shadow-[#bef227]/10 disabled:opacity-50 disabled:pointer-events-none border border-white/10"
+                                >
+                                    <span>Sign in</span>
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer notes */}
+                <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-600 flex flex-col sm:flex-row gap-3 justify-between items-center w-full select-none border-t border-slate-200/30 dark:border-zinc-900/60 pt-4">
+                    <span>Secure SSL connection</span>
+                    <div className="flex gap-4">
+                        <a href="/cookie" className="hover:text-[#bef227] transition-colors">Session Gateway</a>
+                        <a href="#" className="hover:text-[#bef227] transition-colors">Privacy</a>
                     </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 

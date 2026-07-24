@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
+import UserToken from './src/models/UserToken.js';
+
 import { fetchPlacementData } from './src/modules/GetPlacementData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,14 +65,18 @@ async function fetchStudentDetails(cookieString) {
 async function run() {
     console.log('🏆 UMSY Ranking Snapshot Generator starting...');
     
-    if (!fs.existsSync(RESULTS_FILE)) {
-        console.error(`❌ Input file results.json not found at: ${RESULTS_FILE}`);
+    console.log('🔌 Connecting to MongoDB...');
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+        console.error('❌ MONGODB_URI not found in environment variables.');
         process.exit(1);
     }
-    
-    const students = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
-    const studentsWithTokens = students.filter(s => s.token && s.token.trim().length > 0);
-    console.log(`✅ Loaded ${students.length} total students. Found ${studentsWithTokens.length} students with tokens.`);
+    await mongoose.connect(mongoUri);
+    console.log('✅ Connected successfully.');
+
+    console.log('📖 Fetching users with tokens from database...');
+    const studentsWithTokens = await UserToken.find({ token: { $exists: true, $ne: '' } });
+    console.log(`✅ Found ${studentsWithTokens.length} students with tokens.`);
     
     // Load existing progress if any
     let rankingsMap = new Map();
@@ -226,6 +233,7 @@ async function run() {
     }
     
     await browser.close();
+    await mongoose.disconnect();
     console.log('\n🎉 Finished snapshot generation!');
     console.log(`Total processed: ${processed}, Succeeded: ${succeeded}`);
 }

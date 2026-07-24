@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
+import UserToken from './src/models/UserToken.js';
+
 import { fetchPlacementData } from './src/modules/GetPlacementData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,8 +62,18 @@ async function fetchStudentDetails(cookieString) {
 async function run() {
     console.log('Starting missing students fetcher...');
     
-    const students = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
-    const allStudentsWithTokens = students.filter(s => s.token && s.token.trim().length > 0);
+    console.log('🔌 Connecting to MongoDB...');
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+        console.error('❌ MONGODB_URI not found in environment variables.');
+        process.exit(1);
+    }
+    await mongoose.connect(mongoUri);
+    console.log('✅ Connected successfully.');
+
+    console.log('📖 Fetching users with tokens from database...');
+    const allStudentsWithTokens = await UserToken.find({ token: { $exists: true, $ne: '' } });
+    console.log(`✅ Found ${allStudentsWithTokens.length} students with tokens.`);
     
     let rankingsMap = new Map();
     if (fs.existsSync(RANKINGS_FILE)) {
@@ -174,6 +187,7 @@ async function run() {
     }
     
     await browser.close();
+    await mongoose.disconnect();
     console.log('\nFinished missing students fetch!');
     console.log(`Total missing processed: ${processed}, Succeeded: ${succeeded}`);
 }

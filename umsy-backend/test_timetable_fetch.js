@@ -6,8 +6,7 @@ import fs from 'fs';
 
 async function run() {
     try {
-        console.log('Reading results.json...');
-        const results = JSON.parse(fs.readFileSync('./results.json', 'utf8'));
+
         const student = {
             name: "Yatish Kumar",
             regno: "12301342",

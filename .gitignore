@@ -17,4 +17,5 @@ test.html
 umsy/
 current_rankings.json
 current_rankings.json.lock
-**/current_rankings.jsonumsy-backend/results.json
+**/current_rankings.json
+umsy-backend/results.json
