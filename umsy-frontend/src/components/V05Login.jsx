@@ -336,20 +336,26 @@ const V05Login = ({ mode }) => {
 
                         {/* Mode 1 & Default: Extension Helper */}
                         {(!mode || mode === 'extension') && (
-                            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-center space-y-2">
+                            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-center space-y-2.5">
                                 <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                                    🧩 Extension Solver Mode (/v05login/1)
+                                    🧩 Chrome Extension Mode (/v05login/1)
                                 </p>
                                 <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                                    Turnstile token is auto-captured when UMSY Chrome Extension is active.
+                                    Auto-captures Turnstile verification with zero manual steps.
                                 </p>
                                 <a
                                     href="/umsy-chrome-extension.zip"
-                                    download
-                                    className="inline-block py-1.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[11px] shadow-sm transition-all cursor-pointer"
+                                    download="umsy-chrome-extension.zip"
+                                    className="inline-block py-2 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
                                 >
-                                    📥 Download UMSY Chrome Extension
+                                    📥 Download UMSY Extension (.zip)
                                 </a>
+                                <div className="text-[10px] text-left text-amber-800 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 p-2.5 rounded-xl space-y-1 font-medium">
+                                    <p className="font-bold text-amber-900 dark:text-amber-200">How to Install in 3 Steps:</p>
+                                    <p>1. Extract the downloaded zip file.</p>
+                                    <p>2. Open <code className="bg-amber-200 dark:bg-amber-800 px-1 rounded">chrome://extensions</code> in Chrome and enable <b>Developer mode</b> (top right toggle).</p>
+                                    <p>3. Click <b>Load unpacked</b> and select the extracted folder.</p>
+                                </div>
                             </div>
                         )}
 
