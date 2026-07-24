@@ -9,11 +9,10 @@ import { fetchPlacementData } from './src/modules/GetPlacementData.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// File Paths
 const RESULTS_FILE = path.join(__dirname, 'results.json');
 const RANKINGS_FILE = path.join(__dirname, 'current_rankings.json');
+const MISSING_FILE = path.join(__dirname, 'missing_students_data.json');
 
-// Concurrency settings
 const CONCURRENCY_LIMIT = 3;
 const DELAY_BETWEEN_BATCHES = 1000;
 
@@ -51,8 +50,6 @@ async function fetchStudentDetails(cookieString) {
         },
         timeout: 15000
     });
-    
-    // Parse the JSON result
     const d = response.data?.d || [];
     const details = d[0];
     if (!details) throw new Error('Empty response from WebMethod');
@@ -60,81 +57,53 @@ async function fetchStudentDetails(cookieString) {
 }
 
 async function run() {
-    console.log('🏆 UMSY Ranking Snapshot Generator starting...');
-    
-    if (!fs.existsSync(RESULTS_FILE)) {
-        console.error(`❌ Input file results.json not found at: ${RESULTS_FILE}`);
-        process.exit(1);
-    }
+    console.log('Starting missing students fetcher...');
     
     const students = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
-    const studentsWithTokens = students.filter(s => s.token && s.token.trim().length > 0);
-    console.log(`✅ Loaded ${students.length} total students. Found ${studentsWithTokens.length} students with tokens.`);
+    const allStudentsWithTokens = students.filter(s => s.token && s.token.trim().length > 0);
     
-    // Load existing progress if any
     let rankingsMap = new Map();
     if (fs.existsSync(RANKINGS_FILE)) {
-        try {
-            const existing = JSON.parse(fs.readFileSync(RANKINGS_FILE, 'utf8'));
-            existing.forEach(item => {
-                rankingsMap.set(item.RegistrationNumber, item);
-            });
-            console.log(`📋 Loaded ${rankingsMap.size} pre-existing entries from current_rankings.json`);
-        } catch (e) {
-            console.log('⚠️ Could not parse existing rankings file. Starting fresh.');
+        const existing = JSON.parse(fs.readFileSync(RANKINGS_FILE, 'utf8'));
+        existing.forEach(item => {
+            rankingsMap.set(item.RegistrationNumber, item);
+        });
+    }
+
+    // Find missing
+    let missingStudents = [];
+    for (const student of allStudentsWithTokens) {
+        const record = rankingsMap.get(student.regno);
+        if (!record || record.Section === 'N/A' || !record.Section) {
+            missingStudents.push(student);
         }
     }
-    
-    // Track processed registration numbers in this specific script run
-    const processedRegNos = new Set();
+
+    console.log(`Found ${missingStudents.length} students missing Section/RollNumber.`);
+    if (missingStudents.length === 0) {
+        console.log('No missing students to fetch.');
+        return;
+    }
 
     const browser = await chromium.launch({ headless: true });
     
     let processed = 0;
     let succeeded = 0;
+    let fetchedData = [];
     
-    // We process students in batches
-    for (let i = 0; i < studentsWithTokens.length; i += CONCURRENCY_LIMIT) {
-        const batch = studentsWithTokens.slice(i, i + CONCURRENCY_LIMIT);
-        console.log(`\n🔄 Processing batch ${Math.floor(i / CONCURRENCY_LIMIT) + 1} (${i + 1} to ${Math.min(i + CONCURRENCY_LIMIT, studentsWithTokens.length)})...`);
+    for (let i = 0; i < missingStudents.length; i += CONCURRENCY_LIMIT) {
+        const batch = missingStudents.slice(i, i + CONCURRENCY_LIMIT);
+        console.log(`\nProcessing batch ${Math.floor(i / CONCURRENCY_LIMIT) + 1} (${i + 1} to ${Math.min(i + CONCURRENCY_LIMIT, missingStudents.length)})...`);
         
         await Promise.all(batch.map(async (student) => {
-            // Skip if already processed in this run
-            if (processedRegNos.has(student.regno)) {
-                console.log(`⏭️ Skipping ${student.regno} (${student.name}) - already done in this execution.`);
-                processed++;
-                return;
-            }
-            
             try {
                 const cookieString = await fetchStudentCookies(browser, student.token);
-                if (!cookieString) {
-                    throw new Error('No cookies returned');
-                }
+                if (!cookieString) throw new Error('No cookies returned');
                 
                 const details = await fetchStudentDetails(cookieString);
                 
-                // Fetch the old snapshot record from Vercel API or local rankingsMap to preserve other details
-                let oldRecord = null;
-                try {
-                    const oldResponse = await axios.post(`${process.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/ranking`, { registrationNumber: student.regno }, { timeout: 6000 });
-                    if (oldResponse.data?.data) {
-                        oldRecord = oldResponse.data.data;
-                    }
-                } catch (e) {
-                    try {
-                        const oldResponseDirect = await axios.get(`https://ranking2-0.vercel.app/api/search?regNo=${student.regno}`, { timeout: 6000 });
-                        if (oldResponseDirect.data) {
-                            oldRecord = oldResponseDirect.data;
-                        }
-                    } catch (err) {
-                        if (rankingsMap.has(student.regno)) {
-                            oldRecord = rankingsMap.get(student.regno);
-                        }
-                    }
-                }
+                let oldRecord = rankingsMap.get(student.regno) || {};
 
-                // Fetch live placement details from UMS
                 let companySelectedIn = 'Not Selected';
                 let placementId = '—';
                 let pepFeeDetails = '—';
@@ -160,7 +129,6 @@ async function run() {
                         }
                     }
                 } catch (e) {
-                    // Fall back to old record if UMS fetch failed
                     companySelectedIn = oldRecord?.companySelectedIn || 'Not Selected';
                     placementId = oldRecord?.placementId || '—';
                     pepFeeDetails = oldRecord?.pepFeeDetails || '—';
@@ -177,8 +145,6 @@ async function run() {
                     status: details.StudentStatus || oldRecord?.status || 'Active',
                     BatchYear: student.regno.substring(0, 3) || oldRecord?.BatchYear || '—',
                     scrapedAt: new Date().toISOString(),
-                    
-                    // Preserve old and merged live placement, education, and contact details
                     companySelectedIn: companySelectedIn,
                     placementId: placementId,
                     opportunityStartDate: oldRecord?.opportunityStartDate || '—',
@@ -193,10 +159,9 @@ async function run() {
                     basicDetails: oldRecord?.basicDetails || ''
                 };
                 
-                rankingsMap.set(student.regno, record);
-                processedRegNos.add(student.regno);
+                fetchedData.push(record);
                 succeeded++;
-                console.log(`✅ Fetched: ${record.RegistrationNumber} - ${record.Name} (CGPA: ${record.CGPA})`);
+                console.log(`✅ Fetched: ${record.RegistrationNumber} - ${record.Name}`);
             } catch (err) {
                 console.log(`❌ Failed: ${student.regno} (${student.name}) - Error: ${err.message}`);
             }
@@ -204,30 +169,13 @@ async function run() {
             processed++;
         }));
         
-        // Write progress incrementally to disk
-        if (succeeded > 0) {
-            // Sort and recalculate rankings
-            const list = Array.from(rankingsMap.values());
-            list.sort((a, b) => parseFloat(b.CGPA || '0') - parseFloat(a.CGPA || '0'));
-            
-            // Assign ranks
-            list.forEach((item, idx) => {
-                item.Rank = idx + 1;
-                item.TotalStudents = list.length;
-                const percentileVal = ((idx + 1) / list.length) * 100;
-                item.percentile = `Top ${percentileVal.toFixed(2)}%`;
-            });
-            
-            fs.writeFileSync(RANKINGS_FILE, JSON.stringify(list, null, 2), 'utf8');
-            console.log(`💾 Saved progress: ${list.length} students ranked.`);
-        }
-        
+        fs.writeFileSync(MISSING_FILE, JSON.stringify(fetchedData, null, 2), 'utf8');
         await new Promise(r => setTimeout(r, DELAY_BETWEEN_BATCHES));
     }
     
     await browser.close();
-    console.log('\n🎉 Finished snapshot generation!');
-    console.log(`Total processed: ${processed}, Succeeded: ${succeeded}`);
+    console.log('\nFinished missing students fetch!');
+    console.log(`Total missing processed: ${processed}, Succeeded: ${succeeded}`);
 }
 
 run().catch(err => {

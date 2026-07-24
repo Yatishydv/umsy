@@ -8,7 +8,7 @@ import { Eye, EyeOff, Sun, Moon, HelpCircle, Loader2 } from 'lucide-react';
 
 const UMS_TURNSTILE_SITEKEY = '0x4AAAAAABqizXa69CuLKKuQ';
 
-const V05Login = () => {
+const V05Login = ({ mode }) => {
     const navigate = useNavigate();
 
     // ── UI state ───────────────────────────────────────────────────────────
@@ -140,6 +140,24 @@ const V05Login = () => {
         setTheme(next);
         localStorage.setItem('theme', next);
         document.documentElement.classList.toggle('dark', next === 'dark');
+    };
+
+    const openTurnstilePopup = () => {
+        const width = 500;
+        const height = 650;
+        const left = (window.screen.width / 2) - (width / 2);
+        const top = (window.screen.height / 2) - (height / 2);
+
+        setStatusMsg('Opening Cloudflare verification window...');
+        const popup = window.open(
+            'https://ums.lpu.in/lpuums/',
+            'CloudflareSolver',
+            `width=${width},height=${height},top=${top},left=${left},status=no,resizable=yes`
+        );
+
+        if (!popup) {
+            setError('Popup blocked! Please allow popups for this domain.');
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -316,58 +334,91 @@ const V05Login = () => {
                             </div>
                         </div>
 
-                        {/* Native Frontend Cloudflare Turnstile Widget */}
-                        <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Cloudflare Security Verification
-                            </p>
-                            <div ref={turnstileRef} className="flex justify-center my-2" />
-                            {turnstileToken ? (
-                                <p className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
-                                    ✓ Turnstile Verified! Ready to Sign in.
+                        {/* Mode 1 & Default: Extension Helper */}
+                        {(!mode || mode === 'extension') && (
+                            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-center space-y-1">
+                                <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                                    🧩 Extension Solver Mode (/v05login/1)
                                 </p>
-                            ) : (
-                                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                                    Check the box above to verify, then click Sign in.
+                                <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                    Turnstile token is auto-captured when UMSY Chrome Extension is active.
                                 </p>
-                            )}
-                        </div>
-                        {/* Instant 1-Click Direct Login */}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (!username || !password) {
-                                    setError('Please enter Registration Number and Password.');
-                                    return;
-                                }
-                                setError('');
-                                setLoading(true);
-                                setStatusMsg('Connecting to UMS...');
+                            </div>
+                        )}
 
-                                v05Login(username.trim(), password.trim(), '')
-                                    .then(res => {
-                                        if (res.success && res.cookies) {
-                                            saveSession(username.trim(), res.cookies);
-                                            localStorage.setItem('umsy_cookies', res.cookies);
-                                            localStorage.setItem('umsy_regno', username.trim());
-                                            localStorage.setItem('umsy_password', password.trim());
-                                            localStorage.removeItem('umsy_seating_plan');
-                                            setStatusMsg('Login successful! Redirecting...');
-                                            setTimeout(() => navigate('/dashboard'), 500);
-                                        } else {
-                                            setError(res.error || 'Login failed — please check credentials.');
+                        {/* Mode 2 & Default: UMS Popup Helper */}
+                        {(!mode || mode === 'popup') && (
+                            <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 text-center space-y-2">
+                                <p className="text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                                    🌐 Popup Solver Mode (/v05login/2)
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={openTurnstilePopup}
+                                    className="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                                >
+                                    Open UMS Verification Popup
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Mode 3 & Default: Native Turnstile Widget */}
+                        {(!mode || mode === 'turnstile') && (
+                            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                    🛡️ Turnstile Widget Mode (/v05login/3)
+                                </p>
+                                <div ref={turnstileRef} className="flex justify-center my-2" />
+                                {turnstileToken ? (
+                                    <p className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                                        ✓ Turnstile Verified! Ready to Sign in.
+                                    </p>
+                                ) : (
+                                    <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                                        Check the box above to verify, then click Sign in.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Mode 4 & Default: Instant Direct Login */}
+                        {(!mode || mode === 'instant') && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!username || !password) {
+                                        setError('Please enter Registration Number and Password.');
+                                        return;
+                                    }
+                                    setError('');
+                                    setLoading(true);
+                                    setStatusMsg('Connecting to UMS...');
+
+                                    v05Login(username.trim(), password.trim(), '')
+                                        .then(res => {
+                                            if (res.success && res.cookies) {
+                                                saveSession(username.trim(), res.cookies);
+                                                localStorage.setItem('umsy_cookies', res.cookies);
+                                                localStorage.setItem('umsy_regno', username.trim());
+                                                localStorage.setItem('umsy_password', password.trim());
+                                                localStorage.removeItem('umsy_seating_plan');
+                                                setStatusMsg('Login successful! Redirecting...');
+                                                setTimeout(() => navigate('/dashboard'), 500);
+                                            } else {
+                                                setError(res.error || 'Login failed — please check credentials.');
+                                                setLoading(false);
+                                            }
+                                        })
+                                        .catch(err => {
+                                            setError(err.message || 'Login failed.');
                                             setLoading(false);
-                                        }
-                                    })
-                                    .catch(err => {
-                                        setError(err.message || 'Login failed.');
-                                        setLoading(false);
-                                    });
-                            }}
-                            className="w-full py-4 px-6 rounded-2xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-sm tracking-wide shadow-lg shadow-[#bef227]/20 transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center space-x-2 cursor-pointer"
-                        >
-                            <span>⚡ Instant Sign in (No Cloudflare Needed)</span>
-                        </button>
+                                        });
+                                }}
+                                className="w-full py-4 px-6 rounded-2xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-sm tracking-wide shadow-lg shadow-[#bef227]/20 transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center space-x-2 cursor-pointer"
+                            >
+                                <span>⚡ Instant Sign in (/v05login/4)</span>
+                            </button>
+                        )}
                     </form>
                 </div>
 

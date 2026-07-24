@@ -1,0 +1,944 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head id="ctl00_Head1"><title>
+	Family Details
+</title><link href="styles/placement_style.css" rel="stylesheet" type="text/css" />
+    
+    
+
+    <script type="text/javascript" src="Scripts/jquery-1.4.2.min.js"></script>
+    <style>
+        .bizzbar {
+            background: #fccb92;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            padding: 2px;
+            overflow: hidden;
+            height: 30px;
+            z-index: 1000;
+            font-family: Georgia;
+            font-size: 14px;
+            line-height: 30px;
+            top: 0;
+            left: 0;
+            border-bottom: 1px solid rgb(255,255,255);
+            box-shadow: 0 1px 5px rgba(0,0,0,.7)
+        }
+
+
+            .bizzbar a {
+                color: #000;
+                cursor: pointer;
+                background: #fccb92;
+                width: 100%;
+                text-align: center;
+                padding: 2px;
+                overflow: hidden;
+                height: 30px;
+                z-index: 1000;
+                font-family: Georgia;
+                font-size: 14px;
+                font-weight: bold;
+                line-height: 30px;
+                top: 0;
+                left: 0;
+            }
+
+            .bizzbar button {
+                -webkit-box-shadow: rgba(0,0,0,0.278431) 1px 1px 3px;
+                background: #333;
+                border-bottom-left-radius: 4px;
+                border-bottom-right-radius: 4px;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                border: none;
+                box-shadow: rgba(0,0,0,0.278431) 1px 1px 3px;
+                color: white;
+                cursor: pointer;
+                font-size: 0.854em;
+                margin: 0px 0px 0px 7px;
+                outline: none;
+                padding: 2px 10px 1px;
+                position: relative;
+                text-decoration: initial
+            }
+
+                .bizzbar button:hover {
+                    cursor: pointer;
+                    background: #444
+                }
+
+                .bizzbar button:active {
+                    top: 1px
+                }
+
+        close {
+            width: 20px;
+            height: 19px;
+            bottom: 6px;
+            right: 20px;
+            background: url(https://hb-assets.s3.amazonaws.com/system/modules/hellobar/lib/sprite-8bit.png) no-repeat 0px -247px;
+            position: absolute
+        }
+
+            close:hover {
+                background: url(https://hb-assets.s3.amazonaws.com/system/modules/hellobar/lib/sprite-8bit.png) no-repeat 0px -228px;
+                cursor: pointer;
+                height: 19px
+            }
+
+        open {
+            -webkit-box-shadow: rgba(0,0,0,0.34902) 0px 0px 5px;
+            background-image: url(https://hb-assets.s3.amazonaws.com/system/modules/hellobar/lib/sprite-8bit.png);
+            background-position: 0px -8px;
+            background-repeat: no-repeat no-repeat;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            border: 3px solid rgb(255,255,255);
+            box-shadow: rgba(0,0,0,0.34902) 0px 0px 5px;
+            display: block;
+            height: 0px;
+            outline: none;
+            overflow: hidden;
+            padding: 80px 0px 0px;
+            position: absolute;
+            right: 10px;
+            top: -50px;
+            width: 35px;
+            z-index: 100;
+            background-color: #eb593c;
+            display: none
+        }
+
+            open:hover {
+                background-color: #ff5a3d;
+                cursor: pointer
+            }
+    </style>
+    <!--[if gte IE 9]>
+  <style type="text/css">
+    .gradient {
+       filter: none;
+    }
+  </style>
+<![endif]-->
+
+    <script type="text/javascript">
+        var $buoop = {}
+        $buoop.ol = window.onload;
+        window.onload = function () {
+            try { if ($buoop.ol) $buoop.ol(); } catch (e) { }
+            var e = document.createElement("script");
+            e.setAttribute("type", "text/javascript");
+            e.setAttribute("src", "http://browser-update.org/update.js");
+            document.body.appendChild(e);
+        }
+    </script>
+
+    <style>
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            z-index: 2000;
+        }
+
+        /* Popup Box */
+        .popup {
+            background: #ffffff;
+            width: 75%;
+            max-width: 850px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 35px 45px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: fadeScale 0.35s ease;
+        }
+
+            /* Heading */
+            .popup h1 {
+                text-align: center;
+                margin-bottom: 25px;
+                font-size: 28px;
+                color: #222;
+            }
+
+        /* Undertaking content */
+        .undertaking-content {
+            text-align: left;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+            /* Checkbox alignment */
+            .undertaking-content label {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                margin: 14px 0;
+                cursor: pointer;
+            }
+
+            .undertaking-content input[type="checkbox"] {
+                margin-top: 4px;
+                transform: scale(1.1);
+            }
+
+        /* Buttons area */
+        .popup-actions {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        /* Buttons */
+        .popup button {
+            padding: 12px 26px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: #fff;
+        }
+
+            .btn-primary:hover {
+                background: #0056b3;
+            }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: #fff;
+        }
+
+            .btn-secondary:hover {
+                background: #5a6268;
+            }
+
+        /* Note */
+        .undertaking-content .note {
+            color: red;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        /* Animation */
+        @keyframes fadeScale {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -55%) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+    </style>
+
+    
+
+    
+
+    <style>
+        .pending-list {
+    list-style: none;
+    padding: 0;
+}
+
+.pending-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.link-btn {
+    background: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.link-btn:hover {
+    background: #0056b3;
+}
+    </style>
+<link href="App_Themes/Blue/placement_style.css" type="text/css" rel="stylesheet" /><link href="/Placements/WebResource.axd?d=XOlimF8A-Lbtjtgj2pFkG4hdqMW7jdSPw-az-USbemjBaQH-D34uNfjARGMi7TlNg6cCVBfSIZ3ZGX3tRU628q43ZLLSkYnoP4yGD12rMGD8QSeePLgdffr3E_SzqeopekGPL9z1COjggP2N1IssSnRKvUM1&amp;t=638437861564279719" type="text/css" rel="stylesheet" /><link href="/Placements/WebResource.axd?d=QRtRuztIVnh874OZKy5pXKnZc2-CYNMM0DMtushwuEMcOzoVRd09nmhnRtB95YIA8V0h8xXGLmnM2NnMhf9PlSXnNe2McvGYsNl1PQG3Jga2m1NodcXsTw1xuJHauY_5uMQ5jw2&amp;t=638437861570685992" type="text/css" rel="stylesheet" class="Telerik_stylesheet" /><link href="/Placements/WebResource.axd?d=hVjBi3fedltaaGo2sYZVcU9Fbm6XvIDCdhbw5FTA5y5t5D7eZKipmkJYR3ljM3w74m50ly11lDEH5vtHyP1qamXQXQEl1xuvYiKNBH89_1ha54I6_8Ngm_RElge2kyuVWyZZ6riOxINckgpxRC4u50sNMf01&amp;t=638437861570685992" type="text/css" rel="stylesheet" class="Telerik_stylesheet" /></head>
+<body>
+    <div class="overlay" id="overlay">
+        <div class="popup">
+            <h1>Offer Acceptance</h1>
+            
+            <div id="pOfferAcceptance" class="undertaking-content"></div>
+            <button onclick="closePopup('overlay')">Got It!</button>
+        </div>
+    </div>
+    
+    <div class="overlay" id="overlay1">
+        <div class="popup">
+            <h1>Undertaking</h1>
+
+            <!-- IMPORTANT: div instead of p -->
+            <div id="pUnderTaking" class="undertaking-content"></div>
+
+            <div class="popup-actions">
+                <button class="btn-secondary" onclick="closePopup('overlay1')">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="pendingde">
+    <div class="popup">
+        <h1>Pending Details</h1>
+        
+        <div id="pending" class="undertaking-content"></div>
+        <button onclick="closePopup('pendingde')">Got It!</button>
+    </div>
+</div>
+
+    <form name="aspnetForm" method="post" action="./frmFamilyDetails.aspx" onsubmit="javascript:return WebForm_OnSubmit();" id="aspnetForm">
+<div>
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUIMTE0NDUyMDAPFgQeAklkAoueIB4LUmVjb3JkQ291bnQCAhYCZg9kFgICAw9kFgQCBw8UKwACFCsAAg8WCh4LXyFEYXRhQm91bmRnHhVFbmFibGVFbWJlZGRlZFNjcmlwdHNnHhdFbmFibGVBamF4U2tpblJlbmRlcmluZ2geHEVuYWJsZUVtYmVkZGVkQmFzZVN0eWxlc2hlZXRnHhJSZXNvbHZlZFJlbmRlck1vZGULKXJUZWxlcmlrLldlYi5VSS5SZW5kZXJNb2RlLCBUZWxlcmlrLldlYi5VSSwgVmVyc2lvbj0yMDE2LjEuMTEzLjQ1LCBDdWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPTEyMWZhZTc4MTY1YmEzZDQBZA8UKwAFFCsAAg8WBh4EVGV4dAUESG9tZR4FVmFsdWUFATEeC05hdmlnYXRlVXJsBRlIb21lUGxhY2VtZW50U3R1ZGVudC5hc3B4ZGQUKwACDxYGHwcFEVBvcnRhbCBOYXZpZ2F0aW9uHwgFATIfCWVkEBYPZgIBAgICAwIEAgUCBgIHAggCCQIKAgsCDAINAg4WDxQrAAIPFgYfBwUQRGV0YWlscyBVcGRhdGlvbh8IBQE1HwkFHGZybVVwZGF0ZUNvbnRhY3REZXRhaWxzLmFzcHhkZBQrAAIPFgYfBwUKRHV0eSBMZWF2ZR8IBQE4HwkFIWZybUdldFN0dWRlbnREdXR5TGVhdmVSZWNvcmQuYXNweGRkFCsAAg8WBh8HBRJEdXR5IExlYXZlIFJlcXVlc3QfCAUCMjAfCQUaZnJtUGxhY2VtZW50RExSZXF1ZXN0LmFzcHhkZBQrAAIPFgYfBwUORmFtaWx5IERldGFpbHMfCAUBNh8JBRVmcm1GYW1pbHlEZXRhaWxzLmFzcHhkZBQrAAIPFgYfBwUUSm9iIE9mZmVyIEFjY2VwdGFuY2UfCAUCMTAfCQUeZnJtUGxhY2VtZW50Sm9iQWNjZXB0YW5jZS5hc3B4ZGQUKwACDxYGHwcFFU1hcmsgRHJpdmUgQXR0ZW5kYW5jZR8IBQIxNB8JBSRmcm1QbGFjZW1lbnREcml2ZUF0dGVuZGFuY2VCeVFSLmFzcHhkZBQrAAIPFgYfBwUTUGF5IEJhbGFuY2UgUEVQIEZlZR8IBQIxNh8JBRtmcm1QbGFjZW1lbnRCYWxQYXltZW50LmFzcHhkZBQrAAIPFgYfBwUdUGxhY2VtZW50IENvb3JkaW5hdG9yIENvbnNlbnQfCAUCMTEfCQUdZnJtUGxhY2VtZW50RHJpdmVDb25zZW50LmFzcHhkZBQrAAIPFgYfBwUkUmVxdWVzdCBGb3IgUmVpbnN0YXRlbWVudCBGZWUgV2FpdmVyHwgFAjIxHwkFH2ZybVN0dWRlbnRSZWluc3RhdGVtZW50RmVlLmFzcHhkZBQrAAIPFgYfBwUPUmVzdW1lIFRlbXBsYXRlHwgFATcfCQUfZnJtUGxhY2VtZW50VGVtcGxhdGVSZXN1bWUuYXNweGRkFCsAAg8WBh8HBRlTdHVkZW50IFBsYWNlbWVudCBQcm9maWxlHwgFAjEyHwkFImZybVN0dWRlbnRQbGFjZW1lbnRBbGxEZXRhaWxzLmFzcHhkZBQrAAIPFgYfBwUpU3R1ZGVudCBQcmVmZXJlbmNlcyBhbmQgU2tpbGwgU2V0IFBvbGxpbmcfCAUBOR8JBSBmcm1QbGFjZW1lbnRTdHVkZW50U2tpbGxTZXQuYXNweGRkFCsAAg8WBh8HBRRTdHVkZW50IFRlc3RpbW9uaWFscx8IBQIxNR8JBR9mcm1QbGFjZW1lbnRTdHVkZW50Q29uc2VudC5hc3B4ZGQUKwACDxYGHwcFE1VwbG9hZCBDVi9Eb2N1bWVudHMfCAUCMTMfCQUZZnJtUGxhY2VtZW50VXBsb2FkQ1YuYXNweGRkFCsAAg8WBh8HBRhVcGxvYWQgSW5kZXBlbmRlbnQgT2ZmZXIfCAUCMTkfCQUnZnJtUGxhY2VtZW50VXBsb2FkSW5kZXBlbmRlbnRPZmZlci5hc3B4ZGQPFg9mZmZmZmZmZmZmZmZmZmYWAQVzVGVsZXJpay5XZWIuVUkuUmFkTWVudUl0ZW0sIFRlbGVyaWsuV2ViLlVJLCBWZXJzaW9uPTIwMTYuMS4xMTMuNDUsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49MTIxZmFlNzgxNjViYTNkNBQrAAIPFgYfBwUSRHJpdmUgUmVnaXN0cmF0aW9uHwgFATQfCQUiZnJtUGxhY2VtZW50RHJpdmVSZWdpc3RyYXRpb24uYXNweGRkFCsAAg8WBh8HBQdNeSBSYW5rHwgFAjE4HwkFFURhc2hib2FyZFN0dWRlbnQuYXNweGRkFCsAAg8WBh8HBSBQbGFjZW1lbnQgUHJvY2Vzcy0yIFJlZ2lzdHJhdGlvbh8IBQEzHwkFHGZybVN0dWRlbnRSZWdpc3RlcmF0aW9uLmFzcHhkZA8UKwEFZmZmZmYWAQVzVGVsZXJpay5XZWIuVUkuUmFkTWVudUl0ZW0sIFRlbGVyaWsuV2ViLlVJLCBWZXJzaW9uPTIwMTYuMS4xMTMuNDUsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49MTIxZmFlNzgxNjViYTNkNGQWCmYPDxYGHwcFBEhvbWUfCAUBMR8JBRlIb21lUGxhY2VtZW50U3R1ZGVudC5hc3B4ZGQCAQ8PFgYfBwURUG9ydGFsIE5hdmlnYXRpb24fCAUBMh8JZWQWHmYPDxYGHwcFEERldGFpbHMgVXBkYXRpb24fCAUBNR8JBRxmcm1VcGRhdGVDb250YWN0RGV0YWlscy5hc3B4ZGQCAQ8PFgYfBwUKRHV0eSBMZWF2ZR8IBQE4HwkFIWZybUdldFN0dWRlbnREdXR5TGVhdmVSZWNvcmQuYXNweGRkAgIPDxYGHwcFEkR1dHkgTGVhdmUgUmVxdWVzdB8IBQIyMB8JBRpmcm1QbGFjZW1lbnRETFJlcXVlc3QuYXNweGRkAgMPDxYGHwcFDkZhbWlseSBEZXRhaWxzHwgFATYfCQUVZnJtRmFtaWx5RGV0YWlscy5hc3B4ZGQCBA8PFgYfBwUUSm9iIE9mZmVyIEFjY2VwdGFuY2UfCAUCMTAfCQUeZnJtUGxhY2VtZW50Sm9iQWNjZXB0YW5jZS5hc3B4ZGQCBQ8PFgYfBwUVTWFyayBEcml2ZSBBdHRlbmRhbmNlHwgFAjE0HwkFJGZybVBsYWNlbWVudERyaXZlQXR0ZW5kYW5jZUJ5UVIuYXNweGRkAgYPDxYGHwcFE1BheSBCYWxhbmNlIFBFUCBGZWUfCAUCMTYfCQUbZnJtUGxhY2VtZW50QmFsUGF5bWVudC5hc3B4ZGQCBw8PFgYfBwUdUGxhY2VtZW50IENvb3JkaW5hdG9yIENvbnNlbnQfCAUCMTEfCQUdZnJtUGxhY2VtZW50RHJpdmVDb25zZW50LmFzcHhkZAIIDw8WBh8HBSRSZXF1ZXN0IEZvciBSZWluc3RhdGVtZW50IEZlZSBXYWl2ZXIfCAUCMjEfCQUfZnJtU3R1ZGVudFJlaW5zdGF0ZW1lbnRGZWUuYXNweGRkAgkPDxYGHwcFD1Jlc3VtZSBUZW1wbGF0ZR8IBQE3HwkFH2ZybVBsYWNlbWVudFRlbXBsYXRlUmVzdW1lLmFzcHhkZAIKDw8WBh8HBRlTdHVkZW50IFBsYWNlbWVudCBQcm9maWxlHwgFAjEyHwkFImZybVN0dWRlbnRQbGFjZW1lbnRBbGxEZXRhaWxzLmFzcHhkZAILDw8WBh8HBSlTdHVkZW50IFByZWZlcmVuY2VzIGFuZCBTa2lsbCBTZXQgUG9sbGluZx8IBQE5HwkFIGZybVBsYWNlbWVudFN0dWRlbnRTa2lsbFNldC5hc3B4ZGQCDA8PFgYfBwUUU3R1ZGVudCBUZXN0aW1vbmlhbHMfCAUCMTUfCQUfZnJtUGxhY2VtZW50U3R1ZGVudENvbnNlbnQuYXNweGRkAg0PDxYGHwcFE1VwbG9hZCBDVi9Eb2N1bWVudHMfCAUCMTMfCQUZZnJtUGxhY2VtZW50VXBsb2FkQ1YuYXNweGRkAg4PDxYGHwcFGFVwbG9hZCBJbmRlcGVuZGVudCBPZmZlch8IBQIxOR8JBSdmcm1QbGFjZW1lbnRVcGxvYWRJbmRlcGVuZGVudE9mZmVyLmFzcHhkZAICDw8WBh8HBRJEcml2ZSBSZWdpc3RyYXRpb24fCAUBNB8JBSJmcm1QbGFjZW1lbnREcml2ZVJlZ2lzdHJhdGlvbi5hc3B4ZGQCAw8PFgYfBwUHTXkgUmFuax8IBQIxOB8JBRVEYXNoYm9hcmRTdHVkZW50LmFzcHhkZAIEDw8WBh8HBSBQbGFjZW1lbnQgUHJvY2Vzcy0yIFJlZ2lzdHJhdGlvbh8IBQEzHwkFHGZybVN0dWRlbnRSZWdpc3RlcmF0aW9uLmFzcHhkZAIND2QWAgIFDzwrABEDAA8WBB8CZx4LXyFJdGVtQ291bnQCBGQBEBYAFgAWAAwUKwAAFgJmD2QWCgIBD2QWCGYPZBYCAgMPEA8WAh8CZ2RkZGQCAw9kFgICAQ8QDxYCHwJnFgIeCG9uY2hhbmdlBUpDaGVja1N0YXR1cygnY3RsMDBfQ29udGVudFBsYWNlSG9sZGVyMV9ndkZhbWlseURldGFpbHNfY3RsMDJfZGRsRlN0YXR1cycpO2RkZAIJD2QWAgIBDw8WAh8HBQVGYWxzZWRkAgoPZBYCAgEPDxYCHwcFBUZhbHNlZGQCAg9kFghmD2QWAgIDDxAPFgIfAmdkZGRkAgMPZBYCAgEPEA8WAh8CZxYCHwsFSkNoZWNrU3RhdHVzKCdjdGwwMF9Db250ZW50UGxhY2VIb2xkZXIxX2d2RmFtaWx5RGV0YWlsc19jdGwwM19kZGxGU3RhdHVzJyk7ZGRkAgkPZBYCAgEPDxYCHwcFBUZhbHNlZGQCCg9kFgICAQ8PFgIfBwUFRmFsc2VkZAIDD2QWCGYPZBYCAgMPEA8WAh8CZ2RkZGQCAw9kFgICAQ8QDxYCHwJnFgIfCwVKQ2hlY2tTdGF0dXMoJ2N0bDAwX0NvbnRlbnRQbGFjZUhvbGRlcjFfZ3ZGYW1pbHlEZXRhaWxzX2N0bDA0X2RkbEZTdGF0dXMnKTtkZGQCCQ9kFgICAQ8PFgIfBwUFRmFsc2VkZAIKD2QWAgIBDw8WAh8HBQVGYWxzZWRkAgQPZBYIZg9kFgICAw8QDxYCHwJnZGRkZAIDD2QWAgIBDxAPFgIfAmcWAh8LBUpDaGVja1N0YXR1cygnY3RsMDBfQ29udGVudFBsYWNlSG9sZGVyMV9ndkZhbWlseURldGFpbHNfY3RsMDVfZGRsRlN0YXR1cycpO2RkZAIJD2QWAgIBDw8WAh8HBQVGYWxzZWRkAgoPZBYCAgEPDxYCHwcFBUZhbHNlZGQCBQ8PFgIeB1Zpc2libGVoZGQYAgUeX19Db250cm9sc1JlcXVpcmVQb3N0QmFja0tleV9fFgIFDmN0bDAwJFJhZE1lbnUxBSNjdGwwMCRDb250ZW50UGxhY2VIb2xkZXIxJGJ0blN1Ym1pdAUpY3RsMDAkQ29udGVudFBsYWNlSG9sZGVyMSRndkZhbWlseURldGFpbHMPPCsADAEIAgFkoG5atWESZrzDcWQ5Fkf6/mf9vhg=" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+    theForm = document.aspnetForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/Placements/WebResource.axd?d=8IhmZft4q6AwK333g2zGI-JKRZkSmlfxMixEffeU7Mp6zp431psRrYNw_60PBAbSCSdSVrTk7fJPdtW4xTk4YFRjHE41&amp;t=638901734248157332" type="text/javascript"></script>
+
+
+<script src="/Placements/ScriptResource.axd?d=DG7b1YixuARWT3BY9EAfFiLAi-hPLZcid6FvkqDL249-Vq04HAKUq50vI7sX0zxq5V5rlNJ6zN8WbYue5T8RtPt5O-Z-f-f6pf5LzVBv4GNgUJ9bAGKI7srZYVIf1b68-0WfG8mz0tUnTc1FdhmBnJoktS41&amp;t=ffffffff93d1c106" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=SLW-TFZm2sx9MK67RlJ3QbU8G-03TfVGiLOtOQMzNE64cJ1nnpJ9jnHX7o6YMIX1DD7t4CvpCx4jEWigKkcJwOaYDF7Q5mKyW4_oZupNCyJtbj3FZLngxkJySpjZQT4SjEviojf47JBFsnYuhFfVmPAi0ce9ne0c_J90KAgo6yPY8RtI0&amp;t=5c0e0825" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+if (typeof(Sys) === 'undefined') throw new Error('ASP.NET Ajax client-side framework failed to load.');
+//]]>
+</script>
+
+<script src="/Placements/ScriptResource.axd?d=ebyJCBfXJZLsq8mQLWrVdu4xoU3Gnhh1qzsxkROW2FgaPtCXthIQacdVGfE_cKQSTmh_KnDJkc6GUrqqMxDSunC-f4z_jUnc3nnnXDwAUavI6pKx-JJ1BUjrAowJHzJVJrJVkGFPou2ZseyCfAIzEtWhNporjWX1E79Dv1tZflD_r12NuQNkVlfNnrdSecHrHJf3vA2&amp;t=5c0e0825" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=HgPNYTfS1RSVdL_INEeuFz3O0tofid2HA0_dTIkUB6ECzK4dAv8aO6MbhjBtm0REn93G3W9TZzGsMGcURVcp8SxJD0FrPszO8-YHe0WgRPSkeZP9vWNcc02wmMFjgBcVrkAgfg2&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=BJilb0poUhWBfzOTjzmje2WVX_MqpRKDEQuaXPNN5tpbv-7Na4UsS8UfMLsvgn9-JkAENSuS_Y8nl_xBokwrrQ9Cice-nAX8rrK7VWOAopTCHm7zgxpGPnvG5RdDRjxtGzyWWrQrAzzrsEYL8FrePNBErpQ1&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=nD6C4_zU-3C6zeeLCnCFmZW6H0lv7cBlb39PgVRpHiQgAa7I5Mj4M0hvuw5uLI9DZWVdeW-boe2fBa4puLJ0k6vIxtcOhgyS8oiMY58NMNaiSBvRf7k-764DHvcePXiVMpmynKp4lsf8Ld265_T9sRoq9dg1&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=mmt1JF7JhGQ4I01WGRPIUp-w0tRLetdKhM0TO1zYnHD-keeC7aanF0yvPLccAIQCXjkLYOEeIO1sxa1ZqoXA_yBWkCfHraUnVOfeW66ALb6yYYFhiyC3kG2rLiC3AJe6O1gGbsHl1M3wLE91TYLUKdwgMaJjEDaKrRRB6XUo3y2rWUiw0&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=6qjNx4rOSUF11Lg8B8uXbDJ7dd6MMtfVb4EwNc1LmIxHLrR6q0cBY1RJHo994AHrMv6x0anP6UK7eKQi9RVLi24mqeymWawTJRxvn_KdTzZYE9LI48ndWM5iXlVMLpq6TkPs5b7KfLAW_ccDNABblomxQPdRq1vv1kDS8kJys9QjCcoD0&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=5giryXJNc3_kB-qdNWzA2XMYgwDd4NALjYPaYxoWryJuofs_iekrhbHww9f1Fv1jaldP34lp4wqvE1TJv0vV8JsMj5_Zd7NuiCgkvGCYGYjouJQZl3CFUq7q6cZqmnzzdCguvzPw4Q0OSdy9nYEUvWzinSnT9Fu6BgdtuDy1-85u2oIq0&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=OnxipxIr-s9hQ8lRyyQtFq9vboPevE2clIZIlbYtuWitCT2uclDSbZmA56Jx7Ip01l4lTbh5r_2nJD6NUSDbE8wyGD3nzo22AUUBABwrqNWUqaXQxAwLBdim3uM5wFMRykeKK_u8lUeoebjRvX8dr0SmgweuUaTLGQVICy-BRvdn4wmd0&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=ByyGgtxdWmYQG47XTCedZWC337qSxCi_FBgsIevjBPL-mrLla-3BR9oaZxkyvxnPMMTNj-K6JU7yHpujdg6J618dD0IEs9w0HDmSXF7Fx50T0YzXmHdsH-HpW0HhGzosBHXy-e_MchSHj_x2IDGQoes4XfPhQpJSaMH7qLl1FoLn6hs80&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=zZBh2ngCkM4N-Pc3Yh_4KxK9xg_tsg9f-COwt200MiwmEiQ5BM_U5Sxy5Hb-6aJY025sXRYgEm250nqIOOPPsd0QkIu7F-JIaIMOA3tS2f7SOyTnSoKAqt3Byn6BGUw6NdS3xZDQ-Gxjuw3HrARVFIDu7Es1&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=0epoXoBj4fgiIg1CdKEXL-PDDAtjCoiPL3IB8wY4iSWvbe1rvHS-x04nAbhlwPpctIIRMvFNUmYzVSOjff_up8Uax2d0DQ-igFq26kZ7pyoFbLLO5MbPaBpLDL8WJjpN1uBRoNsakh0TOgVfqO0H-5HKPsE1&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=s1iQtF1Z6hcCohIRAhASZePaVBBW4jQm8kuTSvtRgGZwF3z7Zh3VPxIPKox-LjUyspfBOFJx7xQhJrExThQYsuuKjb-EvifLjVX3CpoXScuN66eaC9tI_gb0Ca_RXT7qa9p-wcwJ1v4hQiIYNOGieklOXe81&amp;t=ffffffffcf2f22b2" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=zndFwYI0Gx0b5lIWGIHMbf4aLHbq6Lv4SreN5IvhHeZusmNa9ohguOv38toe7UHPp07aqlIeYZdXz2XJiKHBBNsIYso4uGzWqU4oDPWu0vK3Z-mmr2NNLuZwAYWg7QQ5ql1Bez6U7dLkQYq3oYHVJ4s_XIM1&amp;t=2009a88" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=w1Yk-UzlajgZXBxIZm1wwb7jdpQIGNgiNTTjU3b5IQ7VbjHnZ7rK5BjdjFhHCk13hgSGzVzH_WaOLS4DQH9As9CgmgGFGMwehcOoZXP3XygoPWg9ENJsdMi8nnGUv6wueegIQQ2&amp;t=2009a88" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=-gCbrXmoKclUzhbVUiUbUL8dCElwzlzmZkuY9_jlZI0M-Gqaalm8k_izT1BWUzTBfMXipUE6rnEXdifrZGMGi4ZB3USWnqBCb_ELdSqr3U-z6zOgxog8IunolGRhoJCHmoFclA2&amp;t=2009a88" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=3Wvj8zJubIYM3a6qdlGm8xmlYULxUGo9PYopsILDTbnCe-B3xb2IQxpgtEqkKToPXUInh48QM1cHSMJq867G5wosfWkLk34OuKjCUJb3LonqRYboGy_cHYmhAEDsOYwbxdoQlg2&amp;t=2009a88" type="text/javascript"></script>
+<script src="/Placements/ScriptResource.axd?d=LabDickhb8EZQeCExh9__eVA_VIN7hcQd0M-mq4sVy0Ck13aI9LoIGUPM8pptZ7vJY1TX_fNjeg8yiFQeNL8rkcL_deNEDPMQ5hHVcH5gC-2YccwRYJ-LcOQFeqsUETv_65CXA2&amp;t=2009a88" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+function WebForm_OnSubmit() {
+null;if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false) return false;
+return true;
+}
+//]]>
+</script>
+
+<div>
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="225EE2EB" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAHAC23hQTh0v6ZiWbkfa4pnTAKzsvYUjb+b2ZaKl/8ywqunjR07tKk0n3/DQ5xBGjTiCrmef5P4etszKzFN49SF5Gbw27wyJifCoIihqjNyv+4VoSdxzEnszy/x7jUiGo/GHpTea90yT/MrNZMqCU6hZackXokn2CRInuPdFOmMDEaIYwQCYvn09+lZuFxRY81oAGPvBCggdQIMzuK6Rqy8i3etjQA+JT1Erm8eFcF3mAZPeW4uv75XRrJB3ho5Lsp1LcyDKs4TPnBxzaAduRp9Yx4q3CA5ilXXsoijajVU+8TXPXUII6gO/YwSyyRQ9DIE9ZCgAusRDpV94b+g/9UzhY1DbIbUJ/YD/kf6iEvQklW4OjzJYtiZ0FxSs+aAYomZwqMJVc+1h3xweKXMUA4ypRZ2csN8bG/ImKMx+0vNeKXvO42nZLX+H1xfD/qNl7jGqan0m5T5McLS3oEoBnshiJABdeO0Ju8INYpnHXticHPi1wF3SBhlIpXr1Euz+DQ6/2uHskGooa4X0PC+Kw0LGjRa0xVxXRnHEmtv/A0XdJrOhfqZmgp0NaDGXQu+XqyYPXB+IR2s4ykDp5FzVNHGm64nwM5X4PmjcP7DyOeo8COWa+QE1Ml6sf8V9vPUVCOqJqC4rtwDrTobH51qsQyOA8dfhNcNANgMiNcbP4ElOPZh2wSoaVyLVqICs9+c53cn82E8BF1AmQxv7cJuDM0PWtprkpKBVeqmX3kJ/aaX9JYNZNr/wUmSboRL+Y26O0LdQfsKvkA3a0OhqB2JI65y7sXJsx5+RM218Q6Uw55xxVubwU/Ur7CZjxr2vON7uFTJXR+pVqqQV6prL9wJ89SgUYig3w9tYQ+ZqOZrVHHe8sJ92W8oBqeihQvpl8yA2KKCUwp6EHM3EdVuuk8Gmhqk1QP85FHmdVH+UxWEv3zJKAityhtvIRoEFSIRl1LJKlXvj6AFTPFkF7O6D4eUk+1RlA4wOlyw5RPe9OhsZkcImy4I2RGBLIvzfQtr+/xrr7jwLMPcwSRogYP9LQJYJPULhPgUaPgVZPvWJUx7mWed6Bx4B8W6fx6oPLrHiPADhaCykcRvwJU6Plb2oiyp5Dj0kTlCxL0p0hIHYbAug4xML0+2u9WoNf/6Rhb007Hxdl+demPjuN95UHHCEcPnDGsXC2Nsndw+6ZaS5ZL94rFvTAKkCN22ga5ETjd6jzlO5E8L2qMh8wwbia+Olc+Lic/je05erS2CPPIEPeKdCFjyKk7I6MEYoxGZ56eQqnMCNf4ZTsaPJvO5/lt+TPhoPlgpit+3RPa9Sq4v+TnVeDN8IcPtRShNUqRbTrILIAXFZzD87Q14IjM9Itqv5UQGWackiabqvDYujpjpzFZuLpsmU7lvUMOQIVKLsC7DDrzlE1VyNGm+DX73649ENOspzlGegvKAskh+xzOjpRkG5Z3ogOqXk/FDHLyoTjQHUkN+pFUFXhDSOxNjKndazv6dC2VFVrkk6edBxw1LaLlJLd+JRXuRVoXNtt55+Rm7oebiYW4uhsmeDlggq1SC7+t1+fbjYqFjvbacQoxQfgKl1QATdhO6C9Zq1IacUkch67pg1xoJw7SVPcscJfjAJ38c11knPy8Nefojt7WYYkb3A31z1RfN2r2qvDUEdYrUtgu/C3AlQwIkl/D6hxBATXAZ2P4eDJ3fOhJeHZ8Io7verx688nWnoflEqYhiRQ+22+4wgqK6TrbcluRGO3zDFohFpiXpKXNyflg6xi4IHypuAaK1MJN4N2OSqUSrFdErPB3dyqZ4HXXTgJ0aT/qQRCyk4nbnzlVsS0nvs8Ooh5kF3216RaBovq9YzWxgom+xWwyEm9he+rDmYBqsvDU+shuta7ffChrK1CCOX70GHqhpIUjif2MNjid6Tg11eWsLu1+DJ9k5I60StILOLq6WtM/9Qp5MD0Nea6looak2yOYVYgKGZdcbpq2Vic1A51PlIliESYa7qv/FOUK4HyTHlZYwVG7d9dm3D9VFwoVONEtzJEq3IvDRYvJHF0b/db0lgaMFCusIQe1XuVASKh6qZ6AD/ZPBu+jJxmUHHu7v4hEjzH10pRWiVSdg5rZqM5pCgDh9GaKirX8OVnUAGVmUSIC5cbjJf76A5NFV/fy945gsFHSqfvyoWbrrDeQncqT2bsDd3adqTVHjZxXMbIpmqxn0mNbWjFgKgUqegIAlF2cv6jIDZ67kftjjjQbHpGi7rY563XkVCs4q7lwB4KGnehdhOFGpD40HkmxS52qa2dnMEG9htGa5iDQuueQT8WG1N9frUWHH2boQ/O8CetCfEkuzPnoAnQZpwasu6WMEshdP+D6idQuFMnRjmj4UVQHjocEZLK3jNH7hILR9lgXQfWCP5eBWLIs/aM0fAr5pDyBG7fMIeWjRtSWI=" />
+</div>
+        <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('ctl00$ScriptManager1', 'aspnetForm', [], [], [], 90, 'ctl00');
+//]]>
+</script>
+
+        <div style="height: 30px;" class="bizzbar" id="HelloBar" style="margin: 0 auto;">
+            <div style="margin: 0 auto; position: relative;" id="owl-demoBar">
+                
+                <div id="ctl00_litHaloBar">
+                </div>
+
+            </div>
+        </div>
+
+        <div class="header-wrapper">
+            <div class="announcement-bar">
+            </div>
+        </div>
+        
+        <div id="main_page" class="main_page">
+            <div id="wrap">
+                <div id="content">
+                    <div id="header">
+                        <a href="#" class="logo">
+                            <img src="imgs/logo.png" width="224" height="131" alt="Logo" /></a>
+                        <div class="header_right">
+                            <div class="header_right_top">
+                                <img class="ums_logo" src="imgs/ums.png" width="275" height="58" />
+                                <div class="quick_links">
+                                    <img class="ums_logo" src="imgs/placement_logo.png" />
+
+                                </div>
+                            </div>
+                            <div class="header_right_bottom">
+                                <div class="nav_left">
+                                    <div id="ctl00_RadMenu1" class="RadMenu RadMenu_Default rmSized" style="width:100%;">
+	<!-- 2016.1.113.45 --><ul class="rmRootGroup rmHorizontal">
+		<li class="rmItem rmFirst"><a class="rmLink rmRootLink" href="HomePlacementStudent.aspx"><span class="rmText">Home</span></a></li><li class="rmItem "><a class="rmLink rmRootLink" href="#"><span class="rmText">Portal Navigation</span></a><div class="rmSlide">
+			<ul class="rmVertical rmGroup rmLevel1">
+				<li class="rmItem rmFirst"><a class="rmLink" href="frmUpdateContactDetails.aspx"><span class="rmText">Details Updation</span></a></li><li class="rmItem "><a class="rmLink" href="frmGetStudentDutyLeaveRecord.aspx"><span class="rmText">Duty Leave</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementDLRequest.aspx"><span class="rmText">Duty Leave Request</span></a></li><li class="rmItem "><a class="rmLink" href="frmFamilyDetails.aspx"><span class="rmText">Family Details</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementJobAcceptance.aspx"><span class="rmText">Job Offer Acceptance</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementDriveAttendanceByQR.aspx"><span class="rmText">Mark Drive Attendance</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementBalPayment.aspx"><span class="rmText">Pay Balance PEP Fee</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementDriveConsent.aspx"><span class="rmText">Placement Coordinator Consent</span></a></li><li class="rmItem "><a class="rmLink" href="frmStudentReinstatementFee.aspx"><span class="rmText">Request For Reinstatement Fee Waiver</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementTemplateResume.aspx"><span class="rmText">Resume Template</span></a></li><li class="rmItem "><a class="rmLink" href="frmStudentPlacementAllDetails.aspx"><span class="rmText">Student Placement Profile</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementStudentSkillSet.aspx"><span class="rmText">Student Preferences and Skill Set Polling</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementStudentConsent.aspx"><span class="rmText">Student Testimonials</span></a></li><li class="rmItem "><a class="rmLink" href="frmPlacementUploadCV.aspx"><span class="rmText">Upload CV/Documents</span></a></li><li class="rmItem rmLast"><a class="rmLink" href="frmPlacementUploadIndependentOffer.aspx"><span class="rmText">Upload Independent Offer</span></a></li>
+			</ul>
+		</div></li><li class="rmItem "><a class="rmLink rmRootLink" href="frmPlacementDriveRegistration.aspx"><span class="rmText">Drive Registration</span></a></li><li class="rmItem "><a class="rmLink rmRootLink" href="DashboardStudent.aspx"><span class="rmText">My Rank</span></a></li><li class="rmItem rmLast"><a class="rmLink rmRootLink" href="frmStudentRegisteration.aspx"><span class="rmText">Placement Process-2 Registration</span></a></li>
+	</ul><input id="ctl00_RadMenu1_ClientState" name="ctl00_RadMenu1_ClientState" type="hidden" />
+</div>
+                                </div>
+                                <div class="nav_right">
+                                    <ul>
+                                        <li><a href="">
+                                            <img src="imgs/home_iocn.jpg" /><a id="ctl00_lbtnHome" class="aspLinkButton" href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$lbtnHome&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, true))">UMS</a></a></li>
+                                        <li><a href="">
+                                            <img src="imgs/logout_icon.jpg" /><a id="ctl00_lbtnLogout" class="aspLinkButton" href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$lbtnLogout&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, true))">Logout</a></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="header_bottom">
+                        </div>
+                    </div>
+                    <div class="middle">
+                        
+    <table  style="width: 100%" align="center">
+        <tr>
+            <td class="form_header" align="center">
+                Family Details
+            </td>
+        </tr>
+        <tr>
+            <td class="input_form_caption_td" style="width: 100%" align="center">
+                <table style="width: 100%" align="center">
+                    <tr>
+                        <td class="input_form_caption_td" align="left" style="width: 100%">
+                            <span id="ctl00_ContentPlaceHolder1_Label58" style="color:Red;font-family:Tahoma;font-weight:bold;">All mandatory fields are marked as *</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="input_form_caption_td" style="color: Red; font-size: medium" align="left">
+                            <div id="ctl00_ContentPlaceHolder1_ValidationSummary1" class="aspValidationSummary" style="color:Red;display:none;">
+
+</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="input_form_caption_td" align="center" style="width: 100%">
+                            <table style="width: 100%" align="center">
+                                <tr>
+                                    <td class="input_form_caption_td" align="center">
+                                        <div>
+	<table class="aspGridView" cellspacing="0" cellpadding="3" border="0" id="ctl00_ContentPlaceHolder1_gvFamilyDetails" style="width:98%;border-collapse:collapse;">
+		<tr class="aspGridView_HeaderStyle" align="left">
+			<th scope="col">
+                                                        Relation<span style="color: Red">*</span>
+                                                    </th><th scope="col">
+                                                        Name <span style="color: Red">*</span>
+                                                    </th><th scope="col">
+                                                        Age(Yrs.)<span style="color: Red">*</span>
+                                                    </th><th scope="col">Status</th><th scope="col">
+                                                        Designation
+                                                    </th><th scope="col">
+                                                        Employer Name
+                                                    </th><th scope="col">
+                                                        Employer Address
+                                                    </th><th scope="col">
+                                                        Contact No
+                                                    </th><th scope="col">Email Id</th>
+		</tr><tr class="aspGridView_RowStyle">
+			<td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtRelationship" type="text" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtRelationship" class="aspTextBox" style="width: 70px" readonly="readOnly" />
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$drpFRelationship" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_drpFRelationship" class="aspDropDownList">
+				<option value="Select">Select</option>
+				<option value="Brother">Brother</option>
+				<option value="Sister">Sister</option>
+				<option value="Friend">Friend</option>
+				<option value="Guardian">Guardian</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFName" type="text" value="Bijender" maxlength="35" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFName" class="aspTextBox" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$TextBoxWatermarkExtender1_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender1_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFAge" type="text" maxlength="5" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFAge" class="aspTextBox" style="width:55px;" />
+                                                    </td><td>
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$ddlFStatus" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_ddlFStatus" class="aspDropDownList" onchange="CheckStatus(&#39;ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_ddlFStatus&#39;);" style="width:70px;">
+				<option selected="selected" value="0">Select</option>
+				<option value="Service">Service</option>
+				<option value="Self Employed">Self Employed</option>
+				<option value="Home Maker">Home Maker</option>
+				<option value="Student">Student</option>
+				<option value="Retired">Retired</option>
+				<option value="Not Alive">Not Alive</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFDesignation" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFDesignation" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$TextBoxWatermarkExtender2_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender2_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFEmployerName" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFEmployerName" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$TextBoxWatermarkExtender3_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender3_ClientState" />
+                                                    </td><td align="center">
+                                                        <textarea name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFEmployerAddress" rows="2" cols="20" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFEmployerAddress" class="aspTextBox" style="width:90px;">
+</textarea>
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$TextBoxWatermarkExtender4_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender4_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFContactNo" type="text" maxlength="10" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFContactNo" class="aspTextBox" style="width:125px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$TextBoxWatermarkExtender5_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender5_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl02$txtFEmailId" type="text" maxlength="30" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFEmailId" class="aspTextBox" />
+                                                        <span id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails" class="aspCustomValidator" style="color:Red;display:none;"></span>
+                                                    </td>
+		</tr><tr class="aspGridView_AlternatingRowStyle">
+			<td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtRelationship" type="text" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtRelationship" class="aspTextBox" style="width: 70px" readonly="readOnly" />
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$drpFRelationship" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_drpFRelationship" class="aspDropDownList">
+				<option value="Select">Select</option>
+				<option value="Brother">Brother</option>
+				<option value="Sister">Sister</option>
+				<option value="Friend">Friend</option>
+				<option value="Guardian">Guardian</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFName" type="text" value="Sarla" maxlength="35" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFName" class="aspTextBox" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$TextBoxWatermarkExtender1_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender1_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFAge" type="text" maxlength="5" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFAge" class="aspTextBox" style="width:55px;" />
+                                                    </td><td>
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$ddlFStatus" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_ddlFStatus" class="aspDropDownList" onchange="CheckStatus(&#39;ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_ddlFStatus&#39;);" style="width:70px;">
+				<option selected="selected" value="0">Select</option>
+				<option value="Service">Service</option>
+				<option value="Self Employed">Self Employed</option>
+				<option value="Home Maker">Home Maker</option>
+				<option value="Student">Student</option>
+				<option value="Retired">Retired</option>
+				<option value="Not Alive">Not Alive</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFDesignation" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFDesignation" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$TextBoxWatermarkExtender2_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender2_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFEmployerName" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFEmployerName" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$TextBoxWatermarkExtender3_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender3_ClientState" />
+                                                    </td><td align="center">
+                                                        <textarea name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFEmployerAddress" rows="2" cols="20" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFEmployerAddress" class="aspTextBox" style="width:90px;">
+</textarea>
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$TextBoxWatermarkExtender4_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender4_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFContactNo" type="text" maxlength="10" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFContactNo" class="aspTextBox" style="width:125px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$TextBoxWatermarkExtender5_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender5_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl03$txtFEmailId" type="text" maxlength="30" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFEmailId" class="aspTextBox" />
+                                                        <span id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails" class="aspCustomValidator" style="color:Red;display:none;"></span>
+                                                    </td>
+		</tr><tr class="aspGridView_RowStyle">
+			<td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtRelationship" type="text" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtRelationship" class="aspTextBox" style="width: 70px" readonly="readOnly" />
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$drpFRelationship" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_drpFRelationship" class="aspDropDownList">
+				<option selected="selected" value="Select">Select</option>
+				<option value="Brother">Brother</option>
+				<option value="Sister">Sister</option>
+				<option value="Friend">Friend</option>
+				<option value="Guardian">Guardian</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFName" type="text" maxlength="35" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFName" class="aspTextBox" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$TextBoxWatermarkExtender1_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender1_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFAge" type="text" maxlength="5" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFAge" class="aspTextBox" style="width:55px;" />
+                                                    </td><td>
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$ddlFStatus" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_ddlFStatus" class="aspDropDownList" onchange="CheckStatus(&#39;ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_ddlFStatus&#39;);" style="width:70px;">
+				<option selected="selected" value="0">Select</option>
+				<option value="Service">Service</option>
+				<option value="Self Employed">Self Employed</option>
+				<option value="Home Maker">Home Maker</option>
+				<option value="Student">Student</option>
+				<option value="Retired">Retired</option>
+				<option value="Not Alive">Not Alive</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFDesignation" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFDesignation" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$TextBoxWatermarkExtender2_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender2_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFEmployerName" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFEmployerName" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$TextBoxWatermarkExtender3_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender3_ClientState" />
+                                                    </td><td align="center">
+                                                        <textarea name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFEmployerAddress" rows="2" cols="20" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFEmployerAddress" class="aspTextBox" style="width:90px;">
+</textarea>
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$TextBoxWatermarkExtender4_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender4_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFContactNo" type="text" maxlength="10" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFContactNo" class="aspTextBox" style="width:125px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$TextBoxWatermarkExtender5_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender5_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl04$txtFEmailId" type="text" maxlength="30" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFEmailId" class="aspTextBox" />
+                                                        <span id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails" class="aspCustomValidator" style="color:Red;display:none;"></span>
+                                                    </td>
+		</tr><tr class="aspGridView_AlternatingRowStyle">
+			<td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtRelationship" type="text" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtRelationship" class="aspTextBox" style="width: 70px" readonly="readOnly" />
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$drpFRelationship" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_drpFRelationship" class="aspDropDownList">
+				<option selected="selected" value="Select">Select</option>
+				<option value="Brother">Brother</option>
+				<option value="Sister">Sister</option>
+				<option value="Friend">Friend</option>
+				<option value="Guardian">Guardian</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFName" type="text" maxlength="35" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFName" class="aspTextBox" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$TextBoxWatermarkExtender1_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender1_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFAge" type="text" maxlength="5" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFAge" class="aspTextBox" style="width:55px;" />
+                                                    </td><td>
+                                                        <select name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$ddlFStatus" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_ddlFStatus" class="aspDropDownList" onchange="CheckStatus(&#39;ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_ddlFStatus&#39;);" style="width:70px;">
+				<option selected="selected" value="0">Select</option>
+				<option value="Service">Service</option>
+				<option value="Self Employed">Self Employed</option>
+				<option value="Home Maker">Home Maker</option>
+				<option value="Student">Student</option>
+				<option value="Retired">Retired</option>
+				<option value="Not Alive">Not Alive</option>
+				<option value="Others">Others</option>
+
+			</select>
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFDesignation" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFDesignation" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$TextBoxWatermarkExtender2_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender2_ClientState" />
+                                                    </td><td align="center">
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFEmployerName" type="text" maxlength="50" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFEmployerName" class="aspTextBox" style="width:70px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$TextBoxWatermarkExtender3_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender3_ClientState" />
+                                                    </td><td align="center">
+                                                        <textarea name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFEmployerAddress" rows="2" cols="20" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFEmployerAddress" class="aspTextBox" style="width:90px;">
+</textarea>
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$TextBoxWatermarkExtender4_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender4_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFContactNo" type="text" maxlength="10" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFContactNo" class="aspTextBox" style="width:125px;" />
+                                                        <input type="hidden" name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$TextBoxWatermarkExtender5_ClientState" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender5_ClientState" />
+                                                    </td><td>
+                                                        <input name="ctl00$ContentPlaceHolder1$gvFamilyDetails$ctl05$txtFEmailId" type="text" maxlength="30" id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFEmailId" class="aspTextBox" />
+                                                        <span id="ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails" class="aspCustomValidator" style="color:Red;display:none;"></span>
+                                                    </td>
+		</tr>
+	</table>
+</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="input_form_caption_td" style="height: 32px" align="center">
+                                        <br />
+                                        &nbsp;
+                                        <input type="image" name="ctl00$ContentPlaceHolder1$btnSubmit" id="ctl00_ContentPlaceHolder1_btnSubmit" src="Img/but_submit.png" onclick="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$ContentPlaceHolder1$btnSubmit&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, false))" style="border-width:0px;" />
+                                        &nbsp;&nbsp; &nbsp;
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <script type="text/javascript" src="Scripts/FamilyDetails.js"></script>
+
+
+                    </div>
+                    <div class="middle_bottom1">
+                        <div class="infotech_logo">
+                            <img src="imgs/lpu_infotech_logo.png" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    
+<script type="text/javascript">
+//<![CDATA[
+var Page_ValidationSummaries =  new Array(document.getElementById("ctl00_ContentPlaceHolder1_ValidationSummary1"));
+var Page_Validators =  new Array(document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails"), document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails"), document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails"), document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails"));
+//]]>
+</script>
+
+<script type="text/javascript">
+//<![CDATA[
+var ctl00_ContentPlaceHolder1_ValidationSummary1 = document.all ? document.all["ctl00_ContentPlaceHolder1_ValidationSummary1"] : document.getElementById("ctl00_ContentPlaceHolder1_ValidationSummary1");
+ctl00_ContentPlaceHolder1_ValidationSummary1.displaymode = "List";
+var ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails = document.all ? document.all["ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails"] : document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails");
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails.display = "None";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails.evaluationfunction = "CustomValidatorEvaluateIsValid";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails.clientvalidationfunction = "ValidateFamilyDetails";
+var ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails = document.all ? document.all["ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails"] : document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails");
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails.display = "None";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails.evaluationfunction = "CustomValidatorEvaluateIsValid";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails.clientvalidationfunction = "ValidateFamilyDetails";
+var ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails = document.all ? document.all["ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails"] : document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails");
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails.display = "None";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails.evaluationfunction = "CustomValidatorEvaluateIsValid";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails.clientvalidationfunction = "ValidateFamilyDetails";
+var ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails = document.all ? document.all["ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails"] : document.getElementById("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails");
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails.display = "None";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails.evaluationfunction = "CustomValidatorEvaluateIsValid";
+ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails.clientvalidationfunction = "ValidateFamilyDetails";
+//]]>
+</script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+(function(id) {
+    var e = document.getElementById(id);
+    if (e) {
+        e.dispose = function() {
+            Array.remove(Page_ValidationSummaries, document.getElementById(id));
+        }
+        e = null;
+    }
+})('ctl00_ContentPlaceHolder1_ValidationSummary1');
+
+var Page_ValidationActive = false;
+if (typeof(ValidatorOnLoad) == "function") {
+    ValidatorOnLoad();
+}
+
+function ValidatorOnSubmit() {
+    if (Page_ValidationActive) {
+        return ValidatorCommonOnSubmit();
+    }
+    else {
+        return true;
+    }
+}
+        Sys.Application.add_init(function() {
+    $create(Telerik.Web.UI.RadMenu, {"_childListElementCssClass":null,"_postBackReference":"WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\u0027ctl00$RadMenu1\u0027, \u0027arguments\u0027, true, \u0027\u0027, \u0027\u0027, false, true))","_skin":"Default","clientStateFieldID":"ctl00_RadMenu1_ClientState","collapseAnimation":"{\"duration\":450}","expandAnimation":"{\"duration\":450}","itemData":[{"value":"1","navigateUrl":"HomePlacementStudent.aspx"},{"items":[{"value":"5","navigateUrl":"frmUpdateContactDetails.aspx"},{"value":"8","navigateUrl":"frmGetStudentDutyLeaveRecord.aspx"},{"value":"20","navigateUrl":"frmPlacementDLRequest.aspx"},{"value":"6","navigateUrl":"frmFamilyDetails.aspx"},{"value":"10","navigateUrl":"frmPlacementJobAcceptance.aspx"},{"value":"14","navigateUrl":"frmPlacementDriveAttendanceByQR.aspx"},{"value":"16","navigateUrl":"frmPlacementBalPayment.aspx"},{"value":"11","navigateUrl":"frmPlacementDriveConsent.aspx"},{"value":"21","navigateUrl":"frmStudentReinstatementFee.aspx"},{"value":"7","navigateUrl":"frmPlacementTemplateResume.aspx"},{"value":"12","navigateUrl":"frmStudentPlacementAllDetails.aspx"},{"value":"9","navigateUrl":"frmPlacementStudentSkillSet.aspx"},{"value":"15","navigateUrl":"frmPlacementStudentConsent.aspx"},{"value":"13","navigateUrl":"frmPlacementUploadCV.aspx"},{"value":"19","navigateUrl":"frmPlacementUploadIndependentOffer.aspx"}],"value":"2"},{"value":"4","navigateUrl":"frmPlacementDriveRegistration.aspx"},{"value":"18","navigateUrl":"DashboardStudent.aspx"},{"value":"3","navigateUrl":"frmStudentRegisteration.aspx"}]}, null, null, $get("ctl00_RadMenu1"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender1_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender1","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender2_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender2","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFDesignation"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender3_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender3","watermarkCssClass":"watermark","watermarkText":"Max 50 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFEmployerName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender4_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender4","watermarkCssClass":"watermark","watermarkText":"Max 200 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFEmployerAddress"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender5_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_TextBoxWatermarkExtender5","watermarkCssClass":"watermark","watermarkText":"Max 10 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_txtFContactNo"));
+});
+
+document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl02_customFamilyDetails'));
+}
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender1_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender1","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender2_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender2","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFDesignation"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender3_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender3","watermarkCssClass":"watermark","watermarkText":"Max 50 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFEmployerName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender4_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender4","watermarkCssClass":"watermark","watermarkText":"Max 200 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFEmployerAddress"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender5_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_TextBoxWatermarkExtender5","watermarkCssClass":"watermark","watermarkText":"Max 10 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_txtFContactNo"));
+});
+
+document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl03_customFamilyDetails'));
+}
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender1_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender1","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender2_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender2","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFDesignation"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender3_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender3","watermarkCssClass":"watermark","watermarkText":"Max 50 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFEmployerName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender4_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender4","watermarkCssClass":"watermark","watermarkText":"Max 200 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFEmployerAddress"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender5_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_TextBoxWatermarkExtender5","watermarkCssClass":"watermark","watermarkText":"Max 10 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_txtFContactNo"));
+});
+
+document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl04_customFamilyDetails'));
+}
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender1_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender1","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender2_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender2","watermarkCssClass":"watermark","watermarkText":"Max 35 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFDesignation"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender3_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender3","watermarkCssClass":"watermark","watermarkText":"Max 50 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFEmployerName"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender4_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender4","watermarkCssClass":"watermark","watermarkText":"Max 200 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFEmployerAddress"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TextBoxWatermarkBehavior, {"ClientStateFieldID":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender5_ClientState","id":"ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_TextBoxWatermarkExtender5","watermarkCssClass":"watermark","watermarkText":"Max 10 chars"}, null, null, $get("ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_txtFContactNo"));
+});
+
+document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('ctl00_ContentPlaceHolder1_gvFamilyDetails_ctl05_customFamilyDetails'));
+}
+//]]>
+</script>
+</form>
+    
+
+    
+
+    <script>
+
+
+        function closePopup(id) {
+            $("#" + id).fadeOut(200);
+        }
+
+        $(document).ready(function () {
+
+            // Offer Acceptance
+            $.ajax({
+                type: "POST",
+                url: "PlacementService.aspx/DisplayMessageList",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    if (response.d && response.d.trim() !== "") {
+                        $("#pOfferAcceptance").html(response.d);
+                        $("#overlay").fadeIn(300);
+                    }
+                }
+            });
+
+            // Undertaking
+            $.ajax({
+                type: "POST",
+                url: "PlacementService.aspx/DisplayUnderTaking",
+                data: JSON.stringify({ type: "Check" }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (res) {
+                    if (res.d && res.d.trim() !== "") {
+                        $("#pUnderTaking").html(res.d);
+                        $("#overlay1").fadeIn(300);
+                    }
+                }
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "PlacementService.aspx/DisplayPendingDetails",
+                contentType: "application/json; charset=utf-8",
+                data: JSON.stringify({
+                    pageUrl: window.location.pathname
+                }),
+                success: function (response) {
+                    if (response.d && response.d.trim() !== "") {
+                        $("#pending").html(response.d);
+                        $("#pendingde").fadeIn(300);
+                    }
+                }
+            })
+
+        });
+
+
+        $("#btnSubmitUT").live("click", function () {
+
+            var total = $(".ut-checkbox").length;
+            var checked = $(".ut-checkbox:checked").length;
+
+            if (total === 0) {
+                alert("No undertaking conditions found.");
+                return;
+            }
+
+            if (total !== checked) {
+                alert("Please tick all checkboxes.");
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: "PlacementService.aspx/DisplayUnderTaking",
+                data: JSON.stringify({ type: "Insert" }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (res) {
+                    if (res.d === "Success") {
+                        alert("Undertaking submitted successfully.");
+                        closePopup('overlay1');
+                    } else {
+                        alert("Insert failed.");
+                    }
+                },
+                error: function () {
+                    alert("Server error.");
+                }
+            });
+        });
+
+    </script>
+
+</body>
+</html>

@@ -3023,6 +3023,68 @@ app.delete('/api/mutual-shift/:vid', async (req, res) => {
 });
 
 /**
+ * GET /api/all-data
+ * Returns aggregated student data from local json files
+ */
+app.get('/api/all-data', async (req, res) => {
+    try {
+        let allData = [];
+        // 1. Fetch latest ranking data from MongoDB
+        const dbData = await StudentRanking.find({}).lean();
+        
+        let allDataMap = new Map();
+        
+        // 2. Fetch section and roll number data from current_rankings.json
+        const localRankingsPath = path.resolve(__dirname, './current_rankings.json');
+        if (fs.existsSync(localRankingsPath)) {
+            const list = JSON.parse(fs.readFileSync(localRankingsPath, 'utf8'));
+            list.forEach(student => {
+                allDataMap.set(String(student.RegistrationNumber), student);
+            });
+        }
+        
+        // 3. Fetch missing data from missing_students_data.json
+        const missingDataPath = path.resolve(__dirname, './missing_students_data.json');
+        if (fs.existsSync(missingDataPath)) {
+            const missingList = JSON.parse(fs.readFileSync(missingDataPath, 'utf8'));
+            missingList.forEach(student => {
+                const regNo = String(student.RegistrationNumber);
+                if (allDataMap.has(regNo)) {
+                    allDataMap.set(regNo, { ...allDataMap.get(regNo), ...student });
+                } else {
+                    allDataMap.set(regNo, student);
+                }
+            });
+        }
+        
+        // 4. Merge MongoDB data (truth for rank/CGPA) with the Map data (truth for Section/Roll)
+        if (dbData && dbData.length > 0) {
+            allData = dbData.map(dbStudent => {
+                const regNo = String(dbStudent.RegistrationNumber);
+                const localStudent = allDataMap.get(regNo) || {};
+                
+                // Override localStudent fields with dbStudent fields, preserving Section/RollNumber
+                return {
+                    ...localStudent,
+                    ...dbStudent,
+                    // Ensure Section and RollNumber are explicitly preserved if dbStudent is missing them
+                    Section: dbStudent.Section || localStudent.Section || "N/A",
+                    RollNumber: dbStudent.RollNumber || localStudent.RollNumber || "N/A"
+                };
+            });
+        } else {
+            // Fallback to purely local JSON if MongoDB is empty for some reason
+            allData = Array.from(allDataMap.values());
+        }
+
+        return res.json({ success: true, data: allData, count: allData.length });
+    } catch (error) {
+        console.error('❌ Error fetching all-data:', error.message);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
  * POST /api/ranking
  * Proxy endpoint for student ranking - avoids CORS issues
  */
@@ -3034,36 +3096,6 @@ app.post('/api/ranking', async (req, res) => {
             success: false,
             error: 'Registration number is required'
         });
-    }
-
-    try {
-        const studentRecord = await StudentRanking.findOne({ RegistrationNumber: String(registrationNumber) }).lean();
-        if (studentRecord) {
-            console.log(`🏆 Found ranking for: ${registrationNumber} in MongoDB database.`);
-            return res.json({
-                success: true,
-                data: studentRecord
-            });
-        }
-    } catch (e) {
-        console.warn('⚠️ Error querying MongoDB for rankings:', e.message);
-    }
-
-    const localRankingsPath = path.resolve(__dirname, './current_rankings.json');
-    if (fs.existsSync(localRankingsPath)) {
-        try {
-            const list = JSON.parse(fs.readFileSync(localRankingsPath, 'utf8'));
-            const studentRecord = list.find(s => String(s.RegistrationNumber) === String(registrationNumber));
-            if (studentRecord) {
-                console.log(`🏆 Found ranking for: ${registrationNumber} in local rankings cache.`);
-                return res.json({
-                    success: true,
-                    data: studentRecord
-                });
-            }
-        } catch (e) {
-            console.warn('⚠️ Error reading local rankings file:', e.message);
-        }
     }
 
     try {
@@ -3139,13 +3171,47 @@ app.post('/api/ranking', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error fetching ranking from new API:', error.message);
+        console.warn('⚠️ Error fetching ranking from new API, falling back to MongoDB/Local:', error.message);
+        
+        // Fallback 1: MongoDB
+        try {
+            const studentRecord = await StudentRanking.findOne({ RegistrationNumber: String(registrationNumber) }).lean();
+            if (studentRecord) {
+                console.log(`🏆 Found ranking for: ${registrationNumber} in MongoDB database.`);
+                return res.json({
+                    success: true,
+                    data: studentRecord
+                });
+            }
+        } catch (e) {
+            console.warn('⚠️ Error querying MongoDB for rankings:', e.message);
+        }
+
+        // Fallback 2: Local JSON
+        const localRankingsPath = path.resolve(__dirname, './current_rankings.json');
+        if (fs.existsSync(localRankingsPath)) {
+            try {
+                const list = JSON.parse(fs.readFileSync(localRankingsPath, 'utf8'));
+                const studentRecord = list.find(s => String(s.RegistrationNumber) === String(registrationNumber));
+                if (studentRecord) {
+                    console.log(`🏆 Found ranking for: ${registrationNumber} in local rankings cache.`);
+                    return res.json({
+                        success: true,
+                        data: studentRecord
+                    });
+                }
+            } catch (e) {
+                console.warn('⚠️ Error reading local rankings file:', e.message);
+            }
+        }
 
         return res.status(error.response?.status || 500).json({
             success: false,
             error: error.response?.data?.message || error.message
         });
     }
+
+
 });
 
 // ── AI Buddy ──────────────────────────────────────────────────────────────

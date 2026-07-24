@@ -1,0 +1,9 @@
+Created At: 2026-07-20T06:04:24Z
+Completed At: 2026-07-20T06:04:33Z
+Title: Live Content
+
+OG Description: Fetched live
+
+The full content of the article at https://studentums.lpu.in/dashboard/examination/conduct/seatingplan?token=9adaf3f8e61d08ded23c14fef235f4b4abb2bfcb95304dd0c3eff5b65186ed98556fc29ca95cab734fee8d1f120e296c9e1993a7830da59f3d4305f739002c7697a0597e2652efebbdeb4ce9c04e1c4742ecc8824a7b37ba866c449dae21b8a3 has been saved to: /Users/yatishydv/.gemini/antigravity-ide/brain/a85da78e-59c2-42b9-af60-e7d98b520fa7/.system_generated/steps/117/content.md
+
+You can use the view_file tool to read specific sections if needed.

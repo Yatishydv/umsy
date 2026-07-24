@@ -24,6 +24,7 @@ import UmsyV04Login from './components/UmsyV04Login';
 import DashboardLayout from './components/DashboardLayout';
 import SeatingPlan from './components/SeatingPlan';
 import V05Login from './components/V05Login';
+import DataPage from './components/DataPage';
 import './App.css';
 
 import { useState } from 'react';
@@ -60,7 +61,7 @@ function ProtectedRoute({ children }) {
 
 function AppContent() {
   const location = useLocation();
-  const loginRoutes = ['/cookie-callback', '/tlogin', '/v05login', '/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
+  const loginRoutes = ['/cookie-callback', '/tlogin', '/v05login', '/v05login/1', '/v05login/2', '/v05login/3', '/v05login/4', '/newlogin', '/newlogin2', '/cookie', '/login', '/umsyV04', '/v04/login', '/'];
   const isLoginPage = loginRoutes.includes(location.pathname);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(null);
@@ -257,6 +258,10 @@ function AppContent() {
         <Route path="/cookie-callback" element={<CookieCallback />} />
         <Route path="/tlogin" element={<UmsyV04Login />} />
         <Route path="/v05login" element={<V05Login />} />
+        <Route path="/v05login/1" element={<V05Login mode="extension" />} />
+        <Route path="/v05login/2" element={<V05Login mode="popup" />} />
+        <Route path="/v05login/3" element={<V05Login mode="turnstile" />} />
+        <Route path="/v05login/4" element={<V05Login mode="instant" />} />
         <Route path="/newlogin" element={<V05Login />} />
         <Route path="/newlogin2" element={<V05Login />} />
         <Route path="/v04/login" element={<Navigate to="/tlogin" replace />} />
@@ -281,6 +286,7 @@ function AppContent() {
 
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/backlogs" element={<ProtectedRoute><MobileBacklogs /></ProtectedRoute>} />
+        <Route path="/data" element={<ProtectedRoute><DataPage /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
