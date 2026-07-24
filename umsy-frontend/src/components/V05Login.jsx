@@ -369,26 +369,43 @@ const V05Login = ({ mode }) => {
 
                         {/* Mode 1 ONLY: Extension Helper */}
                         {mode === 'extension' && (
-                            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-center space-y-2.5">
-                                <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                                    🧩 Chrome Extension Mode (/v05login/1)
-                                </p>
-                                <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                                    Auto-captures Turnstile verification with zero manual steps.
-                                </p>
-                                <a
-                                    href="/umsy-chrome-extension.zip"
-                                    download="umsy-chrome-extension.zip"
-                                    className="inline-block py-2 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
-                                >
-                                    📥 Download UMSY Extension (.zip)
-                                </a>
-                                <div className="text-[10px] text-left text-amber-800 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 p-2.5 rounded-xl space-y-1 font-medium">
-                                    <p className="font-bold text-amber-900 dark:text-amber-200">How to Install in 3 Steps:</p>
-                                    <p>1. Extract the downloaded zip file.</p>
-                                    <p>2. Open <code className="bg-amber-200 dark:bg-amber-800 px-1 rounded">chrome://extensions</code> in Chrome and enable <b>Developer mode</b> (top right toggle).</p>
-                                    <p>3. Click <b>Load unpacked</b> and select the extracted folder.</p>
+                            <div className="space-y-3">
+                                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-center space-y-2.5">
+                                    <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                                        🧩 Chrome Extension Mode (/v05login/1)
+                                    </p>
+                                    <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                        Auto-captures Turnstile verification with zero manual steps.
+                                    </p>
+                                    <a
+                                        href="/umsy-chrome-extension.zip"
+                                        download="umsy-chrome-extension.zip"
+                                        className="inline-block py-2 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
+                                    >
+                                        📥 Download UMSY Extension (.zip)
+                                    </a>
+                                    <div className="text-[10px] text-left text-amber-800 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 p-2.5 rounded-xl space-y-1 font-medium">
+                                        <p className="font-bold text-amber-900 dark:text-amber-200">How to Install in 3 Steps:</p>
+                                        <p>1. Extract the downloaded zip file.</p>
+                                        <p>2. Open <code className="bg-amber-200 dark:bg-amber-800 px-1 rounded">chrome://extensions</code> in Chrome and enable <b>Developer mode</b> (top right toggle).</p>
+                                        <p>3. Click <b>Load unpacked</b> and select the extracted folder.</p>
+                                    </div>
                                 </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-4 px-6 rounded-2xl bg-[#bef227] hover:bg-[#a9d821] text-[#1c312e] font-black text-sm tracking-wide shadow-lg shadow-[#bef227]/20 transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            <span>Signing in...</span>
+                                        </>
+                                    ) : (
+                                        <span>Sign in with Extension</span>
+                                    )}
+                                </button>
                             </div>
                         )}
 
