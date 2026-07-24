@@ -66,20 +66,26 @@ const V05Login = ({ mode }) => {
         return () => clearInterval(interval);
     }, [slides.length]);
 
-    // Listen for automated zero-click Turnstile token message from proxy popup
+    // Listen for automated zero-click Turnstile token or Session from Extension
     useEffect(() => {
         const handleMessage = (event) => {
             if (event.data && event.data.type === 'UMSY_TURNSTILE_TOKEN' && event.data.token) {
-                console.log('⚡ Received Turnstile token automatically from proxy popup!');
+                console.log('⚡ Received Turnstile token automatically!');
                 setTurnstileToken(event.data.token);
                 setError('');
                 setStatusMsg('✅ Cloudflare verified automatically!');
+            }
+            if (event.data && event.data.type === 'UMSY_AUTO_SESSION' && event.data.cookies) {
+                console.log('⚡ Received active session from extension!');
+                localStorage.setItem('umsy_cookies', event.data.cookies.trim());
+                setStatusMsg('✅ Session auto-detected from Extension! Redirecting...');
+                setTimeout(() => navigate('/dashboard'), 500);
             }
         };
 
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
-    }, []);
+    }, [navigate]);
 
     // Load Turnstile Script for frontend solving
     useEffect(() => {

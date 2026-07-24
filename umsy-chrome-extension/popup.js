@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     syncBtn.addEventListener('click', () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.tabs.create({ url: 'https://umsy.vercel.app/v05login' });
+            chrome.tabs.create({ url: 'https://umsy.vercel.app/v05login/1' });
         });
     });
 });
